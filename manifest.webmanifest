@@ -1,0 +1,19 @@
+{
+  "name": "G10 Adhésion",
+  "short_name": "G10 Adhésion",
+  "description": "Application officielle de campagne d’adhésion G10",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b4a7a",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "./g10-app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
