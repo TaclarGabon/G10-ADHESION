@@ -997,7 +997,8 @@ function refreshContributionForm(){
   if(plan==='monthly'){
     if(nextSequence>12){
       box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Les 12 mensualités ont été confirmées.';
-      return;    }
+      return;
+    }
     const confirmed=same.filter(p=>p.status==='Confirmé');const last=confirmed[confirmed.length-1];const due=last?.date?addMonthsIso(last.date,1):'';box.innerHTML=`<strong>Prochain paiement : mois ${nextSequence} / 12 - ${settings.monthlyContribution} €</strong>${due?'<br>À régler au plus tard le '+formatDateFr(due):''}<br>Après déclaration, la Direction vérifiera la réception.`;
   }else{
     if(nextSequence>2){
