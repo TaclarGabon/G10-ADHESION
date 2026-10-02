@@ -1,5 +1,4 @@
 <!doctype html>
-<!-- G10-ADHESION V6.1 -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
@@ -411,7 +410,25 @@
 
 .demo-reset-card{border:1px solid #efd59a;background:#fffdf7}
 .demo-reset-card .notice.warn{background:#fff7df;border-color:#efd59a;color:#725514}
+
+/* V6.2 — retours relecteur : navigation, footer, clarté workflow */
+@media(min-width:761px){.app>.sidebar{position:sticky;top:0;height:100vh;align-self:start;overflow-y:auto}}
+.g10-footer{margin-top:28px;padding:18px 14px;border-top:1px solid #dce5ef;text-align:center;color:#6a7a8c;font-size:12px;line-height:1.45}
+.mobile-member-nav{display:none}
+@media(max-width:760px){
+  .main{padding-bottom:92px!important}
+  .mobile-member-nav{position:fixed;display:grid;grid-template-columns:repeat(3,1fr);left:10px;right:10px;bottom:max(10px,env(safe-area-inset-bottom));z-index:4200;background:#fff;border:1px solid #dce5ef;border-radius:18px;box-shadow:0 12px 35px rgba(10,35,60,.18);overflow:hidden}
+  .mobile-member-nav button{border:0;background:#fff;padding:10px 4px 9px;color:#24425f;font-weight:800;font-size:11px;line-height:1.2}
+  .mobile-member-nav button span{display:block;font-size:18px;margin-bottom:3px}
+}
 </style>
+
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./g10-app-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./g10-app-icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="G10 Adhésion">
 </head>
 <body>
 <div id="landing" class="screen landing">
@@ -436,7 +453,7 @@
           <button class="final-stat" onclick="openMembersInfo()"><span class="stat-ico blue">●●●</span><strong id="landingPlatformCount">910</strong><small>Membres sur la plateforme</small></button>
           <button class="final-stat" onclick="openActiveInfo()"><span class="stat-ico green">●</span><strong id="landingActiveCount">0</strong><small>Adhérents actifs</small></button>
           <button class="final-stat" onclick="openMembershipInfo()"><span class="stat-ico gold">●●</span><strong id="landingFee">10 €</strong><small>Droit d’adhésion — une seule fois</small></button>
-          <button class="final-stat" onclick="openContributionInfo()"><span class="stat-ico calendar">▦</span><strong id="landingMonthlyFee">120 € / an</strong><small>Cotisation de référence</small></button>
+          <button class="final-stat" onclick="openContributionInfo()"><span class="stat-ico calendar">▦</span><strong id="landingMonthlyFee">10 € / mois</strong><small>Cotisation de référence</small></button>
         </div>
       </section>
 
@@ -473,7 +490,7 @@
   </aside>
   <main class="main">
     <section id="member-account">
-      <div class="topbar"><div><h2>Mon compte</h2><p>Compléter mon profil, signer ma fiche et suivre mon adhésion.</p></div><div class="userchip"><div class="avatar" id="memberAvatar">ADH</div><div><strong id="memberChipName">Nouvel adhérent</strong><small id="memberChipId">G10-ADH</small></div><button class="btn btn-light" onclick="goHome()">Quitter</button></div></div>
+      <div class="topbar"><div><h2>Mon compte</h2><p>Compléter mon profil, signer ma fiche et suivre mon adhésion.</p></div><div class="userchip"><div class="avatar" id="memberAvatar">ADH</div><div><strong id="memberChipName">Nouvel adhérent</strong><small id="memberChipId">G10-ADH-DEMO</small></div><button class="btn btn-light" onclick="goHome()">Quitter</button></div></div>
 
       <div class="card panel">
         <div class="panel-head"><div><h3>Suivi de mon dossier</h3><p>Votre progression est mise à jour automatiquement.</p></div><span id="workflowStatus" class="badge badge-warn">En préparation</span></div>
@@ -547,23 +564,20 @@
           <div class="paid-check">✓</div>
           <div><strong>Votre adhésion a été payée et validée par la Direction.</strong>
           <p id="membershipPaidDetails">Vous êtes désormais adhérent actif. Vous pouvez maintenant gérer vos cotisations.</p></div>
-          <div class="action-row">
-            <button class="btn btn-primary" onclick="showMemberView('payments')">Gérer mes cotisations</button>
-            <button class="btn btn-light" onclick="openReceipt('membership','')">Reçu officiel</button>
-          </div>
+          <button class="btn btn-primary" onclick="showMemberView('payments')">Gérer mes cotisations</button>
         </div>
 
         <div id="membershipPaymentForm">
           <div class="payment-options">
-            <label class="payment-option"><input type="radio" name="payMethod" value="RTM Money" checked><div><strong>RTM Money</strong><small>Envoyez le règlement au numéro officiel +241 76 41 24 49 et conservez la référence de transaction.</small></div></label>
-            <label class="payment-option"><input type="radio" name="payMethod" value="Carte bancaire"><div><strong>Carte bancaire</strong><small>Paiement par carte bancaire — prochainement.</small></div></label>
+            <label class="payment-option"><input type="radio" name="payMethod" value="Airtel Money" checked><div><strong>Airtel Money</strong><small>Envoyez le règlement au numéro officiel +241 76 41 24 49 et conservez la référence de transaction.</small></div></label>
+            <label class="payment-option"><input type="radio" name="payMethod" value="Carte bancaire"><div><strong>Carte bancaire</strong><small>Mode prévu pour la version connectée. La V5.2 simule la déclaration pour la démonstration.</small></div></label>
             <label class="payment-option"><input type="radio" name="payMethod" value="Virement bancaire"><div><strong>Virement bancaire</strong><small>Les coordonnées bancaires officielles seront affichées lorsque la Direction les aura renseignées.</small></div></label>
           </div>
-          <div class="payment-highlight"><strong>Montant à payer : <span id="paymentAmount">10 €</span></strong><br>Référence dossier : <span id="paymentReference">G10-ADH</span><br><span id="paymentDestination">RTM Money officiel : +241 76 41 24 49</span><br><small>Après le paiement, saisissez la référence de transaction puis transmettez la déclaration à la Direction.</small></div>
+          <div class="payment-highlight"><strong>Montant à payer : <span id="paymentAmount">10 €</span></strong><br>Référence dossier : <span id="paymentReference">G10-ADH-DEMO</span><br><span id="paymentDestination">Airtel Money officiel : +241 76 41 24 49</span><br><small>Après le paiement, saisissez la référence de transaction puis transmettez la déclaration à la Direction.</small></div>
           <div class="form-grid" style="margin-top:12px">
             <div class="field"><label>Référence / N° transaction *</label><input id="transactionRef"></div>
             <div class="field"><label>Date du paiement *</label><input id="paymentDate" type="date"></div>
-            <div class="field"><label>Justificatif RTM Money — capture d’écran *</label><input id="paymentProof" type="file" accept="image/*"></div>
+            <div class="field"><label>Justificatif</label><input id="paymentProof" type="file" accept="image/*,.pdf"></div>
           </div>
           <div class="action-row"><button class="btn btn-green" onclick="declarePayment()">Déclarer mon paiement</button><button class="btn whatsapp-btn" onclick="sendWhatsAppPayment()">Envoyer la confirmation sur WhatsApp</button></div>
         </div>
@@ -605,42 +619,38 @@
 
         <div id="contributionUnlocked" class="hidden">
           <div class="grid3">
-            <div class="mini card"><span>Option 1 — paiement annuel</span><strong id="monthlyContribution">120 € en une fois</strong></div>
-            <div class="mini card"><span>Cotisation annuelle</span><strong id="annualContribution">120 €</strong></div>
+            <div class="mini card"><span>Option mensuelle</span><strong id="monthlyContribution">12 × 10 €</strong></div>
+            <div class="mini card"><span>Total sur 12 mois</span><strong id="annualContribution">120 €</strong></div>
             <div class="mini card"><span>Option en 2 fois</span><strong id="semesterContribution">2 × 60 €</strong></div>
           </div>
 
           <div class="notice" style="margin-top:12px">
-            Choisissez <b>120 € en une fois pour l’année</b> ou <b>2 versements de 60 €</b>. Il n’existe pas d’option mensuelle. Chaque paiement est déclaré avec son justificatif RTM Money puis confirmé par la Direction.
+            Choisissez <b>12 mensualités</b> ou <b>2 versements semestriels</b>. Chaque paiement est déclaré puis confirmé par la Direction.
           </div>
 
           <div class="contribution-plan-grid">
-            <label class="payment-option"><input type="radio" name="contributionPlan" value="annual" onchange="refreshContributionForm()"><div><strong>Payer l’année en une fois</strong><small id="monthlyPlanText">120 € en un seul paiement pour l’année.</small></div></label>
-            <label class="payment-option"><input type="radio" name="contributionPlan" value="two" onchange="refreshContributionForm()"><div><strong>Payer en deux fois</strong><small id="twoPlanText">60 € + 60 € pour l’année.</small></div></label>
+            <label class="payment-option"><input type="radio" name="contributionPlan" value="monthly" onchange="refreshContributionForm()"><div><strong>Payer chaque mois</strong><small id="monthlyPlanText">10 € par mois pendant 12 mois.</small></div></label>
+            <label class="payment-option"><input type="radio" name="contributionPlan" value="two" onchange="refreshContributionForm()"><div><strong>Payer en deux fois</strong><small id="twoPlanText">60 € maintenant puis 60 € six mois plus tard.</small></div></label>
           </div>
 
           <div id="contributionNextBox" class="payment-highlight" style="margin-top:12px"></div>
 
           <div class="payment-options" style="margin-top:12px">
-            <label class="payment-option"><input type="radio" name="contributionMethod" value="RTM Money" checked><div><strong>RTM Money</strong><small id="contributionAirtelText">Numéro officiel : +241 76 41 24 49</small></div></label>
-            <label class="payment-option"><input type="radio" name="contributionMethod" value="Carte bancaire"><div><strong>Carte bancaire</strong><small>Paiement par carte bancaire — prochainement.</small></div></label>
+            <label class="payment-option"><input type="radio" name="contributionMethod" value="Airtel Money" checked><div><strong>Airtel Money</strong><small id="contributionAirtelText">Numéro officiel : +241 76 41 24 49</small></div></label>
+            <label class="payment-option"><input type="radio" name="contributionMethod" value="Carte bancaire"><div><strong>Carte bancaire</strong><small>Mode prévu pour la version connectée ; déclaration simulée dans cette démo.</small></div></label>
             <label class="payment-option"><input type="radio" name="contributionMethod" value="Virement bancaire"><div><strong>Virement bancaire</strong><small>Coordonnées gérées par la Direction.</small></div></label>
           </div>
 
           <div class="form-grid" style="margin-top:12px">
             <div class="field"><label>Référence / N° transaction *</label><input id="contributionRef"></div>
             <div class="field"><label>Date du paiement *</label><input id="contributionDate" type="date"></div>
-            <div class="field"><label>Justificatif RTM Money — capture d’écran *</label><input id="contributionProof" type="file" accept="image/*"></div>
+            <div class="field"><label>Justificatif</label><input id="contributionProof" type="file" accept="image/*,.pdf"></div>
           </div>
           <div class="action-row"><button class="btn btn-green" onclick="declareContributionPayment()">Déclarer ce paiement</button></div>
 
           <div class="sep"></div>
           <h4>Historique de mes cotisations</h4>
-          <div class="table-wrap"><table class="table"><thead><tr><th>Échéance</th><th>Montant</th><th>Date</th><th>Mode</th><th>Référence</th><th>Justificatif</th><th>Statut / reçu</th></tr></thead><tbody id="memberContributionRows"></tbody></table></div>
-          <div class="sep"></div>
-          <h4>Mes reçus officiels G10</h4>
-          <div class="notice">Chaque reçu validé par la Direction reste archivé dans votre dossier Firebase et peut être réouvert ou enregistré en PDF.</div>
-          <div class="table-wrap" style="margin-top:12px"><table class="table"><thead><tr><th>N° reçu</th><th>Objet</th><th>Montant</th><th>Date de validation</th><th>Validé par</th><th>Document</th></tr></thead><tbody id="memberReceiptRows"><tr><td colspan="6" class="muted">Aucun reçu disponible.</td></tr></tbody></table></div>
+          <div class="table-wrap"><table class="table"><thead><tr><th>Échéance</th><th>Montant</th><th>Date</th><th>Mode</th><th>Référence</th><th>Statut</th></tr></thead><tbody id="memberContributionRows"></tbody></table></div>
         </div>
       </div>
     </section>
@@ -659,7 +669,7 @@
 
     <section id="dir-platform" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Base plateforme</h3><p>La liste Excel existante sera importée ici. L’outil doit permettre de retrouver rapidement un nom et de voir son statut.</p></div><span class="badge badge-info" id="platformImportBadge">Import à faire</span></div><div class="toolbar"><input id="platformSearch" placeholder="Rechercher un nom…" oninput="renderPlatform()"><input id="csvImport" type="file" accept=".csv,text/csv"><button class="btn btn-light" onclick="importCSV()">Importer CSV</button><button class="btn btn-primary" onclick="downloadPlatformTemplate()">Modèle CSV</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Nom</th><th>Contact</th><th>Pays</th><th>Profession / expertise</th><th>Statut</th><th>Action</th></tr></thead><tbody id="platformRows"></tbody></table></div></div></section>
 
-    <section id="dir-applications" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Dossiers d’adhésion</h3><p>Dossiers créés pendant la campagne et en attente de contrôle.</p></div><span class="badge badge-warn" id="appCount">0 dossier</span></div><div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Adhérent</th><th>Profil</th><th>Fiche</th><th>Paiement</th><th>Justificatif</th><th>Expertise</th><th>Décision</th></tr></thead><tbody id="applicationRows"></tbody></table></div></div></section>
+    <section id="dir-applications" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Dossiers d’adhésion</h3><p>Dossiers créés pendant la campagne et en attente de contrôle.</p></div><span class="badge badge-warn" id="appCount">0 dossier</span></div><div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Adhérent</th><th>Profil</th><th>Fiche</th><th>Paiement</th><th>Expertise</th><th>Décision</th></tr></thead><tbody id="applicationRows"></tbody></table></div></div></section>
 
     <section id="dir-active" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Adhérents actifs</h3><p>Liste officielle issue des adhésions validées.</p></div><button class="btn btn-green" onclick="exportActiveCSV()">Exporter CSV</button></div><div class="table-wrap"><table class="table"><thead><tr><th>ID</th><th>Nom</th><th>Contact</th><th>Pays</th><th>Expertise</th><th>Adhésion</th><th>Cotisation</th></tr></thead><tbody id="activeRows"></tbody></table></div></div></section>
 
@@ -675,15 +685,15 @@
       <div class="card panel">
         <div class="panel-head"><div><h3>Suivi des cotisations</h3><p>Paiements déclarés par les adhérents actifs et confirmation par la Direction.</p></div><span class="badge badge-info" id="contributionPendingCount">0 à vérifier</span></div>
         <div class="notice">Le montant de référence reste paramétrable. Les déclarations ci-dessous doivent être confirmées par la Direction après vérification de la réception.</div>
-        <div class="grid3" style="margin-top:12px"><div class="card mini"><span>Option 1</span><strong id="dirMonthly">120 € en une fois</strong></div><div class="card mini"><span>Cotisation annuelle</span><strong id="dirAnnual">120 €</strong></div><div class="card mini"><span>Option 2</span><strong id="dirSemesters">60 € + 60 €</strong></div></div>
+        <div class="grid3" style="margin-top:12px"><div class="card mini"><span>Référence mensuelle</span><strong id="dirMonthly">10 €</strong></div><div class="card mini"><span>Annuel</span><strong id="dirAnnual">120 €</strong></div><div class="card mini"><span>2 échéances</span><strong id="dirSemesters">60 € + 60 €</strong></div></div>
         <div class="action-row"><button class="btn btn-primary" onclick="showDirTab('settings')">Modifier les paramètres</button></div>
         <div class="sep"></div>
-        <div class="table-wrap"><table class="table"><thead><tr><th>Adhérent</th><th>Plan</th><th>Échéance</th><th>Montant</th><th>Date</th><th>Mode</th><th>Référence</th><th>Justificatif</th><th>Statut / action</th></tr></thead><tbody id="contributionPaymentRows"></tbody></table></div>
+        <div class="table-wrap"><table class="table"><thead><tr><th>Adhérent</th><th>Plan</th><th>Échéance</th><th>Montant</th><th>Date</th><th>Mode</th><th>Référence</th><th>Statut / action</th></tr></thead><tbody id="contributionPaymentRows"></tbody></table></div>
       </div>
     </section>
 
-    <section id="dir-settings" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Paramètres de l’adhésion</h3><p>Ces montants peuvent être modifiés sans refaire l’application.</p></div><span class="badge badge-info">Direction / AG</span></div><div class="form-grid"><div class="field"><label>Nombre de membres sur la plateforme</label><input id="setPlatformCount" type="number" min="0" step="1"></div><div class="field"><label>Droit d’adhésion — une seule fois (€)</label><input id="setMembershipFee" type="number" min="0" step="1"></div><div class="field"><label>Cotisation annuelle (€)</label><input id="setAnnual" type="number" min="0" step="1"></div><div class="field"><label>Modalités de cotisation proposées</label><select id="setInstallments"><option value="2">120 € en une fois ou 60 € + 60 €</option></select></div><div class="field"><label>N° RTM Money</label><input id="setRtm" placeholder="À renseigner"></div><div class="field"><label>Nom du validateur / représentant Direction</label><input id="setValidatorName" placeholder="Prénom NOM"></div><div class="field full"><label>Coordonnées de virement bancaire</label><textarea id="setBank" placeholder="À renseigner"></textarea></div></div><div class="action-row"><button class="btn btn-primary" onclick="saveSettings()">Enregistrer les paramètres</button></div></div>
-<div class="card panel demo-reset-card hidden">
+    <section id="dir-settings" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Paramètres de l’adhésion</h3><p>Ces montants peuvent être modifiés sans refaire l’application.</p></div><span class="badge badge-info">Direction / AG</span></div><div class="form-grid"><div class="field"><label>Nombre de membres sur la plateforme</label><input id="setPlatformCount" type="number" min="0" step="1"></div><div class="field"><label>Droit d’adhésion — une seule fois (€)</label><input id="setMembershipFee" type="number" min="0" step="1"></div><div class="field"><label>Cotisation mensuelle de référence (€)</label><input id="setMonthly" type="number" min="0" step="1"></div><div class="field"><label>Modalités de cotisation proposées</label><select id="setInstallments"><option value="2">12 mensualités ou 2 versements semestriels</option></select></div><div class="field"><label>N° Airtel Money</label><input id="setAirtel" placeholder="À renseigner"></div><div class="field full"><label>Coordonnées de virement bancaire</label><textarea id="setBank" placeholder="À renseigner"></textarea></div></div><div class="action-row"><button class="btn btn-primary" onclick="saveSettings()">Enregistrer les paramètres</button></div></div>
+<div class="card panel demo-reset-card">
   <div class="panel-head"><div><h3>Réinitialisation de la démo</h3><p>Efface uniquement les comptes et simulations créés pendant les tests. La base plateforme, les montants, les documents et les paramètres Direction sont conservés.</p></div><span class="badge badge-warn">Démo</span></div>
   <div class="notice warn">Cette action remet à zéro les dossiers d’adhésion, adhérents actifs, cotisations déclarées et comptes de test. Les membres importés de la plateforme restent présents et repassent au statut « Non actif ».</div>
   <div class="action-row"><button class="btn btn-danger" onclick="resetDemoData()">Remettre la démo à zéro</button></div>
@@ -996,7 +1006,7 @@ function saveManualSignedForm(){
   if(!file){alert('Merci de sélectionner la fiche remplie et signée.');return}
   currentMember.signatureMode='manual';currentMember.manualSignedFileName=file.name;currentMember.manualSignedAt=new Date().toISOString();currentMember.formSigned=true;currentMember.status='Fiche manuscrite transmise';
   upsertApplication();syncMemberEverywhere(currentMember);persist();hydrateMember();
-  const s=document.getElementById('manualFileStatus');if(s)s.textContent='Document sélectionné : '+file.name;
+  const s=document.getElementById('manualFileStatus');if(s)s.textContent='Document enregistré pour la démonstration : '+file.name;
   alert('Fiche manuscrite enregistrée. Elle est prête pour le contrôle de la Direction.');
 }
 function contributionSummary(member){
@@ -1154,7 +1164,7 @@ function declareContributionPayment(){
   const plan=document.querySelector('input[name=contributionPlan]:checked')?.value||'monthly';
   const reference=val('contributionRef');
   const date=val('contributionDate');
-  const method=document.querySelector('input[name=contributionMethod]:checked')?.value||'RTM Money';
+  const method=document.querySelector('input[name=contributionMethod]:checked')?.value||'Airtel Money';
   if(!reference||!date){alert('Merci de renseigner la référence et la date du paiement.');return}
 
   const same=currentMember.contributionPayments.filter(p=>p.plan===plan);
@@ -1242,7 +1252,7 @@ function sendWhatsAppPayment(){
   const date=val('paymentDate')||currentMember.paymentDate||'à renseigner';
   const name=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Adhérent';
   const phone=String(settings.airtel||'+241 76 41 24 49').replace(/\D/g,'');
-  const msg=`Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : ${name}\nDossier : ${currentMember.id}\nMontant : ${settings.membershipFee} €\nRTM Money : ${settings.airtel||'+241 76 41 24 49'}\nRéférence transaction : ${ref}\nDate : ${date}\nMerci de vérifier et valider mon adhésion.`;
+  const msg=`Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : ${name}\nDossier : ${currentMember.id}\nMontant : ${settings.membershipFee} €\nAirtel Money : ${settings.airtel||'+241 76 41 24 49'}\nRéférence transaction : ${ref}\nDate : ${date}\nMerci de vérifier et valider mon adhésion.`;
   window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener');
 }
 
@@ -1254,7 +1264,7 @@ function enterMember(){document.getElementById('landing').classList.add('hidden'
 function enterDirection(){if(!isPrivilegedRole()){alert('Accès réservé à la Direction et à l’administrateur de test.');return}document.getElementById('landing').classList.add('hidden');document.getElementById('memberApp').classList.add('hidden');document.getElementById('directionApp').classList.remove('hidden');const role=document.getElementById('dirRoleLabel');if(role)role.textContent=currentUserRole==='direction'?'Compte Direction — Firebase':'Administrateur de test — Firebase';hydrateSettings();refreshDirection();showDirTab('overview');}
 function showMemberView(name,btn){['account','docs','payments'].forEach(x=>document.getElementById('member-'+x).classList.toggle('hidden',x!==name));if(name==='payments')hydrateMember();if(btn){document.querySelectorAll('#memberApp .navbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}}
 function showDirTab(name,btn){['overview','platform','applications','active','history','contributions','settings'].forEach(x=>document.getElementById('dir-'+x).classList.toggle('hidden',x!==name));if(btn){document.querySelectorAll('#directionApp .navbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}const labels={overview:['Tableau de bord Direction','Suivi de la campagne, des dossiers et des adhérents actifs.'],platform:['Base plateforme','Membres existants à convertir progressivement en adhérents actifs.'],applications:['Dossiers d’adhésion','Contrôle des nouveaux dossiers créés pendant la campagne.'],active:['Adhérents actifs','Liste officielle des adhésions validées.'],history:['Historique','Dossiers validés archivés, modifiables ou supprimables.'],contributions:['Cotisations','Suivi des montants et échéances.'],settings:['Paramètres','Montants, moyens de paiement et documents officiels.']};document.getElementById('dirTitle').textContent=labels[name][0];document.getElementById('dirSubtitle').textContent=labels[name][1];if(name==='platform')renderPlatform();if(name==='applications')renderApplications();if(name==='active')renderActive();if(name==='history')renderHistory();}
-function hydrateMember(){if(!currentMember)return;normalizeContributionState();currentMember.signatureMode=currentMember.signatureMode||'electronic';[['civility','civility'],['lastName','lastName'],['lastName2','lastName2'],['firstName','firstName'],['firstName2','firstName2'],['birthDate','birthDate'],['birthPlace','birthPlace'],['nationality','nationality'],['address','address'],['postal','postal'],['city','city'],['country','country'],['idType','idType'],['idNumber','idNumber'],['idIssue','idIssue'],['idExpiry','idExpiry'],['email','email'],['phone','phone'],['profession','profession'],['degree','degree'],['expertise','expertise'],['signPlace','signPlace'],['signDate','signDate'],['transactionRef','transactionRef'],['paymentDate','paymentDate']].forEach(([id,key])=>setVal(id,currentMember[key]||''));document.getElementById('memberChipName').textContent=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Nouvel adhérent';document.getElementById('memberChipId').textContent=currentMember.id;document.getElementById('memberAvatar').textContent=initials(currentMember);document.getElementById('initialsPreview').textContent=initials(currentMember);const elElig=document.getElementById('diasporaEligibility');if(elElig)elElig.checked=!!currentMember.eligibilityConfirmed;document.getElementById('membershipFeeDisplay').value=settings.membershipFee+' € — une seule fois';document.getElementById('paymentAmount').textContent=settings.membershipFee+' €';document.getElementById('paymentReference').textContent=currentMember.id;document.getElementById('paymentDestination').textContent=settings.airtel?('RTM Money officiel : '+settings.airtel):(settings.bank?('Virement : '+settings.bank):'Compte de destination : à renseigner par la Direction.');document.getElementById('membershipFeeBig').textContent=settings.membershipFee+' €';document.getElementById('monthlyContribution').textContent='12 × '+settings.monthlyContribution+' €';document.getElementById('annualContribution').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('semesterContribution').textContent='2 × '+(settings.monthlyContribution*6)+' €';document.getElementById('membershipPaymentStatus').textContent=currentMember.paymentConfirmed?'Payé et validé':(currentMember.paymentDeclared?'À vérifier':'Non confirmé');document.getElementById('membershipPaymentStatus').className='badge '+(currentMember.paymentConfirmed?'badge-ok':currentMember.paymentDeclared?'badge-warn':'badge-off');const paidBox=document.getElementById('membershipPaidBox');const payForm=document.getElementById('membershipPaymentForm');if(paidBox)paidBox.classList.toggle('hidden',!currentMember.paymentConfirmed);if(payForm)payForm.classList.toggle('hidden',!!currentMember.paymentConfirmed);const paidDetails=document.getElementById('membershipPaidDetails');if(paidDetails&&currentMember.paymentConfirmed)paidDetails.textContent='Paiement confirmé par la Direction'+(currentMember.paymentDate?' le '+currentMember.paymentDate:'')+'. Vous êtes désormais adhérent actif et pouvez gérer vos cotisations.';setFormMode(currentMember.signatureMode||'electronic');const mfs=document.getElementById('manualFileStatus');if(mfs&&currentMember.manualSignedFileName)mfs.textContent='Document déjà enregistré : '+currentMember.manualSignedFileName;renderWorkflow();renderContributionMember();renderMemberSituation();}
+function hydrateMember(){if(!currentMember)return;normalizeContributionState();currentMember.signatureMode=currentMember.signatureMode||'electronic';[['civility','civility'],['lastName','lastName'],['lastName2','lastName2'],['firstName','firstName'],['firstName2','firstName2'],['birthDate','birthDate'],['birthPlace','birthPlace'],['nationality','nationality'],['address','address'],['postal','postal'],['city','city'],['country','country'],['idType','idType'],['idNumber','idNumber'],['idIssue','idIssue'],['idExpiry','idExpiry'],['email','email'],['phone','phone'],['profession','profession'],['degree','degree'],['expertise','expertise'],['signPlace','signPlace'],['signDate','signDate'],['transactionRef','transactionRef'],['paymentDate','paymentDate']].forEach(([id,key])=>setVal(id,currentMember[key]||''));document.getElementById('memberChipName').textContent=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Nouvel adhérent';document.getElementById('memberChipId').textContent=currentMember.id;document.getElementById('memberAvatar').textContent=initials(currentMember);document.getElementById('initialsPreview').textContent=initials(currentMember);const elElig=document.getElementById('diasporaEligibility');if(elElig)elElig.checked=!!currentMember.eligibilityConfirmed;document.getElementById('membershipFeeDisplay').value=settings.membershipFee+' € — une seule fois';document.getElementById('paymentAmount').textContent=settings.membershipFee+' €';document.getElementById('paymentReference').textContent=currentMember.id;document.getElementById('paymentDestination').textContent=settings.airtel?('Airtel Money officiel : '+settings.airtel):(settings.bank?('Virement : '+settings.bank):'Compte de destination : à renseigner par la Direction.');document.getElementById('membershipFeeBig').textContent=settings.membershipFee+' €';document.getElementById('monthlyContribution').textContent='12 × '+settings.monthlyContribution+' €';document.getElementById('annualContribution').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('semesterContribution').textContent='2 × '+(settings.monthlyContribution*6)+' €';document.getElementById('membershipPaymentStatus').textContent=currentMember.paymentConfirmed?'Payé et validé':(currentMember.paymentDeclared?'À vérifier':'Non confirmé');document.getElementById('membershipPaymentStatus').className='badge '+(currentMember.paymentConfirmed?'badge-ok':currentMember.paymentDeclared?'badge-warn':'badge-off');const paidBox=document.getElementById('membershipPaidBox');const payForm=document.getElementById('membershipPaymentForm');if(paidBox)paidBox.classList.toggle('hidden',!currentMember.paymentConfirmed);if(payForm)payForm.classList.toggle('hidden',!!currentMember.paymentConfirmed);const paidDetails=document.getElementById('membershipPaidDetails');if(paidDetails&&currentMember.paymentConfirmed)paidDetails.textContent='Paiement confirmé par la Direction'+(currentMember.paymentDate?' le '+currentMember.paymentDate:'')+'. Vous êtes désormais adhérent actif et pouvez gérer vos cotisations.';setFormMode(currentMember.signatureMode||'electronic');const mfs=document.getElementById('manualFileStatus');if(mfs&&currentMember.manualSignedFileName)mfs.textContent='Document déjà enregistré : '+currentMember.manualSignedFileName;renderWorkflow();renderContributionMember();renderMemberSituation();}
 function saveProfile(){if(!currentMember)startNewMember();const required=['civility','lastName','firstName','birthDate','birthPlace','nationality','address','city','country','idType','idNumber','idIssue','idExpiry','email','phone'];for(const id of required){if(!val(id)){alert('Merci de compléter tous les champs obligatoires.');document.getElementById(id).focus();return}}if(!document.getElementById('diasporaEligibility').checked){alert('Merci de confirmer les conditions d’adhésion.');return}if(!val('profession')&&!val('degree')&&!val('expertise')){alert('Merci d’indiquer au moins votre métier/profession, votre diplôme ou votre expertise.');return}for(const id of ['civility','lastName','lastName2','firstName','firstName2','birthDate','birthPlace','nationality','address','postal','city','country','idType','idNumber','idIssue','idExpiry','email','phone','profession','degree','expertise'])currentMember[id]=val(id);currentMember.eligibilityConfirmed=true;currentMember.profileComplete=true;currentMember.status='Profil complété';
 const matchedIndex=findPlatformByEmail(currentMember.email);
 if(matchedIndex>=0){
@@ -1262,9 +1272,9 @@ if(matchedIndex>=0){
   platform[matchedIndex]={...platform[matchedIndex],firstName:currentMember.firstName,firstName2:currentMember.firstName2,lastName:currentMember.lastName,lastName2:currentMember.lastName2,email:currentMember.email,phone:currentMember.phone,country:currentMember.country,profession:currentMember.profession,expertise:currentMember.expertise,status:currentMember.active?'Actif':'Inscrit — adhésion en cours'};
 }upsertApplication();persist();hydrateMember();alert('Profil enregistré. Vous pouvez maintenant passer à la fiche et à la signature.');}
 function validateSmartForm(){if(!currentMember?.profileComplete){alert('Enregistrez d’abord votre profil.');return}if(!val('signPlace')||!val('signDate')||!document.getElementById('acceptRules').checked||!document.getElementById('acceptInitials').checked){alert('Complétez le lieu, la date et les deux validations de signature.');return}currentMember.signPlace=val('signPlace');currentMember.signDate=val('signDate');currentMember.signatureMode='electronic';currentMember.formSigned=true;currentMember.status='Fiche signée électroniquement';upsertApplication();persist();hydrateMember();closeModal('smartFormModal');alert('Fiche et signature enregistrées.');}
-function declarePayment(){if(!currentMember?.formSigned){alert('Validez d’abord la fiche d’adhésion et la signature.');return}if(!val('transactionRef')||!val('paymentDate')){alert('Indiquez la référence et la date du paiement.');return}currentMember.transactionRef=val('transactionRef');currentMember.paymentDate=val('paymentDate');currentMember.paymentMethod=document.querySelector('input[name=payMethod]:checked')?.value||'RTM Money';currentMember.paymentDeclared=true;currentMember.status='Paiement déclaré — contrôle Direction';upsertApplication();syncMemberEverywhere(currentMember);persist();hydrateMember();refreshDirection();alert('Paiement déclaré. La Direction doit maintenant le confirmer.');}
+function declarePayment(){if(!currentMember?.formSigned){alert('Validez d’abord la fiche d’adhésion et la signature.');return}if(!val('transactionRef')||!val('paymentDate')){alert('Indiquez la référence et la date du paiement.');return}currentMember.transactionRef=val('transactionRef');currentMember.paymentDate=val('paymentDate');currentMember.paymentMethod=document.querySelector('input[name=payMethod]:checked')?.value||'Airtel Money';currentMember.paymentDeclared=true;currentMember.status='Paiement déclaré — contrôle Direction';upsertApplication();syncMemberEverywhere(currentMember);persist();hydrateMember();refreshDirection();alert('Paiement déclaré. La Direction doit maintenant le confirmer.');}
 function upsertApplication(){const i=applications.findIndex(a=>a.id===currentMember.id);const copy=JSON.parse(JSON.stringify(currentMember));if(i>=0)applications[i]=copy;else applications.push(copy)}
-function renderWorkflow(){const states=[['Compte créé','Dossier ouvert',true],['Profil complété','Identité et expertise',currentMember?.profileComplete],['Fiche et signature','Document intelligent',currentMember?.formSigned],['Paiement adhésion','Droit d’adhésion',currentMember?.paymentDeclared],['Contrôle Direction','Paiement et dossier',currentMember?.paymentConfirmed],['Adhérent actif','Validation finale',currentMember?.active]];let activeIdx=states.findIndex(x=>!x[2]);if(activeIdx<0)activeIdx=5;document.getElementById('workflow').innerHTML=states.map((s,i)=>`<div class="wstep ${s[2]?'done':i===activeIdx?'active':''}"><b>${i+1}</b><span><strong>${s[0]}</strong><small>${s[1]}</small></span></div>`).join('');document.getElementById('workflowStatus').textContent=currentMember?.active?'Adhérent actif':currentMember?.status||'En préparation';document.getElementById('workflowStatus').className='badge '+(currentMember?.active?'badge-ok':'badge-warn');document.getElementById('paymentBadge').textContent=currentMember?.paymentConfirmed?'Payé & validé':currentMember?.paymentDeclared?'À vérifier':'À payer';document.getElementById('paymentBadge').className='badge '+(currentMember?.paymentConfirmed?'badge-ok':currentMember?.paymentDeclared?'badge-warn':'badge-off');}
+function renderWorkflow(){const states=[['Compte créé','Dossier ouvert',true],['Profil complété','Identité et expertise',currentMember?.profileComplete],['Fiche et signature','Document intelligent',currentMember?.formSigned],['Paiement adhésion','Droit d’adhésion',currentMember?.paymentDeclared],['Contrôle Direction','Paiement et dossier',currentMember?.paymentConfirmed],['Adhérent actif','Validation finale',currentMember?.active]];let activeIdx=states.findIndex(x=>!x[2]);if(activeIdx<0)activeIdx=5;document.getElementById('workflow').innerHTML=states.map((s,i)=>`<div class="wstep ${s[2]?'done':i===activeIdx?'active':''}"><b title="Étape ${i+1}">${i+1}</b><span><strong>Étape ${i+1} — ${s[0]}</strong><small>${s[1]}</small></span></div>`).join('');document.getElementById('workflowStatus').textContent=currentMember?.active?'Adhérent actif':currentMember?.status||'En préparation';document.getElementById('workflowStatus').className='badge '+(currentMember?.active?'badge-ok':'badge-warn');document.getElementById('paymentBadge').textContent=currentMember?.paymentConfirmed?'Payé & validé':currentMember?.paymentDeclared?'À vérifier':'À payer';document.getElementById('paymentBadge').className='badge '+(currentMember?.paymentConfirmed?'badge-ok':currentMember?.paymentDeclared?'badge-warn':'badge-off');}
 function openSmartForm(){if(!currentMember){startNewMember();return}fillSmartForm();openModal('smartFormModal')}
 function fillSmartForm(){const m=currentMember||{};const pairs={sfRef:m.id||'—',sfFee:settings.membershipFee+' € — une seule fois',sfContribution:settings.monthlyContribution+' €/mois — 12 mensualités ou 2 × '+(settings.monthlyContribution*6)+' €',sfStatus:m.active?'Adhérent actif':(m.status||'Dossier en préparation'),sfCivility:m.civility,sfLastName:[m.lastName,m.lastName2].filter(Boolean).join(' '),sfFirstName:[m.firstName,m.firstName2].filter(Boolean).join(' '),sfBirthDate:m.birthDate,sfBirthPlace:m.birthPlace,sfNationality:m.nationality,sfAddress:m.address,sfPostal:m.postal,sfCity:m.city,sfCountry:m.country,sfIdType:m.idType,sfIdNumber:m.idNumber,sfIssue:m.idIssue,sfExpiry:m.idExpiry,sfEmail:m.email,sfPhone:m.phone,sfProfession:m.profession,sfDegree:m.degree,sfExpertise:m.expertise,sfPlace:val('signPlace')||m.signPlace,sfDate:val('signDate')||m.signDate,sfInitials:initials(m)};Object.entries(pairs).forEach(([id,v])=>{document.getElementById(id).textContent=v||'—'})}
 function searchCandidate(){const q=val('candidateSearch').toLowerCase();const box=document.getElementById('candidateResults');if(!q){box.innerHTML='La liste complète sera importée depuis le fichier Excel existant.';return}const matches=platform.map((p,i)=>({...p,i})).filter(p=>((p.firstName||'')+' '+(p.lastName||'')+' '+(p.name||'')).toLowerCase().includes(q)).slice(0,6);box.innerHTML=matches.length?matches.map(p=>`<button class="btn btn-light" style="width:100%;justify-content:flex-start" onclick="enterMemberFromPlatform(${p.i})">${esc(((p.firstName||'')+' '+(p.lastName||'')).trim()||p.name)} — ${p.status||'Non actif'}</button>`).join(''):'Aucun nom trouvé. Vous pouvez créer un nouveau dossier.'}
@@ -1280,10 +1290,42 @@ function hydrateSettings(){setVal('setPlatformCount',settings.platformCount);set
 function saveSettings(){settings.platformCount=Number(val('setPlatformCount'))||0;settings.membershipFee=Number(val('setMembershipFee'))||0;settings.monthlyContribution=Number(val('setMonthly'))||0;settings.installments=Number(val('setInstallments'))||1;settings.airtel=val('setAirtel');settings.bank=val('setBank');persist();saveSettingsToFirebase().catch(console.error);refreshDirection();refreshLanding();hydrateMember();alert('Paramètres enregistrés et synchronisés dans Firebase.');}
 function refreshLanding(){document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:settings.platformCount;document.getElementById('landingActiveCount').textContent=activeMembers.length||Number(settings.activeCount||0);document.getElementById('landingMonthlyFee').textContent=settings.monthlyContribution+' € / mois';document.getElementById('landingFee').textContent=settings.membershipFee+' €'}
 function refreshDirection(){const pc=platform.length||settings.platformCount;document.getElementById('kPlatform').textContent=pc;document.getElementById('kInactive').textContent=Math.max(0,pc-activeMembers.length);document.getElementById('kPending').textContent=applications.filter(a=>!a.active).length;document.getElementById('kActive').textContent=activeMembers.length;document.getElementById('kRevenue').textContent=(activeMembers.length*settings.membershipFee)+' €';document.getElementById('dirMonthly').textContent=settings.monthlyContribution+' €';document.getElementById('dirAnnual').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('dirSemesters').textContent=(settings.monthlyContribution*6)+' € + '+(settings.monthlyContribution*6)+' €';renderApplications();renderActive();renderPlatform();renderHistory();renderContributionPayments()}
+
+// V6.2 — améliorations UX validées
+(function applyReviewerUx(){
+  // Fermer une modale en touchant uniquement son fond, jamais son contenu.
+  document.querySelectorAll('.modal').forEach(function(modal){
+    modal.addEventListener('click',function(e){if(e.target===modal)modal.classList.remove('open');});
+  });
+  // Footer discret dans les espaces applicatifs.
+  document.querySelectorAll('.app .main').forEach(function(main){
+    if(!main.querySelector('.g10-footer')){
+      var f=document.createElement('footer');f.className='g10-footer';
+      f.innerHTML='<b>G10 — Campagne d’adhésion</b><br>Adhésions, validation des dossiers et suivi des cotisations.';
+      main.appendChild(f);
+    }
+  });
+  // Navigation mobile simple : les trois fonctions essentielles de l’adhérent.
+  var member=document.getElementById('memberApp');
+  if(member&&!member.querySelector('.mobile-member-nav')){
+    var nav=document.createElement('nav');nav.className='mobile-member-nav';nav.setAttribute('aria-label','Navigation adhérent mobile');
+    nav.innerHTML='<button type="button" data-view="account"><span>👤</span>Mon compte</button><button type="button" data-view="payments"><span>💳</span>Paiements</button><button type="button" data-view="docs"><span>📄</span>Documents</button>';
+    nav.addEventListener('click',function(e){var b=e.target.closest('button[data-view]');if(!b)return;showMemberView(b.dataset.view,null);window.scrollTo({top:0,behavior:'smooth'});});
+    member.appendChild(nav);
+  }
+})();
+
 refreshLanding();hydrateSettings();
 loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
-<script src="v61.js?v=61"></script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
+  });
+}
+</script>
 </body>
 </html>
