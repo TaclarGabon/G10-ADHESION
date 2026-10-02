@@ -1523,7 +1523,7 @@ if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRo
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(console.error);
+    navigator.serviceWorker.register('./sw.js?v=20261002-1',{updateViaCache:'none'}).catch(console.error);
   });
 }
 </script>
