@@ -467,7 +467,7 @@
 <meta name="apple-mobile-web-app-title" content="G10 Adhésion">
 </head>
 <body>
-<!-- G10-ADHESION V6.3 ASTUCE PWA -->
+<!-- G10-ADHESION V6.4 COTISATION ANNUELLE CORRIGEE — WhatsApp inchangé -->
 <div id="landing" class="screen landing">
   <div class="container">
     <div class="landing-shell final-home">
@@ -490,7 +490,7 @@
           <button class="final-stat" onclick="openMembersInfo()"><span class="stat-ico blue">●●●</span><strong id="landingPlatformCount">910</strong><small>Membres sur la plateforme</small></button>
           <button class="final-stat" onclick="openActiveInfo()"><span class="stat-ico green">●</span><strong id="landingActiveCount">0</strong><small>Adhérents actifs</small></button>
           <button class="final-stat" onclick="openMembershipInfo()"><span class="stat-ico gold">●●</span><strong id="landingFee">10 €</strong><small>Droit d’adhésion — une seule fois</small></button>
-          <button class="final-stat" onclick="openContributionInfo()"><span class="stat-ico calendar">▦</span><strong id="landingMonthlyFee">10 € / mois</strong><small>Cotisation de référence</small></button>
+          <button class="final-stat" onclick="openContributionInfo()"><span class="stat-ico calendar">▦</span><strong id="landingMonthlyFee">120 € / an</strong><small>Cotisation annuelle</small></button>
         </div>
       </section>
 
@@ -672,17 +672,17 @@
 
         <div id="contributionUnlocked" class="hidden">
           <div class="grid3">
-            <div class="mini card"><span>Option mensuelle</span><strong id="monthlyContribution">12 × 10 €</strong></div>
+            <div class="mini card"><span>Option 1 — annuelle</span><strong id="monthlyContribution">120 € en 1 fois</strong></div>
             <div class="mini card"><span>Total sur 12 mois</span><strong id="annualContribution">120 €</strong></div>
             <div class="mini card"><span>Option en 2 fois</span><strong id="semesterContribution">2 × 60 €</strong></div>
           </div>
 
           <div class="notice" style="margin-top:12px">
-            Choisissez <b>12 mensualités</b> ou <b>2 versements semestriels</b>. Chaque paiement est déclaré puis confirmé par la Direction.
+            Choisissez <b>la cotisation annuelle en une seule fois</b> ou <b>2 versements de 60 €</b>. Chaque paiement est déclaré puis confirmé par la Direction.
           </div>
 
           <div class="contribution-plan-grid">
-            <label class="payment-option"><input type="radio" name="contributionPlan" value="monthly" onchange="refreshContributionForm()"><div><strong>Payer chaque mois</strong><small id="monthlyPlanText">10 € par mois pendant 12 mois.</small></div></label>
+            <label class="payment-option"><input type="radio" name="contributionPlan" value="monthly" onchange="refreshContributionForm()"><div><strong>Payer la cotisation annuelle en une fois</strong><small id="monthlyPlanText">120 € en une seule fois (10 € × 12).</small></div></label>
             <label class="payment-option"><input type="radio" name="contributionPlan" value="two" onchange="refreshContributionForm()"><div><strong>Payer en deux fois</strong><small id="twoPlanText">60 € maintenant puis 60 € six mois plus tard.</small></div></label>
           </div>
 
@@ -738,14 +738,14 @@
       <div class="card panel">
         <div class="panel-head"><div><h3>Suivi des cotisations</h3><p>Paiements déclarés par les adhérents actifs et confirmation par la Direction.</p></div><span class="badge badge-info" id="contributionPendingCount">0 à vérifier</span></div>
         <div class="notice">Le montant de référence reste paramétrable. Les déclarations ci-dessous doivent être confirmées par la Direction après vérification de la réception.</div>
-        <div class="grid3" style="margin-top:12px"><div class="card mini"><span>Référence mensuelle</span><strong id="dirMonthly">10 €</strong></div><div class="card mini"><span>Annuel</span><strong id="dirAnnual">120 €</strong></div><div class="card mini"><span>2 échéances</span><strong id="dirSemesters">60 € + 60 €</strong></div></div>
+        <div class="grid3" style="margin-top:12px"><div class="card mini"><span>Base de calcul</span><strong id="dirMonthly">10 € × 12</strong></div><div class="card mini"><span>Option 1 — annuel en 1 fois</span><strong id="dirAnnual">120 €</strong></div><div class="card mini"><span>Option 2 — 2 échéances</span><strong id="dirSemesters">60 € + 60 €</strong></div></div>
         <div class="action-row"><button class="btn btn-primary" onclick="showDirTab('settings')">Modifier les paramètres</button></div>
         <div class="sep"></div>
         <div class="table-wrap"><table class="table"><thead><tr><th>Adhérent</th><th>Plan</th><th>Échéance</th><th>Montant</th><th>Date</th><th>Mode</th><th>Référence</th><th>Statut / action</th></tr></thead><tbody id="contributionPaymentRows"></tbody></table></div>
       </div>
     </section>
 
-    <section id="dir-settings" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Paramètres de l’adhésion</h3><p>Ces montants peuvent être modifiés sans refaire l’application.</p></div><span class="badge badge-info">Direction / AG</span></div><div class="form-grid"><div class="field"><label>Nombre de membres sur la plateforme</label><input id="setPlatformCount" type="number" min="0" step="1"></div><div class="field"><label>Droit d’adhésion — une seule fois (€)</label><input id="setMembershipFee" type="number" min="0" step="1"></div><div class="field"><label>Cotisation mensuelle de référence (€)</label><input id="setMonthly" type="number" min="0" step="1"></div><div class="field"><label>Modalités de cotisation proposées</label><select id="setInstallments"><option value="2">12 mensualités ou 2 versements semestriels</option></select></div><div class="field"><label>N° Airtel Money</label><input id="setAirtel" placeholder="À renseigner"></div><div class="field full"><label>Coordonnées de virement bancaire</label><textarea id="setBank" placeholder="À renseigner"></textarea></div></div><div class="action-row"><button class="btn btn-primary" onclick="saveSettings()">Enregistrer les paramètres</button></div></div>
+    <section id="dir-settings" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Paramètres de l’adhésion</h3><p>Ces montants peuvent être modifiés sans refaire l’application.</p></div><span class="badge badge-info">Direction / AG</span></div><div class="form-grid"><div class="field"><label>Nombre de membres sur la plateforme</label><input id="setPlatformCount" type="number" min="0" step="1"></div><div class="field"><label>Droit d’adhésion — une seule fois (€)</label><input id="setMembershipFee" type="number" min="0" step="1"></div><div class="field"><label>Base de calcul de la cotisation annuelle (€ × 12)</label><input id="setMonthly" type="number" min="0" step="1"></div><div class="field"><label>Modalités de cotisation proposées</label><select id="setInstallments"><option value="2">Paiement annuel en 1 fois ou 2 versements semestriels</option></select></div><div class="field"><label>N° Airtel Money</label><input id="setAirtel" placeholder="À renseigner"></div><div class="field full"><label>Coordonnées de virement bancaire</label><textarea id="setBank" placeholder="À renseigner"></textarea></div></div><div class="action-row"><button class="btn btn-primary" onclick="saveSettings()">Enregistrer les paramètres</button></div></div>
 <div class="card panel demo-reset-card">
   <div class="panel-head"><div><h3>Réinitialisation de la démo</h3><p>Efface uniquement les comptes et simulations créés pendant les tests. La base plateforme, les montants, les documents et les paramètres Direction sont conservés.</p></div><span class="badge badge-warn">Démo</span></div>
   <div class="notice warn">Cette action remet à zéro les dossiers d’adhésion, adhérents actifs, cotisations déclarées et comptes de test. Les membres importés de la plateforme restent présents et repassent au statut « Non actif ».</div>
@@ -823,7 +823,7 @@ function openInfoCard(title,text){document.getElementById('infoCardTitle').textC
 function openMembersInfo(){openInfoCard('Membres sur la plateforme','Le nombre affiché est géré par la Direction dans <b>Paramètres</b>. Il peut être ajusté sans modifier l’application. La présence dans cette base ne signifie pas encore que la personne est adhérente active.')}
 function openActiveInfo(){openInfoCard('Adhérents actifs','Ce compteur est alimenté automatiquement lorsqu’un dossier d’adhésion est validé et que la personne passe au statut <b>Adhérent actif</b>.')}
 function openMembershipInfo(){openInfoCard('Droit d’adhésion','Le droit d’adhésion est obligatoire pour devenir adhérent actif. Il est actuellement fixé à <b>'+settings.membershipFee+' €</b> et se paie <b>une seule fois</b>.')}
-function openContributionInfo(){const m=settings.monthlyContribution;openInfoCard('Cotisation mensuelle de référence','La cotisation de référence est de <b>'+m+' € par mois</b>, soit '+(m*12)+' € sur 12 mois.<br><br><b>Option 1 — Mensuelle :</b> '+m+' € chaque mois pendant 12 mois.<br><b>Option 2 — En deux fois :</b> '+(m*6)+' € lors du premier versement puis '+(m*6)+' € six mois plus tard.<br><br>Le montant reste modifiable par la Direction selon les décisions de l’Assemblée générale.')}
+function openContributionInfo(){const m=settings.monthlyContribution;openInfoCard('Cotisation annuelle','La cotisation annuelle est calculée sur une base de <b>'+m+' € × 12</b>, soit <b>'+(m*12)+' €</b>.<br><br><b>Option 1 — En une fois :</b> '+(m*12)+' € en un seul paiement.<br><b>Option 2 — En deux fois :</b> '+(m*6)+' € lors du premier versement puis '+(m*6)+' € six mois plus tard.<br><br>Le montant reste modifiable par la Direction selon les décisions de l’Assemblée générale.')}
 
 
 const ACCOUNT_KEY='g10_accounts_v5';
@@ -1068,8 +1068,8 @@ function contributionSummary(member){
   const same=plan?all.filter(p=>p.plan===plan):[];
   const confirmed=same.filter(p=>p.status==='Confirmé');
   const pending=same.find(p=>p.status!=='Confirmé');
-  const max=plan==='two'?2:12;
-  const interval=plan==='two'?6:1;
+  const max=plan==='two'?2:1;
+  const interval=plan==='two'?6:12;
   let label='Non commencée',next='—';
   if(plan){label=confirmed.length+'/'+max+' paiement'+(confirmed.length>1?'s':'')+' confirmé'+(confirmed.length>1?'s':'');}
   if(pending){label+=(confirmed.length?' · ':'')+'1 à vérifier';next='En attente de validation Direction';}
@@ -1139,7 +1139,7 @@ function syncMemberEverywhere(member){
   if(currentMember?.id===member.id)currentMember=JSON.parse(JSON.stringify(member));
 }
 function contributionPaymentLabel(p){
-  if(p.plan==='monthly')return 'Mois '+p.sequence+' / 12';
+  if(p.plan==='monthly')return 'Cotisation annuelle / 1';
   return p.sequence===1?'1er versement / 2':'2e versement / 2';
 }
 function renderContributionMember(){
@@ -1160,7 +1160,7 @@ function renderContributionMember(){
   const mp=document.getElementById('monthlyPlanText');
   const tp=document.getElementById('twoPlanText');
   const at=document.getElementById('contributionAirtelText');
-  if(mp)mp.textContent=settings.monthlyContribution+' € par mois pendant 12 mois.';
+  if(mp)mp.textContent=(settings.monthlyContribution*12)+' € en une seule fois ('+settings.monthlyContribution+' € × 12).';
   if(tp)tp.textContent=(settings.monthlyContribution*6)+' € maintenant puis '+(settings.monthlyContribution*6)+' € six mois plus tard.';
   if(at)at.textContent='Numéro officiel : '+(settings.airtel||'+241 76 41 24 49');
 
@@ -1193,11 +1193,11 @@ function refreshContributionForm(){
     return;
   }
   if(plan==='monthly'){
-    if(nextSequence>12){
-      box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Les 12 mensualités ont été confirmées.';
+    if(nextSequence>1){
+      box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Le paiement annuel a été confirmé.';
       return;
     }
-    const confirmed=same.filter(p=>p.status==='Confirmé');const last=confirmed[confirmed.length-1];const due=last?.date?addMonthsIso(last.date,1):'';box.innerHTML=`<strong>Prochain paiement : mois ${nextSequence} / 12 - ${settings.monthlyContribution} €</strong>${due?'<br>À régler au plus tard le '+formatDateFr(due):''}<br>Après déclaration, la Direction vérifiera la réception.`;
+    box.innerHTML=`<strong>Cotisation annuelle : ${settings.monthlyContribution*12} € en une seule fois</strong><br>Base de calcul : ${settings.monthlyContribution} € × 12.<br>Après déclaration, la Direction vérifiera la réception.`;
   }else{
     if(nextSequence>2){
       box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Les deux versements ont été confirmés.';
@@ -1223,9 +1223,9 @@ function declareContributionPayment(){
   const same=currentMember.contributionPayments.filter(p=>p.plan===plan);
   if(same.some(p=>p.status!=='Confirmé')){alert('Le paiement précédent doit d’abord être confirmé par la Direction.');return}
   const sequence=same.length+1;
-  const max=plan==='monthly'?12:2;
+  const max=plan==='monthly'?1:2;
   if(sequence>max){alert('Toutes les échéances de ce plan ont déjà été confirmées.');return}
-  const amount=plan==='monthly'?settings.monthlyContribution:settings.monthlyContribution*6;
+  const amount=plan==='monthly'?settings.monthlyContribution*12:settings.monthlyContribution*6;
   const payment={
     id:'COT-'+Date.now(),
     plan,sequence,amount,date,method,reference,
@@ -1255,7 +1255,7 @@ function renderContributionPayments(){
   if(!body)return;
   body.innerHTML=rows.length?rows.map(({member,payment})=>{
     const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||member.email||member.id;
-    const plan=payment.plan==='monthly'?'Mensuel':'2 fois';
+    const plan=payment.plan==='monthly'?'Annuel — 1 fois':'2 fois';
     const action=payment.status==='Confirmé'
       ?'<span class="badge badge-ok">Confirmé</span>'
       :`<button class="btn btn-green" onclick="confirmContributionPayment('${member.id}','${payment.id}')">Confirmer</button>`;
@@ -1299,30 +1299,12 @@ function openOfficialDocument(key){
   if(btn)btn.onclick=()=>window.open(d.src,'_blank');
   openModal('officialDocsModal');
 }
-const G10_TEST_WHATSAPP='+1 778 808 2048';
-function whatsappDestinationNumber(){
-  // Mode test : ajouter ?wa=<numéro international> au lien public.
-  // Le numéro de test n'est pas enregistré dans Firebase et ne remplace pas le numéro Airtel Money.
-  try{
-    const q=new URLSearchParams(window.location.search).get('wa');
-    const digits=String(q||'').replace(/\D/g,'');
-    if(digits.length>=8){
-      sessionStorage.setItem('g10_test_whatsapp',digits);
-      return '+'+digits;
-    }
-    const saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
-    if(saved.length>=8)return '+'+saved;
-  }catch(e){}
-  // MODE DÉMO : numéro WhatsApp TEST persistant, même après fermeture/réouverture de la PWA.
-  return G10_TEST_WHATSAPP;
-}
 function sendWhatsAppPayment(){
   if(!currentMember) return alert('Ouvrez d’abord votre dossier.');
   const ref=val('transactionRef')||currentMember.transactionRef||'à renseigner';
   const date=val('paymentDate')||currentMember.paymentDate||'à renseigner';
   const name=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Adhérent';
-  const waNumber=whatsappDestinationNumber();
-  const phone=waNumber.replace(/\D/g,'');
+  const phone=String(settings.airtel||'+241 76 41 24 49').replace(/\D/g,'');
   const msg=`Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : ${name}\nDossier : ${currentMember.id}\nMontant : ${settings.membershipFee} €\nAirtel Money : ${settings.airtel||'+241 76 41 24 49'}\nRéférence transaction : ${ref}\nDate : ${date}\nMerci de vérifier et valider mon adhésion.`;
   window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener');
 }
@@ -1335,17 +1317,7 @@ function enterMember(){document.getElementById('landing').classList.add('hidden'
 function enterDirection(){if(!isPrivilegedRole()){alert('Accès réservé à la Direction et à l’administrateur de test.');return}document.getElementById('landing').classList.add('hidden');document.getElementById('memberApp').classList.add('hidden');document.getElementById('directionApp').classList.remove('hidden');const role=document.getElementById('dirRoleLabel');if(role)role.textContent=currentUserRole==='direction'?'Compte Direction — Firebase':'Administrateur de test — Firebase';hydrateSettings();refreshDirection();showDirTab('overview');}
 function showMemberView(name,btn){['account','docs','payments'].forEach(x=>document.getElementById('member-'+x).classList.toggle('hidden',x!==name));if(name==='payments')hydrateMember();if(btn){document.querySelectorAll('#memberApp .navbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}}
 function showDirTab(name,btn){['overview','platform','applications','active','history','contributions','settings'].forEach(x=>document.getElementById('dir-'+x).classList.toggle('hidden',x!==name));if(btn){document.querySelectorAll('#directionApp .navbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}const labels={overview:['Tableau de bord Direction','Suivi de la campagne, des dossiers et des adhérents actifs.'],platform:['Base plateforme','Membres existants à convertir progressivement en adhérents actifs.'],applications:['Dossiers d’adhésion','Contrôle des nouveaux dossiers créés pendant la campagne.'],active:['Adhérents actifs','Liste officielle des adhésions validées.'],history:['Historique','Dossiers validés archivés, modifiables ou supprimables.'],contributions:['Cotisations','Suivi des montants et échéances.'],settings:['Paramètres','Montants, moyens de paiement et documents officiels.']};document.getElementById('dirTitle').textContent=labels[name][0];document.getElementById('dirSubtitle').textContent=labels[name][1];if(name==='platform')renderPlatform();if(name==='applications')renderApplications();if(name==='active')renderActive();if(name==='history')renderHistory();}
-function hydrateMember(){if(!currentMember)return;normalizeContributionState();currentMember.signatureMode=currentMember.signatureMode||'electronic';[['civility','civility'],['lastName','lastName'],['lastName2','lastName2'],['firstName','firstName'],['firstName2','firstName2'],['birthDate','birthDate'],['birthPlace','birthPlace'],['nationality','nationality'],['address','address'],['postal','postal'],['city','city'],['country','country'],['idType','idType'],['idNumber','idNumber'],['idIssue','idIssue'],['idExpiry','idExpiry'],['email','email'],['phone','phone'],['profession','profession'],['degree','degree'],['expertise','expertise'],['signPlace','signPlace'],['signDate','signDate'],['transactionRef','transactionRef'],['paymentDate','paymentDate']].forEach(([id,key])=>setVal(id,currentMember[key]||''));document.getElementById('memberChipName').textContent=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Nouvel adhérent';document.getElementById('memberChipId').textContent=currentMember.id;document.getElementById('memberAvatar').textContent=initials(currentMember);document.getElementById('initialsPreview').textContent=initials(currentMember);const elElig=document.getElementById('diasporaEligibility');if(elElig)elElig.checked=!!currentMember.eligibilityConfirmed;document.getElementById('membershipFeeDisplay').value=settings.membershipFee+' € — une seule fois';document.getElementById('paymentAmount').textContent=settings.membershipFee+' €';document.getElementById('paymentReference').textContent=currentMember.id;{
-  const payDest=document.getElementById('paymentDestination');
-  const airtel=String(settings.airtel||'+241 76 41 24 49').trim();
-  const waDest=whatsappDestinationNumber();
-  const isWaTest=waDest.replace(/\D/g,'')!==airtel.replace(/\D/g,'');
-  payDest.textContent=isWaTest
-    ? ('Airtel Money officiel : '+airtel+'  •  WhatsApp TEST : '+waDest)
-    : (settings.airtel?('Airtel Money officiel : '+airtel):(settings.bank?('Virement : '+settings.bank):'Compte de destination : à renseigner par la Direction.'));
-  const waBtn=document.querySelector('button.whatsapp-btn[onclick="sendWhatsAppPayment()"]');
-  if(waBtn)waBtn.textContent=isWaTest?('Envoyer sur WhatsApp TEST ('+waDest+')'):'Envoyer la confirmation sur WhatsApp';
-}document.getElementById('membershipFeeBig').textContent=settings.membershipFee+' €';document.getElementById('monthlyContribution').textContent='12 × '+settings.monthlyContribution+' €';document.getElementById('annualContribution').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('semesterContribution').textContent='2 × '+(settings.monthlyContribution*6)+' €';document.getElementById('membershipPaymentStatus').textContent=currentMember.paymentConfirmed?'Payé et validé':(currentMember.paymentDeclared?'À vérifier':'Non confirmé');document.getElementById('membershipPaymentStatus').className='badge '+(currentMember.paymentConfirmed?'badge-ok':currentMember.paymentDeclared?'badge-warn':'badge-off');const paidBox=document.getElementById('membershipPaidBox');const payForm=document.getElementById('membershipPaymentForm');if(paidBox)paidBox.classList.toggle('hidden',!currentMember.paymentConfirmed);if(payForm)payForm.classList.toggle('hidden',!!currentMember.paymentConfirmed);const paidDetails=document.getElementById('membershipPaidDetails');if(paidDetails&&currentMember.paymentConfirmed)paidDetails.textContent='Paiement confirmé par la Direction'+(currentMember.paymentDate?' le '+currentMember.paymentDate:'')+'. Vous êtes désormais adhérent actif et pouvez gérer vos cotisations.';setFormMode(currentMember.signatureMode||'electronic');const mfs=document.getElementById('manualFileStatus');if(mfs&&currentMember.manualSignedFileName)mfs.textContent='Document déjà enregistré : '+currentMember.manualSignedFileName;renderWorkflow();renderContributionMember();renderMemberSituation();}
+function hydrateMember(){if(!currentMember)return;normalizeContributionState();currentMember.signatureMode=currentMember.signatureMode||'electronic';[['civility','civility'],['lastName','lastName'],['lastName2','lastName2'],['firstName','firstName'],['firstName2','firstName2'],['birthDate','birthDate'],['birthPlace','birthPlace'],['nationality','nationality'],['address','address'],['postal','postal'],['city','city'],['country','country'],['idType','idType'],['idNumber','idNumber'],['idIssue','idIssue'],['idExpiry','idExpiry'],['email','email'],['phone','phone'],['profession','profession'],['degree','degree'],['expertise','expertise'],['signPlace','signPlace'],['signDate','signDate'],['transactionRef','transactionRef'],['paymentDate','paymentDate']].forEach(([id,key])=>setVal(id,currentMember[key]||''));document.getElementById('memberChipName').textContent=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Nouvel adhérent';document.getElementById('memberChipId').textContent=currentMember.id;document.getElementById('memberAvatar').textContent=initials(currentMember);document.getElementById('initialsPreview').textContent=initials(currentMember);const elElig=document.getElementById('diasporaEligibility');if(elElig)elElig.checked=!!currentMember.eligibilityConfirmed;document.getElementById('membershipFeeDisplay').value=settings.membershipFee+' € — une seule fois';document.getElementById('paymentAmount').textContent=settings.membershipFee+' €';document.getElementById('paymentReference').textContent=currentMember.id;document.getElementById('paymentDestination').textContent=settings.airtel?('Airtel Money officiel : '+settings.airtel):(settings.bank?('Virement : '+settings.bank):'Compte de destination : à renseigner par la Direction.');document.getElementById('membershipFeeBig').textContent=settings.membershipFee+' €';document.getElementById('monthlyContribution').textContent=(settings.monthlyContribution*12)+' € en 1 fois';document.getElementById('annualContribution').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('semesterContribution').textContent='2 × '+(settings.monthlyContribution*6)+' €';document.getElementById('membershipPaymentStatus').textContent=currentMember.paymentConfirmed?'Payé et validé':(currentMember.paymentDeclared?'À vérifier':'Non confirmé');document.getElementById('membershipPaymentStatus').className='badge '+(currentMember.paymentConfirmed?'badge-ok':currentMember.paymentDeclared?'badge-warn':'badge-off');const paidBox=document.getElementById('membershipPaidBox');const payForm=document.getElementById('membershipPaymentForm');if(paidBox)paidBox.classList.toggle('hidden',!currentMember.paymentConfirmed);if(payForm)payForm.classList.toggle('hidden',!!currentMember.paymentConfirmed);const paidDetails=document.getElementById('membershipPaidDetails');if(paidDetails&&currentMember.paymentConfirmed)paidDetails.textContent='Paiement confirmé par la Direction'+(currentMember.paymentDate?' le '+currentMember.paymentDate:'')+'. Vous êtes désormais adhérent actif et pouvez gérer vos cotisations.';setFormMode(currentMember.signatureMode||'electronic');const mfs=document.getElementById('manualFileStatus');if(mfs&&currentMember.manualSignedFileName)mfs.textContent='Document déjà enregistré : '+currentMember.manualSignedFileName;renderWorkflow();renderContributionMember();renderMemberSituation();}
 function saveProfile(){if(!currentMember)startNewMember();const required=['civility','lastName','firstName','birthDate','birthPlace','nationality','address','city','country','idType','idNumber','idIssue','idExpiry','email','phone'];for(const id of required){if(!val(id)){alert('Merci de compléter tous les champs obligatoires.');document.getElementById(id).focus();return}}if(!document.getElementById('diasporaEligibility').checked){alert('Merci de confirmer les conditions d’adhésion.');return}if(!val('profession')&&!val('degree')&&!val('expertise')){alert('Merci d’indiquer au moins votre métier/profession, votre diplôme ou votre expertise.');return}for(const id of ['civility','lastName','lastName2','firstName','firstName2','birthDate','birthPlace','nationality','address','postal','city','country','idType','idNumber','idIssue','idExpiry','email','phone','profession','degree','expertise'])currentMember[id]=val(id);currentMember.eligibilityConfirmed=true;currentMember.profileComplete=true;currentMember.status='Profil complété';
 const matchedIndex=findPlatformByEmail(currentMember.email);
 if(matchedIndex>=0){
@@ -1357,115 +1329,20 @@ function declarePayment(){if(!currentMember?.formSigned){alert('Validez d’abor
 function upsertApplication(){const i=applications.findIndex(a=>a.id===currentMember.id);const copy=JSON.parse(JSON.stringify(currentMember));if(i>=0)applications[i]=copy;else applications.push(copy)}
 function renderWorkflow(){const states=[['Compte créé','Dossier ouvert',true],['Profil complété','Identité et expertise',currentMember?.profileComplete],['Fiche et signature','Document intelligent',currentMember?.formSigned],['Paiement adhésion','Droit d’adhésion',currentMember?.paymentDeclared],['Contrôle Direction','Paiement et dossier',currentMember?.paymentConfirmed],['Adhérent actif','Validation finale',currentMember?.active]];let activeIdx=states.findIndex(x=>!x[2]);if(activeIdx<0)activeIdx=5;document.getElementById('workflow').innerHTML=states.map((s,i)=>`<div class="wstep ${s[2]?'done':i===activeIdx?'active':''}"><b title="Étape ${i+1}">${i+1}</b><span><strong>Étape ${i+1} — ${s[0]}</strong><small>${s[1]}</small></span></div>`).join('');document.getElementById('workflowStatus').textContent=currentMember?.active?'Adhérent actif':currentMember?.status||'En préparation';document.getElementById('workflowStatus').className='badge '+(currentMember?.active?'badge-ok':'badge-warn');document.getElementById('paymentBadge').textContent=currentMember?.paymentConfirmed?'Payé & validé':currentMember?.paymentDeclared?'À vérifier':'À payer';document.getElementById('paymentBadge').className='badge '+(currentMember?.paymentConfirmed?'badge-ok':currentMember?.paymentDeclared?'badge-warn':'badge-off');}
 function openSmartForm(){if(!currentMember){startNewMember();return}fillSmartForm();openModal('smartFormModal')}
-function fillSmartForm(){const m=currentMember||{};const pairs={sfRef:m.id||'—',sfFee:settings.membershipFee+' € — une seule fois',sfContribution:settings.monthlyContribution+' €/mois — 12 mensualités ou 2 × '+(settings.monthlyContribution*6)+' €',sfStatus:m.active?'Adhérent actif':(m.status||'Dossier en préparation'),sfCivility:m.civility,sfLastName:[m.lastName,m.lastName2].filter(Boolean).join(' '),sfFirstName:[m.firstName,m.firstName2].filter(Boolean).join(' '),sfBirthDate:m.birthDate,sfBirthPlace:m.birthPlace,sfNationality:m.nationality,sfAddress:m.address,sfPostal:m.postal,sfCity:m.city,sfCountry:m.country,sfIdType:m.idType,sfIdNumber:m.idNumber,sfIssue:m.idIssue,sfExpiry:m.idExpiry,sfEmail:m.email,sfPhone:m.phone,sfProfession:m.profession,sfDegree:m.degree,sfExpertise:m.expertise,sfPlace:val('signPlace')||m.signPlace,sfDate:val('signDate')||m.signDate,sfInitials:initials(m)};Object.entries(pairs).forEach(([id,v])=>{document.getElementById(id).textContent=v||'—'})}
+function fillSmartForm(){const m=currentMember||{};const pairs={sfRef:m.id||'—',sfFee:settings.membershipFee+' € — une seule fois',sfContribution:(settings.monthlyContribution*12)+' € en 1 fois ou 2 × '+(settings.monthlyContribution*6)+' €',sfStatus:m.active?'Adhérent actif':(m.status||'Dossier en préparation'),sfCivility:m.civility,sfLastName:[m.lastName,m.lastName2].filter(Boolean).join(' '),sfFirstName:[m.firstName,m.firstName2].filter(Boolean).join(' '),sfBirthDate:m.birthDate,sfBirthPlace:m.birthPlace,sfNationality:m.nationality,sfAddress:m.address,sfPostal:m.postal,sfCity:m.city,sfCountry:m.country,sfIdType:m.idType,sfIdNumber:m.idNumber,sfIssue:m.idIssue,sfExpiry:m.idExpiry,sfEmail:m.email,sfPhone:m.phone,sfProfession:m.profession,sfDegree:m.degree,sfExpertise:m.expertise,sfPlace:val('signPlace')||m.signPlace,sfDate:val('signDate')||m.signDate,sfInitials:initials(m)};Object.entries(pairs).forEach(([id,v])=>{document.getElementById(id).textContent=v||'—'})}
 function searchCandidate(){const q=val('candidateSearch').toLowerCase();const box=document.getElementById('candidateResults');if(!q){box.innerHTML='La liste complète sera importée depuis le fichier Excel existant.';return}const matches=platform.map((p,i)=>({...p,i})).filter(p=>((p.firstName||'')+' '+(p.lastName||'')+' '+(p.name||'')).toLowerCase().includes(q)).slice(0,6);box.innerHTML=matches.length?matches.map(p=>`<button class="btn btn-light" style="width:100%;justify-content:flex-start" onclick="enterMemberFromPlatform(${p.i})">${esc(((p.firstName||'')+' '+(p.lastName||'')).trim()||p.name)} — ${p.status||'Non actif'}</button>`).join(''):'Aucun nom trouvé. Vous pouvez créer un nouveau dossier.'}
 function importCSV(){const f=document.getElementById('csvImport').files[0];if(!f){alert('Choisissez un fichier CSV.');return}const r=new FileReader();r.onload=()=>{const lines=String(r.result).split(/\r?\n/).filter(Boolean);if(lines.length<2){alert('Fichier vide.');return}const head=lines[0].split(',').map(x=>x.trim().toLowerCase());platform=lines.slice(1).map(line=>{const cols=line.split(',').map(x=>x.trim().replace(/^"|"$/g,''));const get=(...names)=>{for(const n of names){const i=head.indexOf(n);if(i>=0)return cols[i]||''}return''};return{firstName:get('prenom','prénom','first_name'),lastName:get('nom','last_name'),name:get('nom complet','name'),email:get('email','courriel'),phone:get('telephone','téléphone','phone'),country:get('pays','country'),profession:get('profession','metier','métier'),expertise:get('expertise','competences','compétences'),status:get('statut','status')||'Non actif'}}).filter(p=>p.firstName||p.lastName||p.name);settings.platformCount=platform.length||settings.platformCount;document.getElementById('platformImportBadge').textContent=platform.length+' importés';document.getElementById('platformImportBadge').className='badge badge-ok';persist();savePlatformToFirebase(platform).then(()=>updatePublicSummary()).catch(err=>console.error('Import plateforme Firebase',err));renderPlatform();refreshDirection();refreshLanding();alert(platform.length+' membres importés.');};r.readAsText(f,'utf-8')}
 function downloadPlatformTemplate(){downloadCSV('modele_membres_G10.csv',[['prenom','nom','email','telephone','pays','profession','expertise','statut'],['','','','','','','','Non actif']])}
 function renderPlatform(){const q=(document.getElementById('platformSearch')?.value||'').toLowerCase();const rows=platform.map((p,i)=>({...p,i})).filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q));document.getElementById('platformRows').innerHTML=rows.length?rows.map(p=>`<tr><td><b>${esc(((p.firstName||'')+' '+(p.lastName||'')).trim()||p.name||'—')}</b></td><td>${esc(p.email||p.phone||'—')}</td><td>${esc(p.country||'—')}</td><td>${esc(p.profession||p.expertise||'—')}</td><td><span class="badge ${p.status==='Actif'?'badge-ok':'badge-off'}">${esc(p.status||'Non actif')}</span></td><td><button class="btn btn-light" onclick="enterMemberFromPlatform(${p.i})">Ouvrir dossier</button></td></tr>`).join(''):'<tr><td colspan="6" class="muted">Aucune liste importée pour le moment.</td></tr>'}
 function renderApplications(){const pending=applications.filter(a=>!a.active);document.getElementById('appCount').textContent=pending.length+' dossier'+(pending.length>1?'s':'');document.getElementById('applicationRows').innerHTML=pending.length?pending.map(a=>`<tr><td><b>${esc(a.id)}</b></td><td>${esc([a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' ')||'À compléter')}<br><small>${esc(a.email||'')}</small></td><td>${a.profileComplete?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-warn">À compléter</span>'}</td><td>${a.formSigned?'<span class="badge badge-ok">'+(a.signatureMode==='manual'?'Manuscrite':'Électronique')+'</span>':'<span class="badge badge-warn">À signer</span>'}</td><td>${a.paymentConfirmed?'<span class="badge badge-ok">Confirmé</span>':a.paymentDeclared?'<span class="badge badge-warn">À vérifier</span>':'<span class="badge badge-off">Non déclaré</span>'}</td><td>${esc(a.expertise||a.profession||'—')}</td><td><button class="btn btn-green" ${!(a.profileComplete&&a.formSigned&&a.paymentDeclared)?'disabled':''} onclick="validateApplication('${a.id}')">Valider adhésion</button></td></tr>`).join(''):'<tr><td colspan="7" class="muted">Aucun dossier en attente. Les dossiers validés se trouvent dans Historique.</td></tr>'}
-function memberConfirmationWhatsAppNumber(member){
-  // Pendant une démo, ?wa=<numéro international> (ou le numéro mémorisé dans la session)
-  // force le retour WhatsApp vers le téléphone de test.
-  try{
-    const q=new URLSearchParams(window.location.search).get('wa');
-    const qDigits=String(q||'').replace(/\D/g,'');
-    if(qDigits.length>=8){
-      sessionStorage.setItem('g10_test_whatsapp',qDigits);
-      return '+'+qDigits;
-    }
-    const saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
-    if(saved.length>=8)return '+'+saved;
-  }catch(e){}
-  // MODE DÉMO : confirmation renvoyée vers le numéro WhatsApp TEST persistant.
-  // En production, remettre ici : return String(member?.phone||'').trim();
-  return G10_TEST_WHATSAPP;
-}
-function sendValidationWhatsApp(member){
-  if(!member)return;
-  const waNumber=memberConfirmationWhatsAppNumber(member);
-  const phone=waNumber.replace(/\D/g,'');
-  if(phone.length<8){
-    alert("Aucun numéro WhatsApp valide n'est enregistré pour cet adhérent.");
-    return;
-  }
-  const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||'Adhérent';
-  const validatedDate=member.membershipValidatedAt?new Date(member.membershipValidatedAt).toLocaleDateString('fr-FR'):new Date().toLocaleDateString('fr-FR');
-  const isTest=(G10_TEST_WHATSAPP.replace(/\D/g,'')===phone);
-  const msg=`Bonjour ${name},
-
-Votre paiement du droit d’adhésion G10 a bien été vérifié et votre adhésion est maintenant validée.
-
-Dossier : ${member.id}
-Statut : Adhésion payée et validée
-Date de validation : ${validatedDate}
-
-Merci et bienvenue au sein de G10.`;
-  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener');
-  if(isTest) console.info('Confirmation WhatsApp envoyée en mode TEST vers '+waNumber);
-}
-function openValidationConfirmation(member){
-  const previous=document.getElementById('validationWhatsAppModal');
-  if(previous)previous.remove();
-
-  const overlay=document.createElement('div');
-  overlay.id='validationWhatsAppModal';
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(11,53,90,.48);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-
-  const card=document.createElement('div');
-  card.style.cssText='width:min(520px,100%);background:#fff;border-radius:20px;box-shadow:0 22px 60px rgba(0,0,0,.22);padding:24px;color:#142234';
-
-  const title=document.createElement('h3');
-  title.textContent='Adhésion validée avec succès';
-  title.style.cssText='margin:0 0 10px;color:#0b355a;font-size:22px';
-
-  const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||'Adhérent';
-  const dest=memberConfirmationWhatsAppNumber(member);
-  const testDigits=G10_TEST_WHATSAPP.replace(/\D/g,'');
-  const destDigits=String(dest||'').replace(/\D/g,'');
-  const isTest=testDigits&&testDigits===destDigits;
-
-  const info=document.createElement('div');
-  info.style.cssText='line-height:1.6;margin-bottom:18px';
-  const p1=document.createElement('div'); p1.textContent='Adhérent : '+name;
-  const p2=document.createElement('div'); p2.textContent='Dossier : '+member.id;
-  const p3=document.createElement('div'); p3.textContent='Statut : Payée & validée';
-  info.append(p1,p2,p3);
-
-  const note=document.createElement('div');
-  note.style.cssText='background:#eef8f3;border:1px solid #cdebdc;border-radius:12px;padding:12px;margin-bottom:18px;font-size:14px';
-  note.textContent=isTest
-    ? 'MODE TEST — la confirmation WhatsApp sera ouverte vers '+dest+'.'
-    : 'La confirmation WhatsApp sera ouverte vers le numéro enregistré de l’adhérent'+(dest?' : '+dest+'.':'.');
-
-  const actions=document.createElement('div');
-  actions.style.cssText='display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end';
-
-  const close=document.createElement('button');
-  close.type='button';
-  close.className='btn btn-light';
-  close.textContent='← Retour';
-  close.onclick=()=>overlay.remove();
-
-  const send=document.createElement('button');
-  send.type='button';
-  send.className='btn btn-green';
-  send.textContent=isTest?'Envoyer la confirmation WhatsApp TEST':'Envoyer la confirmation WhatsApp';
-  send.onclick=()=>sendValidationWhatsApp(member);
-
-  actions.append(close,send);
-  card.append(title,info,note,actions);
-  overlay.append(card);
-  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
-  document.body.appendChild(overlay);
-}
-function validateApplication(id){const i=applications.findIndex(a=>a.id===id);if(i<0)return;const a=applications[i];a.paymentConfirmed=true;a.active=true;a.status='Adhérent actif';a.membershipValidatedAt=new Date().toISOString();if(!Array.isArray(a.contributionPayments))a.contributionPayments=[];applications[i]=a;const ai=activeMembers.findIndex(x=>x.id===id);if(ai>=0)activeMembers[ai]=JSON.parse(JSON.stringify(a));else activeMembers.push(JSON.parse(JSON.stringify(a)));if(a.platformIndex!==undefined&&platform[a.platformIndex])platform[a.platformIndex].status='Actif';if(currentMember?.id===id)currentMember=JSON.parse(JSON.stringify(a));persist();saveAnyMemberToFirebase(a).catch(console.error);if(a.platformIndex!==undefined)savePlatformEntryToFirebase(a.platformIndex).catch(console.error);updatePublicSummary().catch(console.error);refreshDirection();renderApplications();renderActive();renderHistory();if(currentMember?.id===id)hydrateMember();openValidationConfirmation(a);}
+function validateApplication(id){const i=applications.findIndex(a=>a.id===id);if(i<0)return;const a=applications[i];a.paymentConfirmed=true;a.active=true;a.status='Adhérent actif';a.membershipValidatedAt=new Date().toISOString();if(!Array.isArray(a.contributionPayments))a.contributionPayments=[];applications[i]=a;const ai=activeMembers.findIndex(x=>x.id===id);if(ai>=0)activeMembers[ai]=JSON.parse(JSON.stringify(a));else activeMembers.push(JSON.parse(JSON.stringify(a)));if(a.platformIndex!==undefined&&platform[a.platformIndex])platform[a.platformIndex].status='Actif';if(currentMember?.id===id)currentMember=JSON.parse(JSON.stringify(a));persist();saveAnyMemberToFirebase(a).catch(console.error);if(a.platformIndex!==undefined)savePlatformEntryToFirebase(a.platformIndex).catch(console.error);updatePublicSummary().catch(console.error);refreshDirection();renderApplications();renderActive();renderHistory();if(currentMember?.id===id)hydrateMember();alert('Adhésion validée : le droit d’adhésion est maintenant marqué payé et les cotisations sont ouvertes.');}
 function renderActive(){document.getElementById('activeRows').innerHTML=activeMembers.length?activeMembers.map(a=>{const cps=a.contributionPayments||[];const confirmed=cps.filter(p=>p.status==='Confirmé').reduce((s,p)=>s+Number(p.amount||0),0);const pending=cps.filter(p=>p.status!=='Confirmé').length;const cot=cps.length?(`<span class="badge ${pending?'badge-warn':'badge-ok'}">${confirmed} € confirmés${pending?' · '+pending+' à vérifier':''}</span>`):'<span class="badge badge-info">À démarrer</span>';return `<tr><td>${esc(a.id)}</td><td><b>${esc([a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' '))}</b></td><td>${esc(a.email||a.phone||'—')}</td><td>${esc(a.country||'—')}</td><td>${esc(a.expertise||a.profession||'—')}</td><td><span class="badge badge-ok">Payée & validée</span></td><td>${cot}</td></tr>`}).join(''):'<tr><td colspan="7" class="muted">Aucun adhérent actif pour le moment.</td></tr>'}
 function exportActiveCSV(){const rows=[['id','prenom','nom','email','telephone','pays','profession','expertise','statut'],...activeMembers.map(a=>[a.id,a.firstName,a.lastName,a.email,a.phone,a.country,a.profession,a.expertise,'Actif'])];downloadCSV('adherents_actifs_G10.csv',rows)}
 function downloadCSV(name,rows){const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
 function hydrateSettings(){setVal('setPlatformCount',settings.platformCount);setVal('setMembershipFee',settings.membershipFee);setVal('setMonthly',settings.monthlyContribution);setVal('setInstallments',settings.installments);setVal('setAirtel',settings.airtel);setVal('setBank',settings.bank)}
 function saveSettings(){settings.platformCount=Number(val('setPlatformCount'))||0;settings.membershipFee=Number(val('setMembershipFee'))||0;settings.monthlyContribution=Number(val('setMonthly'))||0;settings.installments=Number(val('setInstallments'))||1;settings.airtel=val('setAirtel');settings.bank=val('setBank');persist();saveSettingsToFirebase().catch(console.error);refreshDirection();refreshLanding();hydrateMember();alert('Paramètres enregistrés et synchronisés dans Firebase.');}
-function refreshLanding(){document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:settings.platformCount;document.getElementById('landingActiveCount').textContent=activeMembers.length||Number(settings.activeCount||0);document.getElementById('landingMonthlyFee').textContent=settings.monthlyContribution+' € / mois';document.getElementById('landingFee').textContent=settings.membershipFee+' €'}
-function refreshDirection(){const pc=platform.length||settings.platformCount;document.getElementById('kPlatform').textContent=pc;document.getElementById('kInactive').textContent=Math.max(0,pc-activeMembers.length);document.getElementById('kPending').textContent=applications.filter(a=>!a.active).length;document.getElementById('kActive').textContent=activeMembers.length;document.getElementById('kRevenue').textContent=(activeMembers.length*settings.membershipFee)+' €';document.getElementById('dirMonthly').textContent=settings.monthlyContribution+' €';document.getElementById('dirAnnual').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('dirSemesters').textContent=(settings.monthlyContribution*6)+' € + '+(settings.monthlyContribution*6)+' €';renderApplications();renderActive();renderPlatform();renderHistory();renderContributionPayments()}
+function refreshLanding(){document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:settings.platformCount;document.getElementById('landingActiveCount').textContent=activeMembers.length||Number(settings.activeCount||0);document.getElementById('landingMonthlyFee').textContent=(settings.monthlyContribution*12)+' € / an';document.getElementById('landingFee').textContent=settings.membershipFee+' €'}
+function refreshDirection(){const pc=platform.length||settings.platformCount;document.getElementById('kPlatform').textContent=pc;document.getElementById('kInactive').textContent=Math.max(0,pc-activeMembers.length);document.getElementById('kPending').textContent=applications.filter(a=>!a.active).length;document.getElementById('kActive').textContent=activeMembers.length;document.getElementById('kRevenue').textContent=(activeMembers.length*settings.membershipFee)+' €';document.getElementById('dirMonthly').textContent=settings.monthlyContribution+' € × 12';document.getElementById('dirAnnual').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('dirSemesters').textContent=(settings.monthlyContribution*6)+' € + '+(settings.monthlyContribution*6)+' €';renderApplications();renderActive();renderPlatform();renderHistory();renderContributionPayments()}
 
 // V6.2 — améliorations UX validées
 (function applyReviewerUx(){
@@ -1523,7 +1400,7 @@ if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRo
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=20261002-1',{updateViaCache:'none'}).catch(console.error);
+    navigator.serviceWorker.register('./sw.js').catch(console.error);
   });
 }
 </script>
