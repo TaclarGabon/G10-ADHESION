@@ -1299,6 +1299,7 @@ function openOfficialDocument(key){
   if(btn)btn.onclick=()=>window.open(d.src,'_blank');
   openModal('officialDocsModal');
 }
+const G10_TEST_WHATSAPP='+1 778 808 2048';
 function whatsappDestinationNumber(){
   // Mode test : ajouter ?wa=<numéro international> au lien public.
   // Le numéro de test n'est pas enregistré dans Firebase et ne remplace pas le numéro Airtel Money.
@@ -1312,7 +1313,8 @@ function whatsappDestinationNumber(){
     const saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
     if(saved.length>=8)return '+'+saved;
   }catch(e){}
-  return String(settings.airtel||'+241 76 41 24 49').trim();
+  // MODE DÉMO : numéro WhatsApp TEST persistant, même après fermeture/réouverture de la PWA.
+  return G10_TEST_WHATSAPP;
 }
 function sendWhatsAppPayment(){
   if(!currentMember) return alert('Ouvrez d’abord votre dossier.');
@@ -1374,8 +1376,9 @@ function memberConfirmationWhatsAppNumber(member){
     const saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
     if(saved.length>=8)return '+'+saved;
   }catch(e){}
-  // En utilisation réelle, la confirmation repart vers le numéro enregistré dans le dossier adhérent.
-  return String(member?.phone||'').trim();
+  // MODE DÉMO : confirmation renvoyée vers le numéro WhatsApp TEST persistant.
+  // En production, remettre ici : return String(member?.phone||'').trim();
+  return G10_TEST_WHATSAPP;
 }
 function sendValidationWhatsApp(member){
   if(!member)return;
@@ -1387,7 +1390,7 @@ function sendValidationWhatsApp(member){
   }
   const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||'Adhérent';
   const validatedDate=member.membershipValidatedAt?new Date(member.membershipValidatedAt).toLocaleDateString('fr-FR'):new Date().toLocaleDateString('fr-FR');
-  const isTest=(String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'')===phone);
+  const isTest=(G10_TEST_WHATSAPP.replace(/\D/g,'')===phone);
   const msg=`Bonjour ${name},
 
 Votre paiement du droit d’adhésion G10 a bien été vérifié et votre adhésion est maintenant validée.
@@ -1417,7 +1420,7 @@ function openValidationConfirmation(member){
 
   const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||'Adhérent';
   const dest=memberConfirmationWhatsAppNumber(member);
-  const testDigits=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
+  const testDigits=G10_TEST_WHATSAPP.replace(/\D/g,'');
   const destDigits=String(dest||'').replace(/\D/g,'');
   const isTest=testDigits&&testDigits===destDigits;
 
