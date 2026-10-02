@@ -421,6 +421,42 @@
   .mobile-member-nav button{border:0;background:#fff;padding:10px 4px 9px;color:#24425f;font-weight:800;font-size:11px;line-height:1.2}
   .mobile-member-nav button span{display:block;font-size:18px;margin-bottom:3px}
 }
+
+/* =========================================================
+   V6.3 — ASTUCE PWA VALIDÉE
+   ========================================================= */
+.landing-copy h1{font-size:clamp(40px,4.65vw,62px)!important}
+.home-login-card{padding:24px 26px 22px!important}
+.home-login-avatar{width:72px!important;height:72px!important}
+.home-login-card h2{font-size:29px!important;margin-bottom:18px!important}
+.home-login-card input{min-height:49px!important}
+.home-login-btn{min-height:47px!important}
+.home-install-tip{display:flex;align-items:center;justify-content:center;gap:7px;margin:12px auto 0;padding:7px 13px;border:1px solid #b9d5ea;border-radius:999px;background:rgba(255,255,255,.92);color:#0876c9;font-weight:900;font-size:13px;box-shadow:0 5px 14px rgba(13,68,111,.08)}
+.home-install-tip:hover{background:#f2f8fd}
+.install-help-overlay{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(8,35,58,.76);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.install-help-overlay.open{display:flex}
+.install-help-card{position:relative;width:min(560px,100%);max-height:92dvh;overflow:auto;background:#fff;border:1px solid rgba(255,255,255,.9);border-radius:22px;padding:24px;box-shadow:0 30px 90px rgba(0,0,0,.34);color:#142234}
+.install-help-card h3{margin:0 42px 8px 0;color:#0b355a;font-size:22px}
+.install-help-card>p{margin:0 0 16px;color:#526579;line-height:1.45}
+.install-help-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border:0;border-radius:50%;background:#eef4f9;color:#0b4a7a;font-size:23px;line-height:1}
+.install-help-list{display:grid;gap:10px}
+.install-help-item{display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;padding:13px;border:1px solid #dce5ef;border-radius:14px;background:#fbfdff}
+.install-help-ico{width:42px;height:42px;display:grid;place-items:center;border-radius:11px;background:#edf6fd;color:#0b4a7a;font-size:24px}
+.install-help-item strong{display:block;color:#0b355a;margin-bottom:3px}
+.install-help-item span{display:block;color:#425a70;font-size:14px;line-height:1.4}
+@media(max-width:520px){
+  .landing-copy h1{font-size:35px!important}
+  .home-login-card{padding:19px 15px 17px!important}
+  .home-login-avatar{width:66px!important;height:66px!important}
+  .home-login-card h2{font-size:25px!important}
+  .install-help-overlay{padding:10px}
+  .install-help-card{width:100%;max-height:94dvh;padding:20px 15px 16px;border-radius:18px}
+  .install-help-card h3{font-size:19px}
+  .install-help-item{grid-template-columns:38px 1fr;padding:11px;gap:9px}
+  .install-help-ico{width:36px;height:36px;font-size:21px}
+  .install-help-item span{font-size:13px}
+}
+
 </style>
 
 <link rel="manifest" href="./manifest.webmanifest">
@@ -431,6 +467,7 @@
 <meta name="apple-mobile-web-app-title" content="G10 Adhésion">
 </head>
 <body>
+<!-- G10-ADHESION V6.3 ASTUCE PWA -->
 <div id="landing" class="screen landing">
   <div class="container">
     <div class="landing-shell final-home">
@@ -476,10 +513,26 @@
         <button class="home-forgot" onclick="forgotPassword()">Mot de passe oublié ?</button>
         <div class="muted" style="font-size:12px;line-height:1.45;margin-top:8px">Direction, administrateur de test et adhérents utilisent ce même accès sécurisé.</div>
         <div id="homeLoginMessage" class="home-login-message"></div>
+        <button type="button" class="home-install-tip" onclick="openInstallTip()" aria-haspopup="dialog" aria-controls="installTipModal">⭐ Astuce</button>
       </aside>
     </div>
   </div>
 </div>
+
+
+<div id="installTipModal" class="install-help-overlay" aria-hidden="true">
+  <div class="install-help-card" role="dialog" aria-modal="true" aria-labelledby="installTipTitle">
+    <button type="button" class="install-help-close" onclick="closeInstallTip()" aria-label="Fermer">×</button>
+    <h3 id="installTipTitle">⭐ Astuce : Installer G10 Adhésion</h3>
+    <p>Ajoutez G10 Adhésion à votre écran d’accueil pour un accès rapide.</p>
+    <div class="install-help-list">
+      <div class="install-help-item"><div class="install-help-ico">💻</div><div><strong>Sur ordinateur (Windows / Mac)</strong><span>Cliquez sur « Installer » dans la barre d’adresse de votre navigateur.</span></div></div>
+      <div class="install-help-item"><div class="install-help-ico">📱</div><div><strong>Sur Android (Chrome)</strong><span>Touchez le menu ⋮, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».</span></div></div>
+      <div class="install-help-item"><div class="install-help-ico"></div><div><strong>Sur iPhone (Safari)</strong><span>Touchez Partager, puis « Sur l’écran d’accueil ».</span></div></div>
+    </div>
+  </div>
+</div>
+
 
 
 <div id="memberApp" class="app hidden">
@@ -1246,27 +1299,12 @@ function openOfficialDocument(key){
   if(btn)btn.onclick=()=>window.open(d.src,'_blank');
   openModal('officialDocsModal');
 }
-function whatsappDestinationNumber(){
-  const official=String(settings.airtel||'+241 76 41 24 49').trim();
-  try{
-    const q=new URLSearchParams(window.location.search).get('wa');
-    const digits=String(q||'').replace(/\D/g,'');
-    if(digits.length>=8){
-      sessionStorage.setItem('g10_test_whatsapp',digits);
-      return '+'+digits;
-    }
-    const saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
-    if(saved.length>=8)return '+'+saved;
-  }catch(e){}
-  return official;
-}
 function sendWhatsAppPayment(){
   if(!currentMember) return alert('Ouvrez d’abord votre dossier.');
   const ref=val('transactionRef')||currentMember.transactionRef||'à renseigner';
   const date=val('paymentDate')||currentMember.paymentDate||'à renseigner';
   const name=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Adhérent';
-  const waDest=whatsappDestinationNumber();
-  const phone=waDest.replace(/\D/g,'');
+  const phone=String(settings.airtel||'+241 76 41 24 49').replace(/\D/g,'');
   const msg=`Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : ${name}\nDossier : ${currentMember.id}\nMontant : ${settings.membershipFee} €\nAirtel Money : ${settings.airtel||'+241 76 41 24 49'}\nRéférence transaction : ${ref}\nDate : ${date}\nMerci de vérifier et valider mon adhésion.`;
   window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener');
 }
@@ -1279,14 +1317,7 @@ function enterMember(){document.getElementById('landing').classList.add('hidden'
 function enterDirection(){if(!isPrivilegedRole()){alert('Accès réservé à la Direction et à l’administrateur de test.');return}document.getElementById('landing').classList.add('hidden');document.getElementById('memberApp').classList.add('hidden');document.getElementById('directionApp').classList.remove('hidden');const role=document.getElementById('dirRoleLabel');if(role)role.textContent=currentUserRole==='direction'?'Compte Direction — Firebase':'Administrateur de test — Firebase';hydrateSettings();refreshDirection();showDirTab('overview');}
 function showMemberView(name,btn){['account','docs','payments'].forEach(x=>document.getElementById('member-'+x).classList.toggle('hidden',x!==name));if(name==='payments')hydrateMember();if(btn){document.querySelectorAll('#memberApp .navbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}}
 function showDirTab(name,btn){['overview','platform','applications','active','history','contributions','settings'].forEach(x=>document.getElementById('dir-'+x).classList.toggle('hidden',x!==name));if(btn){document.querySelectorAll('#directionApp .navbtn').forEach(b=>b.classList.remove('active'));btn.classList.add('active')}const labels={overview:['Tableau de bord Direction','Suivi de la campagne, des dossiers et des adhérents actifs.'],platform:['Base plateforme','Membres existants à convertir progressivement en adhérents actifs.'],applications:['Dossiers d’adhésion','Contrôle des nouveaux dossiers créés pendant la campagne.'],active:['Adhérents actifs','Liste officielle des adhésions validées.'],history:['Historique','Dossiers validés archivés, modifiables ou supprimables.'],contributions:['Cotisations','Suivi des montants et échéances.'],settings:['Paramètres','Montants, moyens de paiement et documents officiels.']};document.getElementById('dirTitle').textContent=labels[name][0];document.getElementById('dirSubtitle').textContent=labels[name][1];if(name==='platform')renderPlatform();if(name==='applications')renderApplications();if(name==='active')renderActive();if(name==='history')renderHistory();}
-function hydrateMember(){if(!currentMember)return;normalizeContributionState();currentMember.signatureMode=currentMember.signatureMode||'electronic';[['civility','civility'],['lastName','lastName'],['lastName2','lastName2'],['firstName','firstName'],['firstName2','firstName2'],['birthDate','birthDate'],['birthPlace','birthPlace'],['nationality','nationality'],['address','address'],['postal','postal'],['city','city'],['country','country'],['idType','idType'],['idNumber','idNumber'],['idIssue','idIssue'],['idExpiry','idExpiry'],['email','email'],['phone','phone'],['profession','profession'],['degree','degree'],['expertise','expertise'],['signPlace','signPlace'],['signDate','signDate'],['transactionRef','transactionRef'],['paymentDate','paymentDate']].forEach(([id,key])=>setVal(id,currentMember[key]||''));document.getElementById('memberChipName').textContent=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Nouvel adhérent';document.getElementById('memberChipId').textContent=currentMember.id;document.getElementById('memberAvatar').textContent=initials(currentMember);document.getElementById('initialsPreview').textContent=initials(currentMember);const elElig=document.getElementById('diasporaEligibility');if(elElig)elElig.checked=!!currentMember.eligibilityConfirmed;document.getElementById('membershipFeeDisplay').value=settings.membershipFee+' € — une seule fois';document.getElementById('paymentAmount').textContent=settings.membershipFee+' €';document.getElementById('paymentReference').textContent=currentMember.id;{
-  const officialAirtel=settings.airtel||'+241 76 41 24 49';
-  const waTest=whatsappDestinationNumber();
-  const testActive=waTest.replace(/\D/g,'')!==String(officialAirtel).replace(/\D/g,'');
-  document.getElementById('paymentDestination').textContent=settings.airtel
-    ?('Airtel Money officiel : '+officialAirtel+(testActive?' • WhatsApp TEST : '+waTest:''))
-    :(settings.bank?('Virement : '+settings.bank):'Compte de destination : à renseigner par la Direction.');
-}document.getElementById('membershipFeeBig').textContent=settings.membershipFee+' €';document.getElementById('monthlyContribution').textContent='12 × '+settings.monthlyContribution+' €';document.getElementById('annualContribution').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('semesterContribution').textContent='2 × '+(settings.monthlyContribution*6)+' €';document.getElementById('membershipPaymentStatus').textContent=currentMember.paymentConfirmed?'Payé et validé':(currentMember.paymentDeclared?'À vérifier':'Non confirmé');document.getElementById('membershipPaymentStatus').className='badge '+(currentMember.paymentConfirmed?'badge-ok':currentMember.paymentDeclared?'badge-warn':'badge-off');const paidBox=document.getElementById('membershipPaidBox');const payForm=document.getElementById('membershipPaymentForm');if(paidBox)paidBox.classList.toggle('hidden',!currentMember.paymentConfirmed);if(payForm)payForm.classList.toggle('hidden',!!currentMember.paymentConfirmed);const paidDetails=document.getElementById('membershipPaidDetails');if(paidDetails&&currentMember.paymentConfirmed)paidDetails.textContent='Paiement confirmé par la Direction'+(currentMember.paymentDate?' le '+currentMember.paymentDate:'')+'. Vous êtes désormais adhérent actif et pouvez gérer vos cotisations.';setFormMode(currentMember.signatureMode||'electronic');const mfs=document.getElementById('manualFileStatus');if(mfs&&currentMember.manualSignedFileName)mfs.textContent='Document déjà enregistré : '+currentMember.manualSignedFileName;renderWorkflow();renderContributionMember();renderMemberSituation();}
+function hydrateMember(){if(!currentMember)return;normalizeContributionState();currentMember.signatureMode=currentMember.signatureMode||'electronic';[['civility','civility'],['lastName','lastName'],['lastName2','lastName2'],['firstName','firstName'],['firstName2','firstName2'],['birthDate','birthDate'],['birthPlace','birthPlace'],['nationality','nationality'],['address','address'],['postal','postal'],['city','city'],['country','country'],['idType','idType'],['idNumber','idNumber'],['idIssue','idIssue'],['idExpiry','idExpiry'],['email','email'],['phone','phone'],['profession','profession'],['degree','degree'],['expertise','expertise'],['signPlace','signPlace'],['signDate','signDate'],['transactionRef','transactionRef'],['paymentDate','paymentDate']].forEach(([id,key])=>setVal(id,currentMember[key]||''));document.getElementById('memberChipName').textContent=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Nouvel adhérent';document.getElementById('memberChipId').textContent=currentMember.id;document.getElementById('memberAvatar').textContent=initials(currentMember);document.getElementById('initialsPreview').textContent=initials(currentMember);const elElig=document.getElementById('diasporaEligibility');if(elElig)elElig.checked=!!currentMember.eligibilityConfirmed;document.getElementById('membershipFeeDisplay').value=settings.membershipFee+' € — une seule fois';document.getElementById('paymentAmount').textContent=settings.membershipFee+' €';document.getElementById('paymentReference').textContent=currentMember.id;document.getElementById('paymentDestination').textContent=settings.airtel?('Airtel Money officiel : '+settings.airtel):(settings.bank?('Virement : '+settings.bank):'Compte de destination : à renseigner par la Direction.');document.getElementById('membershipFeeBig').textContent=settings.membershipFee+' €';document.getElementById('monthlyContribution').textContent='12 × '+settings.monthlyContribution+' €';document.getElementById('annualContribution').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('semesterContribution').textContent='2 × '+(settings.monthlyContribution*6)+' €';document.getElementById('membershipPaymentStatus').textContent=currentMember.paymentConfirmed?'Payé et validé':(currentMember.paymentDeclared?'À vérifier':'Non confirmé');document.getElementById('membershipPaymentStatus').className='badge '+(currentMember.paymentConfirmed?'badge-ok':currentMember.paymentDeclared?'badge-warn':'badge-off');const paidBox=document.getElementById('membershipPaidBox');const payForm=document.getElementById('membershipPaymentForm');if(paidBox)paidBox.classList.toggle('hidden',!currentMember.paymentConfirmed);if(payForm)payForm.classList.toggle('hidden',!!currentMember.paymentConfirmed);const paidDetails=document.getElementById('membershipPaidDetails');if(paidDetails&&currentMember.paymentConfirmed)paidDetails.textContent='Paiement confirmé par la Direction'+(currentMember.paymentDate?' le '+currentMember.paymentDate:'')+'. Vous êtes désormais adhérent actif et pouvez gérer vos cotisations.';setFormMode(currentMember.signatureMode||'electronic');const mfs=document.getElementById('manualFileStatus');if(mfs&&currentMember.manualSignedFileName)mfs.textContent='Document déjà enregistré : '+currentMember.manualSignedFileName;renderWorkflow();renderContributionMember();renderMemberSituation();}
 function saveProfile(){if(!currentMember)startNewMember();const required=['civility','lastName','firstName','birthDate','birthPlace','nationality','address','city','country','idType','idNumber','idIssue','idExpiry','email','phone'];for(const id of required){if(!val(id)){alert('Merci de compléter tous les champs obligatoires.');document.getElementById(id).focus();return}}if(!document.getElementById('diasporaEligibility').checked){alert('Merci de confirmer les conditions d’adhésion.');return}if(!val('profession')&&!val('degree')&&!val('expertise')){alert('Merci d’indiquer au moins votre métier/profession, votre diplôme ou votre expertise.');return}for(const id of ['civility','lastName','lastName2','firstName','firstName2','birthDate','birthPlace','nationality','address','postal','city','country','idType','idNumber','idIssue','idExpiry','email','phone','profession','degree','expertise'])currentMember[id]=val(id);currentMember.eligibilityConfirmed=true;currentMember.profileComplete=true;currentMember.status='Profil complété';
 const matchedIndex=findPlatformByEmail(currentMember.email);
 if(matchedIndex>=0){
@@ -1336,6 +1367,30 @@ function refreshDirection(){const pc=platform.length||settings.platformCount;doc
     member.appendChild(nav);
   }
 })();
+
+
+function openInstallTip(){
+  const modal=document.getElementById('installTipModal');
+  if(!modal)return;
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  document.body.style.overflow='hidden';
+  const closeBtn=modal.querySelector('.install-help-close');
+  if(closeBtn)setTimeout(()=>closeBtn.focus(),0);
+}
+function closeInstallTip(){
+  const modal=document.getElementById('installTipModal');
+  if(!modal)return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    const modal=document.getElementById('installTipModal');
+    if(modal&&modal.classList.contains('open'))closeInstallTip();
+  }
+});
 
 refreshLanding();hydrateSettings();
 loadPublicSettings();
