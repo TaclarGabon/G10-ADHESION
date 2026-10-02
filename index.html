@@ -1361,7 +1361,101 @@ function importCSV(){const f=document.getElementById('csvImport').files[0];if(!f
 function downloadPlatformTemplate(){downloadCSV('modele_membres_G10.csv',[['prenom','nom','email','telephone','pays','profession','expertise','statut'],['','','','','','','','Non actif']])}
 function renderPlatform(){const q=(document.getElementById('platformSearch')?.value||'').toLowerCase();const rows=platform.map((p,i)=>({...p,i})).filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q));document.getElementById('platformRows').innerHTML=rows.length?rows.map(p=>`<tr><td><b>${esc(((p.firstName||'')+' '+(p.lastName||'')).trim()||p.name||'—')}</b></td><td>${esc(p.email||p.phone||'—')}</td><td>${esc(p.country||'—')}</td><td>${esc(p.profession||p.expertise||'—')}</td><td><span class="badge ${p.status==='Actif'?'badge-ok':'badge-off'}">${esc(p.status||'Non actif')}</span></td><td><button class="btn btn-light" onclick="enterMemberFromPlatform(${p.i})">Ouvrir dossier</button></td></tr>`).join(''):'<tr><td colspan="6" class="muted">Aucune liste importée pour le moment.</td></tr>'}
 function renderApplications(){const pending=applications.filter(a=>!a.active);document.getElementById('appCount').textContent=pending.length+' dossier'+(pending.length>1?'s':'');document.getElementById('applicationRows').innerHTML=pending.length?pending.map(a=>`<tr><td><b>${esc(a.id)}</b></td><td>${esc([a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' ')||'À compléter')}<br><small>${esc(a.email||'')}</small></td><td>${a.profileComplete?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-warn">À compléter</span>'}</td><td>${a.formSigned?'<span class="badge badge-ok">'+(a.signatureMode==='manual'?'Manuscrite':'Électronique')+'</span>':'<span class="badge badge-warn">À signer</span>'}</td><td>${a.paymentConfirmed?'<span class="badge badge-ok">Confirmé</span>':a.paymentDeclared?'<span class="badge badge-warn">À vérifier</span>':'<span class="badge badge-off">Non déclaré</span>'}</td><td>${esc(a.expertise||a.profession||'—')}</td><td><button class="btn btn-green" ${!(a.profileComplete&&a.formSigned&&a.paymentDeclared)?'disabled':''} onclick="validateApplication('${a.id}')">Valider adhésion</button></td></tr>`).join(''):'<tr><td colspan="7" class="muted">Aucun dossier en attente. Les dossiers validés se trouvent dans Historique.</td></tr>'}
-function validateApplication(id){const i=applications.findIndex(a=>a.id===id);if(i<0)return;const a=applications[i];a.paymentConfirmed=true;a.active=true;a.status='Adhérent actif';a.membershipValidatedAt=new Date().toISOString();if(!Array.isArray(a.contributionPayments))a.contributionPayments=[];applications[i]=a;const ai=activeMembers.findIndex(x=>x.id===id);if(ai>=0)activeMembers[ai]=JSON.parse(JSON.stringify(a));else activeMembers.push(JSON.parse(JSON.stringify(a)));if(a.platformIndex!==undefined&&platform[a.platformIndex])platform[a.platformIndex].status='Actif';if(currentMember?.id===id)currentMember=JSON.parse(JSON.stringify(a));persist();saveAnyMemberToFirebase(a).catch(console.error);if(a.platformIndex!==undefined)savePlatformEntryToFirebase(a.platformIndex).catch(console.error);updatePublicSummary().catch(console.error);refreshDirection();renderApplications();renderActive();renderHistory();if(currentMember?.id===id)hydrateMember();alert('Adhésion validée : le droit d’adhésion est maintenant marqué payé et les cotisations sont ouvertes.');}
+function memberConfirmationWhatsAppNumber(member){
+  // Pendant une démo, ?wa=<numéro international> (ou le numéro mémorisé dans la session)
+  // force le retour WhatsApp vers le téléphone de test.
+  try{
+    const q=new URLSearchParams(window.location.search).get('wa');
+    const qDigits=String(q||'').replace(/\D/g,'');
+    if(qDigits.length>=8){
+      sessionStorage.setItem('g10_test_whatsapp',qDigits);
+      return '+'+qDigits;
+    }
+    const saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
+    if(saved.length>=8)return '+'+saved;
+  }catch(e){}
+  // En utilisation réelle, la confirmation repart vers le numéro enregistré dans le dossier adhérent.
+  return String(member?.phone||'').trim();
+}
+function sendValidationWhatsApp(member){
+  if(!member)return;
+  const waNumber=memberConfirmationWhatsAppNumber(member);
+  const phone=waNumber.replace(/\D/g,'');
+  if(phone.length<8){
+    alert("Aucun numéro WhatsApp valide n'est enregistré pour cet adhérent.");
+    return;
+  }
+  const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||'Adhérent';
+  const validatedDate=member.membershipValidatedAt?new Date(member.membershipValidatedAt).toLocaleDateString('fr-FR'):new Date().toLocaleDateString('fr-FR');
+  const isTest=(String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'')===phone);
+  const msg=`Bonjour ${name},
+
+Votre paiement du droit d’adhésion G10 a bien été vérifié et votre adhésion est maintenant validée.
+
+Dossier : ${member.id}
+Statut : Adhésion payée et validée
+Date de validation : ${validatedDate}
+
+Merci et bienvenue au sein de G10.`;
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener');
+  if(isTest) console.info('Confirmation WhatsApp envoyée en mode TEST vers '+waNumber);
+}
+function openValidationConfirmation(member){
+  const previous=document.getElementById('validationWhatsAppModal');
+  if(previous)previous.remove();
+
+  const overlay=document.createElement('div');
+  overlay.id='validationWhatsAppModal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(11,53,90,.48);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+
+  const card=document.createElement('div');
+  card.style.cssText='width:min(520px,100%);background:#fff;border-radius:20px;box-shadow:0 22px 60px rgba(0,0,0,.22);padding:24px;color:#142234';
+
+  const title=document.createElement('h3');
+  title.textContent='Adhésion validée avec succès';
+  title.style.cssText='margin:0 0 10px;color:#0b355a;font-size:22px';
+
+  const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||'Adhérent';
+  const dest=memberConfirmationWhatsAppNumber(member);
+  const testDigits=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
+  const destDigits=String(dest||'').replace(/\D/g,'');
+  const isTest=testDigits&&testDigits===destDigits;
+
+  const info=document.createElement('div');
+  info.style.cssText='line-height:1.6;margin-bottom:18px';
+  const p1=document.createElement('div'); p1.textContent='Adhérent : '+name;
+  const p2=document.createElement('div'); p2.textContent='Dossier : '+member.id;
+  const p3=document.createElement('div'); p3.textContent='Statut : Payée & validée';
+  info.append(p1,p2,p3);
+
+  const note=document.createElement('div');
+  note.style.cssText='background:#eef8f3;border:1px solid #cdebdc;border-radius:12px;padding:12px;margin-bottom:18px;font-size:14px';
+  note.textContent=isTest
+    ? 'MODE TEST — la confirmation WhatsApp sera ouverte vers '+dest+'.'
+    : 'La confirmation WhatsApp sera ouverte vers le numéro enregistré de l’adhérent'+(dest?' : '+dest+'.':'.');
+
+  const actions=document.createElement('div');
+  actions.style.cssText='display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end';
+
+  const close=document.createElement('button');
+  close.type='button';
+  close.className='btn btn-light';
+  close.textContent='Fermer';
+  close.onclick=()=>overlay.remove();
+
+  const send=document.createElement('button');
+  send.type='button';
+  send.className='btn btn-green';
+  send.textContent=isTest?'Envoyer la confirmation WhatsApp TEST':'Envoyer la confirmation WhatsApp';
+  send.onclick=()=>sendValidationWhatsApp(member);
+
+  actions.append(close,send);
+  card.append(title,info,note,actions);
+  overlay.append(card);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  document.body.appendChild(overlay);
+}
+function validateApplication(id){const i=applications.findIndex(a=>a.id===id);if(i<0)return;const a=applications[i];a.paymentConfirmed=true;a.active=true;a.status='Adhérent actif';a.membershipValidatedAt=new Date().toISOString();if(!Array.isArray(a.contributionPayments))a.contributionPayments=[];applications[i]=a;const ai=activeMembers.findIndex(x=>x.id===id);if(ai>=0)activeMembers[ai]=JSON.parse(JSON.stringify(a));else activeMembers.push(JSON.parse(JSON.stringify(a)));if(a.platformIndex!==undefined&&platform[a.platformIndex])platform[a.platformIndex].status='Actif';if(currentMember?.id===id)currentMember=JSON.parse(JSON.stringify(a));persist();saveAnyMemberToFirebase(a).catch(console.error);if(a.platformIndex!==undefined)savePlatformEntryToFirebase(a.platformIndex).catch(console.error);updatePublicSummary().catch(console.error);refreshDirection();renderApplications();renderActive();renderHistory();if(currentMember?.id===id)hydrateMember();openValidationConfirmation(a);}
 function renderActive(){document.getElementById('activeRows').innerHTML=activeMembers.length?activeMembers.map(a=>{const cps=a.contributionPayments||[];const confirmed=cps.filter(p=>p.status==='Confirmé').reduce((s,p)=>s+Number(p.amount||0),0);const pending=cps.filter(p=>p.status!=='Confirmé').length;const cot=cps.length?(`<span class="badge ${pending?'badge-warn':'badge-ok'}">${confirmed} € confirmés${pending?' · '+pending+' à vérifier':''}</span>`):'<span class="badge badge-info">À démarrer</span>';return `<tr><td>${esc(a.id)}</td><td><b>${esc([a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' '))}</b></td><td>${esc(a.email||a.phone||'—')}</td><td>${esc(a.country||'—')}</td><td>${esc(a.expertise||a.profession||'—')}</td><td><span class="badge badge-ok">Payée & validée</span></td><td>${cot}</td></tr>`}).join(''):'<tr><td colspan="7" class="muted">Aucun adhérent actif pour le moment.</td></tr>'}
 function exportActiveCSV(){const rows=[['id','prenom','nom','email','telephone','pays','profession','expertise','statut'],...activeMembers.map(a=>[a.id,a.firstName,a.lastName,a.email,a.phone,a.country,a.profession,a.expertise,'Actif'])];downloadCSV('adherents_actifs_G10.csv',rows)}
 function downloadCSV(name,rows){const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
