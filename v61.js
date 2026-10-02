@@ -14,11 +14,17 @@
   function halfAnnualAmount(){return annualAmount()/2}
   function rtmNumber(){
     // Temporary test override: add ?wa=<international number> to the app URL.
-    // The test number is never stored in the public GitHub source or Firebase settings.
+    // Keep it only for this browser tab/session so login/navigation cannot lose it.
+    // It is never written to Firebase or saved as the official G10 number.
     try{
       var q=new URLSearchParams(window.location.search).get('wa');
       var digits=String(q||'').replace(/\D/g,'');
-      if(digits.length>=8)return '+'+digits;
+      if(digits.length>=8){
+        sessionStorage.setItem('g10_test_whatsapp',digits);
+        return '+'+digits;
+      }
+      var saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
+      if(saved.length>=8)return '+'+saved;
     }catch(e){}
     return String((settings&&settings.rtm)||(settings&&settings.airtel)||'+241 76 41 24 49').trim();
   }
