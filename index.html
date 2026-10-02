@@ -467,7 +467,7 @@
 <meta name="apple-mobile-web-app-title" content="G10 Adhésion">
 </head>
 <body>
-<!-- G10-ADHESION V6.4 COTISATION ANNUELLE CORRIGEE — WhatsApp inchangé -->
+<!-- G10-ADHESION V6.5 — UX mobile, synchro temps réel, WhatsApp TEST -->
 <div id="landing" class="screen landing">
   <div class="container">
     <div class="landing-shell final-home">
@@ -1396,6 +1396,8 @@ refreshLanding();hydrateSettings();
 loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
+
+<script src="./v65.js?v=650"></script>
 
 <script>
 if ('serviceWorker' in navigator) {
