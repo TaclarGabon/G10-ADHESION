@@ -503,7 +503,15 @@
     var ref=val('transactionRef')||currentMember.transactionRef||'à renseigner';
     var date=val('paymentDate')||currentMember.paymentDate||'à renseigner';
     var name=memberFullName(currentMember);
-    var phone=whatsappDestinationNumber().replace(/\D/g,'');
+    var waDest=whatsappDestinationNumber();
+    var phone=waDest.replace(/\D/g,'');
+    var isTest=phone!==rtmNumber().replace(/\D/g,'');
+    if(isTest){
+      var testBtn=[].slice.call(document.querySelectorAll('button')).find(function(b){
+        return /WhatsApp/i.test(b.textContent||'');
+      });
+      if(testBtn)testBtn.textContent='Envoyer sur WhatsApp TEST ('+waDest+')';
+    }
     var msg='Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : '+name+
       '\nDossier : '+currentMember.id+
       '\nMontant : '+settings.membershipFee+' €'+
@@ -519,7 +527,15 @@
     originalHydrateMember();
     if(!currentMember)return;
     var dest=document.getElementById('paymentDestination');
-    if(dest)dest.textContent='RTM Money officiel : '+rtmNumber();
+    if(dest){
+      var waDest=whatsappDestinationNumber();
+      var waTest=waDest.replace(/\D/g,'')!==rtmNumber().replace(/\D/g,'');
+      dest.textContent='RTM Money officiel : '+rtmNumber()+(waTest?'  •  WhatsApp TEST : '+waDest:'');
+      if(waTest){
+        dest.style.fontWeight='700';
+        dest.style.color='#0b6b3a';
+      }
+    }
     var paid=document.getElementById('membershipPaidDetails');
     if(paid&&currentMember.paymentConfirmed){
       var who=(currentMember.membershipValidatedBy&&currentMember.membershipValidatedBy.name)
