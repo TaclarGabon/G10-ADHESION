@@ -12,7 +12,16 @@
     return Number.isFinite(legacy)&&legacy>0?legacy*12:120;
   }
   function halfAnnualAmount(){return annualAmount()/2}
-  function rtmNumber(){return String((settings&&settings.rtm)||(settings&&settings.airtel)||'+241 76 41 24 49').trim()}
+  function rtmNumber(){
+    // Temporary test override: add ?wa=<international number> to the app URL.
+    // The test number is never stored in the public GitHub source or Firebase settings.
+    try{
+      var q=new URLSearchParams(window.location.search).get('wa');
+      var digits=String(q||'').replace(/\D/g,'');
+      if(digits.length>=8)return '+'+digits;
+    }catch(e){}
+    return String((settings&&settings.rtm)||(settings&&settings.airtel)||'+241 76 41 24 49').trim();
+  }
   function normalizePhoneKey(v){
     var digits=String(v||'').replace(/\D/g,'').replace(/^00/,'');
     return digits.length>=8?digits.slice(-8):digits;
