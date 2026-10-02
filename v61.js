@@ -13,9 +13,12 @@
   }
   function halfAnnualAmount(){return annualAmount()/2}
   function rtmNumber(){
-    // Temporary test override: add ?wa=<international number> to the app URL.
-    // Keep it only for this browser tab/session so login/navigation cannot lose it.
-    // It is never written to Firebase or saved as the official G10 number.
+    return String((settings&&settings.rtm)||(settings&&settings.airtel)||'+241 76 41 24 49').trim();
+  }
+  function whatsappDestinationNumber(){
+    // Temporary WhatsApp-only test override: add ?wa=<international number> to the app URL.
+    // Persist only for this browser tab/session so login/navigation cannot lose it.
+    // Never changes the official Airtel Money number and is never saved to Firebase.
     try{
       var q=new URLSearchParams(window.location.search).get('wa');
       var digits=String(q||'').replace(/\D/g,'');
@@ -26,7 +29,7 @@
       var saved=String(sessionStorage.getItem('g10_test_whatsapp')||'').replace(/\D/g,'');
       if(saved.length>=8)return '+'+saved;
     }catch(e){}
-    return String((settings&&settings.rtm)||(settings&&settings.airtel)||'+241 76 41 24 49').trim();
+    return rtmNumber();
   }
   function normalizePhoneKey(v){
     var digits=String(v||'').replace(/\D/g,'').replace(/^00/,'');
@@ -500,7 +503,7 @@
     var ref=val('transactionRef')||currentMember.transactionRef||'à renseigner';
     var date=val('paymentDate')||currentMember.paymentDate||'à renseigner';
     var name=memberFullName(currentMember);
-    var phone=rtmNumber().replace(/\D/g,'');
+    var phone=whatsappDestinationNumber().replace(/\D/g,'');
     var msg='Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : '+name+
       '\nDossier : '+currentMember.id+
       '\nMontant : '+settings.membershipFee+' €'+
