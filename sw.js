@@ -1,5 +1,5 @@
-const CACHE='g10-adhesion-pwa-v4';
-const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v61.js'];
+const CACHE='g10-adhesion-pwa-v5-whatsapp-test';
+const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',event=>{
