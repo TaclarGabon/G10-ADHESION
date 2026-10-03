@@ -1,7 +1,7 @@
 /* G10-ADHESION V6.5 — 2026-10-02 */
 (function(){
 'use strict';
-const V='6.5', TEST_WA='+1 778 808 2048', KEN='g10_wa_test_on_v65', KNUM='g10_wa_test_num_v65', KMAIL='g10_last_email_v65';
+const V='6.5.2', TEST_WA='+1 778 808 2048', KEN='g10_wa_test_on_v65', KNUM='g10_wa_test_num_v65', KMAIL='g10_last_email_v65';
 let uMembers=null,uPlatform=null,uSettings=null,uMember=null,page=1,pageSize=50,reconciling=false;
 function d(v){return String(v||'').replace(/\D/g,'').replace(/^00/,'')}
 function pk(v){var x=d(v);return x.length>=8?x.slice(-8):x}
@@ -129,7 +129,7 @@ window.renderActive=function(){
  b.innerHTML=activeMembers.length?activeMembers.map(function(a){
    var cps=a.contributionPayments||[],confirmed=cps.filter(function(p){return p.status==='Confirmé'}).reduce(function(s,p){return s+Number(p.amount||0)},0),pending=cps.filter(function(p){return p.status!=='Confirmé'}).length;
    var cot=cps.length?'<span class="badge '+(pending?'badge-warn':'badge-ok')+'">'+confirmed+' € confirmés'+(pending?' · '+pending+' à vérifier':'')+'</span>':'<span class="badge badge-info">À démarrer</span>';
-   return '<tr><td>'+esc(a.id)+'</td><td><b>'+esc(mname(a)||'—')+'</b></td><td>'+esc(a.email||a.phone||'—')+'</td><td>'+esc(a.country||'—')+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><span class="badge badge-ok">Payée & validée</span></td><td>'+cot+'</td><td><button class="btn btn-light" onclick="g10EditMemberProfile(\''+esc(a.id)+'\')">Modifier profil</button></td></tr>'
+   return '<tr><td>'+esc(a.id)+'</td><td><b>'+esc(mname(a)||'—')+'</b></td><td>'+esc(a.email||a.phone||'—')+'</td><td>'+esc(a.country||'—')+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><span class="badge badge-ok">Payée & validée</span></td><td>'+cot+'</td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-light" onclick="g10Receipt(\''+esc(a.id)+'\',\'membership\')">Reçu adhésion</button><button class="btn btn-light" onclick="g10EditMemberProfile(\''+esc(a.id)+'\')">Modifier profil</button></div></td></tr>'
  }).join(''):'<tr><td colspan="8">Aucun adhérent actif pour le moment.</td></tr>'
 };
 window.g10EditMemberProfile=async function(id){
@@ -156,6 +156,73 @@ window.g10EditMemberProfile=async function(id){
    refreshDirection();
    alert('Profil adhérent corrigé et enregistré dans Firebase.');
  }catch(e){console.error(e);alert('Impossible d’enregistrer la correction.')}
+};
+
+
+function receiptMember(id){
+ return applications.find(function(a){return a.id===id})||activeMembers.find(function(a){return a.id===id})||(currentMember&&currentMember.id===id?currentMember:null)
+}
+function receiptDate(v){
+ if(!v)return '—';var x=String(v);return typeof formatDateFr==='function'?formatDateFr(x.slice(0,10)):x.slice(0,10)
+}
+function receiptNo(member,type,payment){
+ var tail=String(member&&member.id||'G10').replace(/^G10-ADH-/,'');
+ return type==='membership'?'G10-REC-ADH-'+tail:'G10-REC-COT-'+tail+'-'+String(payment&&payment.sequence||1)
+}
+function receiptHtml(member,type,payment){
+ var membership=type==='membership',two=!membership&&payment&&payment.plan==='two';
+ var title=membership?'REÇU D’ADHÉSION':(two?'REÇU DE COTISATION — PAIEMENT EN DEUX FOIS':'REÇU DE COTISATION ANNUELLE');
+ var subtitle=membership?'Droit d’adhésion':(two?'Échéance '+payment.sequence+'/2':'Paiement annuel en une seule fois');
+ var amount=membership?Number(settings.membershipFee||0):Number(payment&&payment.amount||0);
+ var method=membership?(member.paymentMethod||'—'):(payment&&payment.method||'—');
+ var ref=membership?(member.transactionRef||'—'):(payment&&payment.reference||'—');
+ var payDate=membership?(member.paymentDate||member.membershipValidatedAt||''):(payment&&payment.date||'');
+ var confirmed=membership?(member.membershipValidatedAt||''):(payment&&payment.confirmedAt||'');
+ var note=membership?'Adhésion payée et validée.':(two&&Number(payment.sequence)===1?'Première échéance confirmée. Une deuxième échéance reste à régler selon le calendrier prévu.':(two?'Deuxième échéance confirmée. Cotisation annuelle entièrement réglée.':'Cotisation annuelle entièrement réglée.'));
+ var name=mname(member)||member.email||member.id;
+ var icon=(location.origin+location.pathname.replace(/[^/]*$/,'')+'g10-app-icon.svg');
+ return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(title)+' — '+esc(name)+'</title><style>'+
+ 'body{margin:0;background:#eef3f8;font-family:Arial,sans-serif;color:#12263a}.wrap{max-width:760px;margin:26px auto;padding:14px}.receipt{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 16px 45px rgba(11,53,90,.15);border:1px solid #dce5ef}.head{padding:22px 28px 16px;background:#fff}.brand{display:flex;align-items:center;gap:14px}.brand img{width:64px;height:64px}.brand h1{margin:0;color:#0b355a;font-size:27px}.brand p{margin:3px 0 0;color:#65778c;font-size:13px}.bar{height:7px;background:linear-gradient(90deg,#16945f 0 33%,#f3c929 33% 66%,#0d6fb8 66%)}.title{background:#0b355a;color:#fff;padding:20px 28px}.title h2{margin:0;font-size:25px}.title p{margin:5px 0 0;opacity:.9}.body{padding:26px 28px}.num{display:inline-block;padding:8px 12px;background:#edf3f9;border-radius:10px;font-weight:800;color:#0b355a;margin-bottom:18px}.grid{display:grid;grid-template-columns:180px 1fr;gap:10px 16px;font-size:15px}.grid span{color:#65778c}.amount{margin:22px 0;padding:18px;text-align:center;border-radius:14px;background:#edf8f2}.amount small{display:block;color:#35644d;font-weight:700}.amount strong{display:block;color:#0b6b3d;font-size:31px;margin-top:4px}.status{display:inline-block;background:#e8f7ee;color:#087a48;padding:7px 11px;border-radius:999px;font-weight:800}.validation{margin-top:24px;padding:18px;border-radius:14px;background:#f5f8fc;border:1px solid #dce5ef}.validation b{color:#0b355a}.foot{padding:0 28px 24px;text-align:center;color:#65778c;font-size:12px}.actions{display:flex;gap:10px;justify-content:center;margin:18px 0}.actions button{border:0;border-radius:10px;padding:11px 16px;font-weight:800;cursor:pointer}.primary{background:#0b355a;color:#fff}.light{background:#fff;color:#0b355a;border:1px solid #cddbea!important}@media print{body{background:#fff}.wrap{margin:0;max-width:none;padding:0}.receipt{box-shadow:none;border:0;border-radius:0}.actions{display:none}}@media(max-width:600px){.grid{grid-template-columns:1fr}.grid span{font-size:12px}.body,.head,.title{padding-left:18px;padding-right:18px}}'+
+ '</style></head><body><div class="wrap"><div class="receipt"><div class="head"><div class="brand"><img src="'+icon+'"><div><h1>G10 — Confédération</h1><p>Campagne d’adhésion et suivi des cotisations</p></div></div></div><div class="bar"></div><div class="title"><h2>'+title+'</h2><p>'+subtitle+'</p></div><div class="body"><div class="num">N° '+receiptNo(member,type,payment)+'</div><div class="grid">'+
+ '<span>Nom complet</span><b>'+esc(name)+'</b><span>Dossier</span><b>'+esc(member.id||'—')+'</b><span>Pays</span><b>'+esc(member.country||'—')+'</b><span>Contact</span><b>'+esc(member.email||member.phone||'—')+'</b>'+
+ '</div><div class="amount"><small>Montant payé</small><strong>'+esc(String(amount))+' €</strong></div><div class="grid"><span>Mode de paiement</span><b>'+esc(method)+'</b><span>Référence transaction</span><b>'+esc(ref)+'</b><span>Date du paiement</span><b>'+esc(receiptDate(payDate))+'</b><span>Statut</span><b><span class="status">✓ Payé et validé</span></b></div>'+
+ '<div class="validation"><b>Validé par la Direction G10</b><br><br>Date de validation : '+esc(receiptDate(confirmed))+'<br><small>'+esc(note)+'</small></div></div><div class="foot">Document généré depuis G10 Adhésion — '+esc(location.host)+'</div></div><div class="actions"><button class="primary" onclick="window.print()">Imprimer / Enregistrer en PDF</button><button class="light" onclick="window.close()">Fermer</button></div></div></body></html>'
+}
+window.g10Receipt=function(memberId,type,paymentId){
+ var m=receiptMember(memberId);if(!m)return alert('Dossier introuvable.');
+ var p=null;
+ if(type==='contribution'){
+   p=(m.contributionPayments||[]).find(function(x){return x.id===paymentId});
+   if(!p||p.status!=='Confirmé')return alert('Ce reçu sera disponible après confirmation par la Direction.');
+ }else{
+   if(!m.paymentConfirmed)return alert('Le reçu d’adhésion sera disponible après validation par la Direction.');
+   type='membership';
+ }
+ var w=window.open('','_blank');if(!w)return alert('Autorisez les fenêtres contextuelles pour ouvrir le reçu.');
+ w.document.open();w.document.write(receiptHtml(m,type,p));w.document.close()
+};
+function membershipReceiptButton(){
+ var box=document.getElementById('membershipPaidBox');if(!box||!currentMember)return;
+ var old=document.getElementById('g10MembershipReceipt');if(old)old.remove();
+ if(currentMember.paymentConfirmed){
+   var b=document.createElement('button');b.type='button';b.id='g10MembershipReceipt';b.className='btn btn-light';b.textContent='Voir mon reçu d’adhésion';b.onclick=function(){g10Receipt(currentMember.id,'membership')};box.appendChild(b)
+ }
+}
+var oldHydReceipt=window.hydrateMember;
+window.hydrateMember=function(){oldHydReceipt();membershipReceiptButton();setTimeout(addMemberContributionReceipts,0)};
+function addMemberContributionReceipts(){
+ if(!currentMember)return;var body=document.getElementById('memberContributionRows');if(!body)return;
+ var rows=[].slice.call(body.querySelectorAll('tr')),payments=currentMember.contributionPayments||[];
+ rows.forEach(function(tr,i){var p=payments[i],td=tr.lastElementChild;if(!p||!td||p.status!=='Confirmé'||td.querySelector('.g10-receipt-btn'))return;var b=document.createElement('button');b.type='button';b.className='btn btn-light g10-receipt-btn';b.style.marginLeft='6px';b.textContent='Voir reçu';b.onclick=function(){g10Receipt(currentMember.id,'contribution',p.id)};td.appendChild(b)})
+}
+var oldRenderContribMember=window.renderContributionMember;
+window.renderContributionMember=function(){oldRenderContribMember();addMemberContributionReceipts()};
+var oldRenderContribDir=window.renderContributionPayments;
+window.renderContributionPayments=function(){
+ oldRenderContribDir();
+ var body=document.getElementById('contributionPaymentRows');if(!body)return;
+ var flat=[];applications.forEach(function(m){(m.contributionPayments||[]).forEach(function(p){flat.push({m:m,p:p})})});
+ [].slice.call(body.querySelectorAll('tr')).forEach(function(tr,i){var x=flat[i],td=tr.lastElementChild;if(!x||!td||x.p.status!=='Confirmé'||td.querySelector('.g10-receipt-btn'))return;var b=document.createElement('button');b.type='button';b.className='btn btn-light g10-receipt-btn';b.style.marginLeft='6px';b.textContent='Reçu';b.onclick=function(){g10Receipt(x.m.id,'contribution',x.p.id)};td.appendChild(b)})
 };
 
 function init(){addStyle();enhanceLogin();navFix();platformTools();markCards();extBox();payModal();settingsExt();testUi();if(auth&&firebase.auth.Auth&&firebase.auth.Auth.Persistence)auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});addEventListener('resize',function(){stepUi(false);syncDirectionMenu()});console.info('G10 Adhésion V'+V+' chargé')}
