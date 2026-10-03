@@ -596,7 +596,7 @@
             <div class="field"><label>Date *</label><input id="signDate" type="date"></div>
           </div>
           <div class="sep"></div>
-          <div class="signature-card"><input id="acceptRules" type="checkbox"><div><strong>Engagement</strong><div class="muted" style="font-size:12px;margin-top:4px">Je m’engage à respecter les statuts ainsi que le règlement intérieur de la Confédération de la Diaspora Gabonaise Multi Continentale G10.</div></div></div>
+          <div class="signature-card"><input id="acceptRules" type="checkbox"><div><strong>Engagement</strong><div class="muted" style="font-size:12px;margin-top:4px">Je m’engage à respecter les statuts ainsi que le règlement intérieur de la Confédération de la Diaspora Gabonaise Multi Continentale G10.</div><div style="margin-top:9px;display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-light" onclick="openOfficialDocument('statuts')">Consulter les Statuts</button><button type="button" class="btn btn-light" onclick="showMemberView('docs')">Voir tous les Documents officiels</button></div></div></div>
           <div class="signature-card" style="margin-top:10px"><input id="acceptInitials" type="checkbox"><div><strong>Signature électronique par initiales</strong><div class="muted" style="font-size:12px;margin-top:4px">J’accepte que mes initiales soient apposées comme validation électronique de cette demande.</div><div class="signature-preview" id="initialsPreview">—</div></div></div>
           <div class="action-row"><button class="btn btn-light" onclick="openSmartForm()">Aperçu de la fiche intelligente</button><button class="btn btn-primary" onclick="validateSmartForm()">Valider fiche & signature électronique</button></div>
         </div>
@@ -620,11 +620,11 @@
           <button class="btn btn-primary" onclick="showMemberView('payments')">Gérer mes cotisations</button>
         </div>
 
-        <div id="membershipPaymentForm">
+        <div id="membershipPaymentForm"><div class="notice"><b>Version test / démonstration :</b> Airtel Money est le moyen actuellement prévu. Les autres moyens affichés sont des propositions qui devront être validées par la Direction.</div>
           <div class="payment-options">
             <label class="payment-option"><input type="radio" name="payMethod" value="Airtel Money" checked><div><strong>Airtel Money</strong><small>Envoyez le règlement au numéro officiel +241 76 41 24 49 et conservez la référence de transaction.</small></div></label>
-            <label class="payment-option"><input type="radio" name="payMethod" value="Carte bancaire"><div><strong>Carte bancaire</strong><small>Mode prévu pour la version connectée. La V5.2 simule la déclaration pour la démonstration.</small></div></label>
-            <label class="payment-option"><input type="radio" name="payMethod" value="Virement bancaire"><div><strong>Virement bancaire</strong><small>Les coordonnées bancaires officielles seront affichées lorsque la Direction les aura renseignées.</small></div></label>
+            <label class="payment-option" style="opacity:.62"><input type="radio" name="payMethod" value="Carte bancaire" disabled><div><strong>Carte bancaire — option à l’étude</strong><small>Non active pour le moment. Cette possibilité sera soumise à la Direction avant toute mise en service.</small></div></label>
+            <label class="payment-option" style="opacity:.62"><input type="radio" name="payMethod" value="Virement bancaire" disabled><div><strong>Virement bancaire — option à l’étude</strong><small>Non actif pour le moment. Aucun compte bancaire G10 n’est encore proposé dans cette version.</small></div></label>
           </div>
           <div class="payment-highlight"><strong>Montant à payer : <span id="paymentAmount">10 €</span></strong><br>Référence dossier : <span id="paymentReference">G10-ADH-DEMO</span><br><span id="paymentDestination">Airtel Money officiel : +241 76 41 24 49</span><br><small>Après le paiement, saisissez la référence de transaction puis transmettez la déclaration à la Direction.</small></div>
           <div class="form-grid" style="margin-top:12px">
@@ -999,7 +999,7 @@ async function createAccountFromHome(){
     currentMember.emailVerified=!!credential.user.emailVerified;
     await saveMemberToFirebase(currentMember);
     try{await credential.user.sendEmailVerification()}catch(e){console.warn('Vérification e-mail non envoyée',e)}
-    homeMessage('Compte créé. Un courriel de vérification a été envoyé.');
+    homeMessage('Compte créé. Un e-mail de vérification vient de vous être envoyé. Ouvrez-le, cliquez sur le lien pour confirmer votre adresse, puis revenez dans l’application. Vous pouvez déjà compléter votre dossier.');
     enterMember();
   }catch(err){console.error(err);homeMessage(firebaseErrorMessage(err),true)}
 }
@@ -1397,7 +1397,7 @@ loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
 
-<script src="./v65.js?v=652"></script>
+<script src="./v65.js?v=653"></script>
 
 <script>
 if ('serviceWorker' in navigator) {

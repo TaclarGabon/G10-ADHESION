@@ -1,6 +1,6 @@
 /* G10-ADHESION V6.1
    Cotisation annuelle 120 € / 60 € + 60 €
-   Justificatifs RTM Money, validation nominative, reçus et rapprochement téléphone.
+   Justificatifs Airtel Money, validation nominative, reçus et rapprochement téléphone.
 */
 (function(){
   'use strict';
@@ -88,9 +88,9 @@
       data=encode(.38,w,h);
     }
     if(data.length>230000){
-      throw new Error('La capture reste trop volumineuse. Recadrez-la autour du reçu RTM Money puis réessayez.');
+      throw new Error('La capture reste trop volumineuse. Recadrez-la autour du reçu Airtel Money puis réessayez.');
     }
-    return {data:data,name:file.name||'justificatif-rtm.jpg',type:'image/jpeg'};
+    return {data:data,name:file.name||'justificatif-airtel.jpg',type:'image/jpeg'};
   }
 
   function validatorIdentity(){
@@ -135,7 +135,7 @@
       memberName:memberFullName(member),
       amount:Number(membership?settings.membershipFee:((payment&&payment.amount)||0)),
       currency:'EUR',
-      method:membership?(member.paymentMethod||'RTM Money'):((payment&&payment.method)||'RTM Money'),
+      method:membership?(member.paymentMethod||'Airtel Money'):((payment&&payment.method)||'Airtel Money'),
       transactionReference:membership?(member.transactionRef||''):((payment&&payment.reference)||''),
       paymentDate:rawDate,
       contributionYear:membership?null:year,
@@ -194,10 +194,10 @@
     var member=getMemberById(memberId);if(!member)return;
     var p=(member.contributionPayments||[]).find(function(x){return x.id===paymentId});
     var proof=kind==='membership'?member.paymentProofData:(p&&p.proofData);
-    if(!proof||!proof.data){alert('Aucun justificatif RTM Money enregistré.');return}
+    if(!proof||!proof.data){alert('Aucun justificatif Airtel Money enregistré.');return}
     var w=window.open('','_blank');
     if(!w){alert('Autorisez les fenêtres surgissantes.');return}
-    w.document.write('<!doctype html><title>Justificatif RTM Money</title><body style="margin:0;background:#111;display:grid;place-items:center;min-height:100vh"><img src="'+proof.data+'" style="max-width:96vw;max-height:96vh;object-fit:contain" alt="Justificatif RTM Money"></body>');
+    w.document.write('<!doctype html><title>Justificatif Airtel Money</title><body style="margin:0;background:#111;display:grid;place-items:center;min-height:100vh"><img src="'+proof.data+'" style="max-width:96vw;max-height:96vh;object-fit:contain" alt="Justificatif Airtel Money"></body>');
     w.document.close();
   }
   function renderReceipts(){
@@ -292,14 +292,14 @@
         box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Le paiement de '+annualAmount()+' € a été confirmé.';
         return;
       }
-      box.innerHTML='<strong>Paiement annuel : '+annualAmount()+' € en une fois.</strong><br>Joignez votre capture RTM Money. Après déclaration, la Direction vérifiera la réception.';
+      box.innerHTML='<strong>Paiement annuel : '+annualAmount()+' € en une fois.</strong><br>Joignez votre capture Airtel Money. Après déclaration, la Direction vérifiera la réception.';
     }else{
       if(nextSequence>2){
         box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Les deux versements ont été confirmés.';
         return;
       }
       var due=nextSequence===2&&same[0]&&same[0].date?addMonthsIso(same[0].date,6):'';
-      box.innerHTML='<strong>'+(nextSequence===1?'Premier':'Deuxième')+' versement : '+halfAnnualAmount()+' €</strong>'+(due?'<br>À régler au plus tard le '+formatDateFr(due):'')+'<br>Joignez votre capture RTM Money. Après déclaration, la Direction vérifiera la réception.';
+      box.innerHTML='<strong>'+(nextSequence===1?'Premier':'Deuxième')+' versement : '+halfAnnualAmount()+' €</strong>'+(due?'<br>À régler au plus tard le '+formatDateFr(due):'')+'<br>Joignez votre capture Airtel Money. Après déclaration, la Direction vérifiera la réception.';
     }
   };
   declareContributionPayment=async function(){
@@ -311,10 +311,10 @@
     var plan=(selected&&selected.value)||'annual';if(plan==='monthly')plan='annual';
     var reference=val('contributionRef'),date=val('contributionDate');
     var methodEl=document.querySelector('input[name=contributionMethod]:checked');
-    var method=(methodEl&&methodEl.value)||'RTM Money';
+    var method=(methodEl&&methodEl.value)||'Airtel Money';
     var input=document.getElementById('contributionProof'),file=input&&input.files&&input.files[0];
     if(!reference||!date){alert('Merci de renseigner la référence et la date du paiement.');return}
-    if(!file){alert('Joignez la capture d’écran RTM Money comme justificatif.');return}
+    if(!file){alert('Joignez la capture d’écran Airtel Money comme justificatif.');return}
     var same=currentMember.contributionPayments.filter(function(p){return (p.plan==='monthly'?'annual':p.plan)===plan});
     if(same.some(function(p){return p.status!=='Confirmé'})){
       alert('Le paiement précédent doit d’abord être confirmé par la Direction.');return;
@@ -332,7 +332,7 @@
       syncMemberEverywhere(currentMember);persist();
       setVal('contributionRef','');setVal('contributionDate','');if(input)input.value='';
       renderContributionMember();renderMemberSituation();refreshDirection();
-      alert('Cotisation déclarée avec justificatif RTM Money. Elle est visible par la Direction pour validation.');
+      alert('Cotisation déclarée avec justificatif Airtel Money. Elle est visible par la Direction pour validation.');
     }catch(err){
       console.error(err);alert(err.message||'Impossible de préparer le justificatif.');
     }
@@ -361,7 +361,7 @@
     var member=applications[i];
     var p=(member.contributionPayments||[]).find(function(x){return x.id===paymentId});if(!p)return;
     if(!p.proofData||!p.proofData.data){
-      alert('Validation impossible : aucun justificatif RTM Money n’est enregistré.');return;
+      alert('Validation impossible : aucun justificatif Airtel Money n’est enregistré.');return;
     }
     p.status='Confirmé';p.confirmedAt=new Date().toISOString();p.validatedBy=validator;
     p.receipt=buildReceipt(member,'contribution',p,validator);
@@ -385,19 +385,19 @@
       alert('Indiquez la référence et la date du paiement.');return;
     }
     var input=document.getElementById('paymentProof'),file=input&&input.files&&input.files[0];
-    if(!file){alert('Joignez la capture d’écran RTM Money comme justificatif.');return}
+    if(!file){alert('Joignez la capture d’écran Airtel Money comme justificatif.');return}
     try{
       var proof=await proofImageToData(file);
       currentMember.transactionRef=val('transactionRef');
       currentMember.paymentDate=val('paymentDate');
       var methodEl=document.querySelector('input[name=payMethod]:checked');
-      currentMember.paymentMethod=(methodEl&&methodEl.value)||'RTM Money';
+      currentMember.paymentMethod=(methodEl&&methodEl.value)||'Airtel Money';
       currentMember.paymentProofData=proof;
       currentMember.paymentDeclared=true;
       currentMember.status='Paiement déclaré — contrôle Direction';
       upsertApplication();syncMemberEverywhere(currentMember);persist();
       hydrateMember();refreshDirection();
-      alert('Paiement déclaré avec justificatif RTM Money. La Direction doit maintenant le confirmer.');
+      alert('Paiement déclaré avec justificatif Airtel Money. La Direction doit maintenant le confirmer.');
     }catch(err){
       console.error(err);alert(err.message||'Impossible de préparer le justificatif.');
     }
@@ -421,7 +421,7 @@
     var i=applications.findIndex(function(a){return a.id===id});if(i<0)return;
     var a=applications[i];
     if(!a.paymentProofData||!a.paymentProofData.data){
-      alert('Validation impossible : le justificatif RTM Money est obligatoire.');return;
+      alert('Validation impossible : le justificatif Airtel Money est obligatoire.');return;
     }
     a.paymentConfirmed=true;a.active=true;a.status='Adhérent actif';
     a.membershipValidatedAt=new Date().toISOString();
@@ -515,7 +515,7 @@
     var msg='Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : '+name+
       '\nDossier : '+currentMember.id+
       '\nMontant : '+settings.membershipFee+' €'+
-      '\nRTM Money : '+rtmNumber()+
+      '\nAirtel Money : '+rtmNumber()+
       '\nRéférence transaction : '+ref+
       '\nDate : '+date+
       '\nLe justificatif est joint dans mon dossier G10. Merci de vérifier et valider mon adhésion.';
@@ -530,7 +530,7 @@
     if(dest){
       var waDest=whatsappDestinationNumber();
       var waTest=waDest.replace(/\D/g,'')!==rtmNumber().replace(/\D/g,'');
-      dest.textContent='RTM Money officiel : '+rtmNumber()+(waTest?'  •  WhatsApp TEST : '+waDest:'');
+      dest.textContent='Airtel Money officiel : '+rtmNumber()+(waTest?'  •  WhatsApp TEST : '+waDest:'');
       if(waTest){
         dest.style.fontWeight='700';
         dest.style.color='#0b6b3a';

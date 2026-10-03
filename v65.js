@@ -1,7 +1,7 @@
-/* G10-ADHESION V6.5 — 2026-10-02 */
+/* G10-ADHESION V6.5.3 — retours testeurs David — 2026-10-03 */
 (function(){
 'use strict';
-const V='6.5.2', TEST_WA='+1 778 808 2048', KEN='g10_wa_test_on_v65', KNUM='g10_wa_test_num_v65', KMAIL='g10_last_email_v65';
+const V='6.5.3', TEST_WA='+1 778 808 2048', KEN='g10_wa_test_on_v65', KNUM='g10_wa_test_num_v65', KMAIL='g10_last_email_v65';
 let uMembers=null,uPlatform=null,uSettings=null,uMember=null,page=1,pageSize=50,reconciling=false;
 function d(v){return String(v||'').replace(/\D/g,'').replace(/^00/,'')}
 function pk(v){var x=d(v);return x.length>=8?x.slice(-8):x}
@@ -39,7 +39,7 @@ window.loginFromHome=async function(){
 };
 window.createAccountFromHome=async function(){
  if(!auth){homeMessage('Firebase n’est pas disponible.',true);return}var email=normalizeEmail(val('homeEmail')),password=val('homePassword');if(!email||!email.includes('@')){homeMessage('Entrez une adresse courriel valide.',true);return}if(password.length<6){homeMessage('Choisissez un mot de passe d’au moins 6 caractères.',true);return}
- try{if(firebase.auth.Auth&&firebase.auth.Auth.Persistence)await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);homeMessage('Création du compte…');var cr=await auth.createUserWithEmailAndPassword(email,password);localStorage.setItem(KMAIL,email);currentAuthUser=cr.user;currentUserRole=roleForEmail(email);currentMember=createMemberForEmail(email);currentMember.firebaseUid=cr.user.uid;currentMember.emailVerified=!!cr.user.emailVerified;await saveMemberToFirebase(currentMember);try{await cr.user.sendEmailVerification()}catch(e){}homeMessage('Compte créé. Vous pouvez maintenant compléter votre dossier.');enterMember()}catch(err){homeMessage(firebaseErrorMessage(err),true)}
+ try{if(firebase.auth.Auth&&firebase.auth.Auth.Persistence)await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);homeMessage('Création du compte…');var cr=await auth.createUserWithEmailAndPassword(email,password);localStorage.setItem(KMAIL,email);currentAuthUser=cr.user;currentUserRole=roleForEmail(email);currentMember=createMemberForEmail(email);currentMember.firebaseUid=cr.user.uid;currentMember.emailVerified=!!cr.user.emailVerified;await saveMemberToFirebase(currentMember);try{await cr.user.sendEmailVerification()}catch(e){}homeMessage('Compte créé. Un e-mail de vérification vient de vous être envoyé. Ouvrez-le, cliquez sur le lien pour confirmer votre adresse, puis revenez dans l’application. Vous pouvez déjà compléter votre dossier.');enterMember()}catch(err){homeMessage(firebaseErrorMessage(err),true)}
 };
 function findMatch(m,emailOnly){
  var email=normalizeEmail(m&&m.email||''),ph=pk(m&&m.phone),fn=key(mname(m)),first=key(m&&m.firstName),a=[];
@@ -64,9 +64,9 @@ window.declarePayment=async function(){
 };
 window.sendWhatsAppPayment=function(){
  if(!currentMember)return alert('Ouvrez d’abord votre dossier.');var ref=val('transactionRef')||currentMember.transactionRef||'à renseigner',date=val('paymentDate')||currentMember.paymentDate||'à renseigner',name=mname(currentMember)||currentMember.email||'Adhérent',dest=waDest();
- var msg='Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : '+name+'\nDossier : '+currentMember.id+'\nMontant : '+settings.membershipFee+' €\nRTM Money officiel : '+official()+'\nRéférence transaction : '+ref+'\nDate : '+date+'\nLe justificatif est joint dans mon dossier G10. Merci de vérifier et valider mon adhésion.';window.open('https://wa.me/'+d(dest)+'?text='+encodeURIComponent(msg),'_blank','noopener')
+ var msg='Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : '+name+'\nDossier : '+currentMember.id+'\nMontant : '+settings.membershipFee+' €\nAirtel Money officiel : '+official()+'\nRéférence transaction : '+ref+'\nDate : '+date+'\nLe justificatif est joint dans mon dossier G10. Merci de vérifier et valider mon adhésion.';window.open('https://wa.me/'+d(dest)+'?text='+encodeURIComponent(msg),'_blank','noopener')
 };
-function testUi(){var e=document.getElementById('paymentDestination');if(e){e.textContent='RTM Money officiel : '+official()+(testOn()?'  •  WhatsApp TEST : '+testNum():'');e.classList.toggle('g10-test-active',testOn())}document.querySelectorAll('.whatsapp-btn').forEach(function(b){b.textContent=testOn()?'Envoyer la confirmation sur WhatsApp TEST ('+testNum()+')':'Envoyer la confirmation sur WhatsApp'})}
+function testUi(){var e=document.getElementById('paymentDestination');if(e){e.textContent='Airtel Money officiel : '+official()+(testOn()?'  •  WhatsApp TEST : '+testNum():'');e.classList.toggle('g10-test-active',testOn())}document.querySelectorAll('.whatsapp-btn').forEach(function(b){b.textContent=testOn()?'Envoyer la confirmation sur WhatsApp TEST ('+testNum()+')':'Envoyer la confirmation sur WhatsApp'})}
 function cards(){return [].slice.call(document.querySelectorAll('#member-account > .card.panel')).filter(function(c){var h=c.querySelector('.panel-head h3');return h&&/^[123]\./.test((h.textContent||'').trim())})}
 function markCards(){cards().forEach(function(c,i){c.classList.add('g10-step-card');var h=c.querySelector('.panel-head');if(h&&!h.querySelector('.g10-step-toggle')){var b=document.createElement('button');b.type='button';b.className='g10-step-toggle';b.textContent='⌄';h.appendChild(b);h.addEventListener('click',function(ev){if(!mobile())return;if(ev.target.closest('button')&&!ev.target.classList.contains('g10-step-toggle'))return;c.classList.toggle('g10-collapsed');b.textContent=c.classList.contains('g10-collapsed')?'›':'⌄'})}});if(!document.getElementById('g10StepProgress')){var w=document.querySelector('#member-account > .card.panel'),x=document.createElement('div');x.id='g10StepProgress';x.className='g10-step-progress';if(w)w.insertAdjacentElement('afterend',x)}}
 function curStep(){if(!currentMember||!currentMember.profileComplete)return 1;if(!currentMember.formSigned)return 2;return 3}
