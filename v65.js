@@ -117,6 +117,47 @@ var oldHyd=window.hydrateMember;window.hydrateMember=function(){oldHyd();extBox(
 window.renderApplications=function(){var p=applications.filter(function(a){return !a.active}),c=document.getElementById('appCount'),b=document.getElementById('applicationRows');if(c)c.textContent=p.length+' dossier'+(p.length>1?'s':'');if(!b)return;b.innerHTML=p.length?p.map(function(a){var pr=(a.paymentProofData&&a.paymentProofData.data)?'<br><button class="btn btn-light" onclick="g10Proof(\''+esc(a.id)+'\')">Voir justificatif</button>':'',can=a.profileComplete&&a.formSigned&&a.paymentDeclared&&a.paymentProofData&&a.paymentProofData.data;return'<tr><td><b>'+esc(a.id)+'</b></td><td>'+esc(mname(a)||'À compléter')+'<br><small>'+esc(a.email||'')+'</small></td><td>'+(a.profileComplete?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-warn">À compléter</span>')+'</td><td>'+(a.formSigned?'<span class="badge badge-ok">Signée</span>':'<span class="badge badge-warn">À signer</span>')+'</td><td>'+(a.paymentDeclared?'<span class="badge badge-warn">À vérifier</span>':'<span class="badge badge-off">Non déclaré</span>')+pr+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><button class="btn btn-green" '+(!can?'disabled':'')+' onclick="validateApplication(\''+esc(a.id)+'\')">Valider adhésion</button></td></tr>'}).join(''):'<tr><td colspan="7">Aucun dossier en attente.</td></tr>'};
 window.validateApplication=async function(id){var i=applications.findIndex(function(a){return a.id===id});if(i<0)return;var a=applications[i];if(!a.profileComplete||!a.formSigned||!a.paymentDeclared||!a.paymentProofData||!a.paymentProofData.data){alert('Profil, fiche signée, déclaration et justificatif requis.');return}a.paymentConfirmed=true;a.active=true;a.status='Adhérent';a.membershipValidatedAt=new Date().toISOString();applications[i]=a;var ai=activeMembers.findIndex(function(x){return x.id===id});if(ai>=0)activeMembers[ai]=JSON.parse(JSON.stringify(a));else activeMembers.push(JSON.parse(JSON.stringify(a)));await updatePlatformFrom(a,'Adhérent');if(currentMember&&currentMember.id===id)currentMember=JSON.parse(JSON.stringify(a));persist();try{await saveAnyMemberToFirebase(a)}catch(e){}refreshDirection();alert('Adhésion validée : statut « Adhérent ». Le statut « Actif » sera atteint lorsque la cotisation sera à jour.')};
 var oldConfirm=window.confirmContributionPayment;if(typeof oldConfirm==='function')window.confirmContributionPayment=function(mid,pid){oldConfirm(mid,pid);setTimeout(async function(){var m=applications.find(function(a){return a.id===mid})||activeMembers.find(function(a){return a.id===mid}),s=m&&typeof contributionSummary==='function'?contributionSummary(m):null;if(m&&s&&s.plan&&s.confirmed>=s.max){await updatePlatformFrom(m,'Actif');renderPlatform()}},250)};
+
+function activeTools(){
+ var s=document.getElementById('dir-active'),tr=s&&s.querySelector('thead tr');
+ if(tr&&!tr.dataset.g10edit){tr.dataset.g10edit='1';tr.innerHTML='<th>ID</th><th>Nom</th><th>Contact</th><th>Pays</th><th>Expertise</th><th>Adhésion</th><th>Cotisation</th><th>Action</th>'}
+}
+var oldRenderActive=window.renderActive;
+window.renderActive=function(){
+ activeTools();
+ var b=document.getElementById('activeRows');if(!b)return;
+ b.innerHTML=activeMembers.length?activeMembers.map(function(a){
+   var cps=a.contributionPayments||[],confirmed=cps.filter(function(p){return p.status==='Confirmé'}).reduce(function(s,p){return s+Number(p.amount||0)},0),pending=cps.filter(function(p){return p.status!=='Confirmé'}).length;
+   var cot=cps.length?'<span class="badge '+(pending?'badge-warn':'badge-ok')+'">'+confirmed+' € confirmés'+(pending?' · '+pending+' à vérifier':'')+'</span>':'<span class="badge badge-info">À démarrer</span>';
+   return '<tr><td>'+esc(a.id)+'</td><td><b>'+esc(mname(a)||'—')+'</b></td><td>'+esc(a.email||a.phone||'—')+'</td><td>'+esc(a.country||'—')+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><span class="badge badge-ok">Payée & validée</span></td><td>'+cot+'</td><td><button class="btn btn-light" onclick="g10EditMemberProfile(\''+esc(a.id)+'\')">Modifier profil</button></td></tr>'
+ }).join(''):'<tr><td colspan="8">Aucun adhérent actif pour le moment.</td></tr>'
+};
+window.g10EditMemberProfile=async function(id){
+ if(!isPrivilegedRole())return alert('Accès réservé à la Direction.');
+ var m=applications.find(function(a){return a.id===id})||activeMembers.find(function(a){return a.id===id});
+ if(!m)return alert('Dossier introuvable.');
+ var first=prompt('Prénom',m.firstName||'');if(first===null)return;
+ var first2=prompt('Deuxième prénom (laisser vide si aucun)',m.firstName2||'');if(first2===null)return;
+ var last=prompt('Nom',m.lastName||'');if(last===null)return;
+ var last2=prompt('Deuxième nom / nom complémentaire (laisser vide si aucun)',m.lastName2||'');if(last2===null)return;
+ var address=prompt('Adresse / résidence',m.address||'');if(address===null)return;
+ var email=prompt('Adresse courriel',m.email||'');if(email===null)return;
+ var phone=prompt('Téléphone / WhatsApp',m.phone||'');if(phone===null)return;
+ var country=prompt('Pays',m.country||'');if(country===null)return;
+ m.firstName=first.trim();m.firstName2=first2.trim();m.lastName=last.trim();m.lastName2=last2.trim();m.address=address.trim();m.email=email.trim();m.phone=phone.trim();m.country=country.trim();
+ try{
+   await saveAnyMemberToFirebase(m);
+   var ai=applications.findIndex(function(a){return a.id===id});if(ai>=0)applications[ai]=Object.assign({},applications[ai],m);
+   var xi=activeMembers.findIndex(function(a){return a.id===id});if(xi>=0)activeMembers[xi]=Object.assign({},activeMembers[xi],m);
+   if(Number.isInteger(m.platformIndex)&&platform[m.platformIndex]){
+     var st=platform[m.platformIndex].status||'Adhérent';
+     await updatePlatformFrom(m,st);
+   }
+   refreshDirection();
+   alert('Profil adhérent corrigé et enregistré dans Firebase.');
+ }catch(e){console.error(e);alert('Impossible d’enregistrer la correction.')}
+};
+
 function init(){addStyle();enhanceLogin();navFix();platformTools();markCards();extBox();payModal();settingsExt();testUi();if(auth&&firebase.auth.Auth&&firebase.auth.Auth.Persistence)auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(){});addEventListener('resize',function(){stepUi(false);syncDirectionMenu()});console.info('G10 Adhésion V'+V+' chargé')}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
