@@ -1,5 +1,5 @@
-const CACHE='g10-adhesion-pwa-v6-5-1';
-const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=651'];
+const CACHE='g10-adhesion-pwa-v6-5-2';
+const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=652'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
