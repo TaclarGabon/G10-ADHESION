@@ -1,4 +1,4 @@
-const CACHE='g10-adhesion-pwa-v6-5-7-persistance-verrouillee';
+const CACHE='g10-adhesion-pwa-v6-5-8-compteur-actifs-firebase';
 const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=6570'];
 
 self.addEventListener('install',event=>{
