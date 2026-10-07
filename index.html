@@ -960,6 +960,9 @@ async function loadDirectionData(){
   else await saveSettingsToFirebase();
   platform=platformSnap.docs.map(d=>({...d.data(),firebaseDocId:d.id}));
   localStorage.setItem('g10_settings_v2',JSON.stringify(settings));
+  await updatePublicSummary();
+  settings.activeCount=activeMembers.filter(a=>a&&a.active===true).length;
+  localStorage.setItem('g10_settings_v2',JSON.stringify(settings));
   hydrateSettings();refreshLanding();refreshDirection();
 }
 function findPlatformByEmail(email){
@@ -1350,7 +1353,7 @@ function exportActiveCSV(){const rows=[['id','prenom','nom','email','telephone',
 function downloadCSV(name,rows){const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
 function hydrateSettings(){setVal('setPlatformCount',settings.platformCount);setVal('setMembershipFee',settings.membershipFee);setVal('setMonthly',settings.monthlyContribution);setVal('setInstallments',settings.installments);setVal('setAirtel',settings.airtel);setVal('setBank',settings.bank)}
 function saveSettings(){settings.platformCount=Number(val('setPlatformCount'))||0;settings.membershipFee=Number(val('setMembershipFee'))||0;settings.monthlyContribution=Number(val('setMonthly'))||0;settings.installments=Number(val('setInstallments'))||1;settings.airtel=val('setAirtel');settings.bank=val('setBank');persist();saveSettingsToFirebase().catch(console.error);refreshDirection();refreshLanding();hydrateMember();alert('Paramètres enregistrés et synchronisés dans Firebase.');}
-function refreshLanding(){document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:settings.platformCount;document.getElementById('landingActiveCount').textContent=activeMembers.length||Number(settings.activeCount||0);document.getElementById('landingMonthlyFee').textContent=(settings.monthlyContribution*12)+' € / an';document.getElementById('landingFee').textContent=settings.membershipFee+' €'}
+function refreshLanding(){document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:settings.platformCount;const liveActive=activeMembers.filter(a=>a&&a.active===true).length;document.getElementById('landingActiveCount').textContent=isPrivilegedRole()?liveActive:Number(settings.activeCount||0);document.getElementById('landingMonthlyFee').textContent=(settings.monthlyContribution*12)+' € / an';document.getElementById('landingFee').textContent=settings.membershipFee+' €'}
 function refreshDirection(){const pc=platform.length||settings.platformCount;document.getElementById('kPlatform').textContent=pc;document.getElementById('kInactive').textContent=Math.max(0,pc-activeMembers.length);document.getElementById('kPending').textContent=applications.filter(a=>!a.active).length;document.getElementById('kActive').textContent=activeMembers.length;document.getElementById('kRevenue').textContent=(activeMembers.length*settings.membershipFee)+' €';document.getElementById('dirMonthly').textContent=settings.monthlyContribution+' € × 12';document.getElementById('dirAnnual').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('dirSemesters').textContent=(settings.monthlyContribution*6)+' € + '+(settings.monthlyContribution*6)+' €';renderApplications();renderActive();renderPlatform();renderHistory();renderContributionPayments()}
 
 // V6.2 — améliorations UX validées

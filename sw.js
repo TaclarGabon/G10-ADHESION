@@ -1,5 +1,5 @@
-const CACHE='g10-adhesion-pwa-v6-5-9-auth-ok-compteur-actifs';
-const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=6590'];
+const CACHE='g10-adhesion-pwa-v6-5-10-compteur-public-sync';
+const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65100'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
