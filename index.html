@@ -487,7 +487,7 @@
         </div>
 
         <div class="final-stats">
-          <button class="final-stat" onclick="openMembersInfo()"><span class="stat-ico blue">●●●</span><strong id="landingPlatformCount">910</strong><small>Membres sur la plateforme</small></button>
+          <button class="final-stat" onclick="openMembersInfo()"><span class="stat-ico blue">●●●</span><strong id="landingPlatformCount">900</strong><small>Membres sur la plateforme</small></button>
           <button class="final-stat" onclick="openActiveInfo()"><span class="stat-ico green">●</span><strong id="landingActiveCount">0</strong><small>Adhérents actifs</small></button>
           <button class="final-stat" onclick="openMembershipInfo()"><span class="stat-ico gold">●●</span><strong id="landingFee">10 €</strong><small>Droit d’adhésion — une seule fois</small></button>
           <button class="final-stat" onclick="openContributionInfo()"><span class="stat-ico calendar">▦</span><strong id="landingMonthlyFee">120 € / an</strong><small>Cotisation annuelle</small></button>
@@ -716,8 +716,8 @@
     <div class="topbar"><div><h2 id="dirTitle">Tableau de bord Direction</h2><p id="dirSubtitle">Suivi de la campagne, des dossiers et des adhérents actifs.</p></div><div class="userchip"><div class="avatar">DIR</div><div><strong>Direction</strong><small id="dirRoleLabel">Connexion sécurisée Firebase</small></div><button class="btn btn-light" onclick="goHome()">Quitter</button></div></div>
 
     <section id="dir-overview">
-      <div class="kpis"><div class="card kpi"><span>Membres plateforme</span><strong id="kPlatform">910</strong></div><div class="card kpi"><span>Non actifs</span><strong id="kInactive">910</strong></div><div class="card kpi"><span>Dossiers en attente</span><strong id="kPending">0</strong></div><div class="card kpi"><span>Adhérents actifs</span><strong id="kActive">0</strong></div><div class="card kpi"><span>Adhésions encaissées</span><strong id="kRevenue">0 €</strong></div></div>
-      <div class="grid2"><div class="card panel"><div class="panel-head"><div><h3>Logique de campagne</h3><p>De la plateforme à l’adhérent actif.</p></div></div><div class="workflow" style="grid-template-columns:repeat(3,1fr)"><div class="wstep done"><b>1</b><span><strong>Base plateforme</strong><small>Importer les ≈ 910 noms existants</small></span></div><div class="wstep active"><b>2</b><span><strong>Campagne d’adhésion</strong><small>Profil, fiche, signature, paiement</small></span></div><div class="wstep"><b>3</b><span><strong>Adhérent actif</strong><small>Validation et bascule automatique</small></span></div></div></div><div class="card panel"><div class="panel-head"><div><h3>Campagne de relance</h3><p>Concentrer les relances sur les membres encore non actifs.</p></div></div><div class="info-box">La base historique reste intacte. Un membre non adhérent reste « non actif » jusqu’à ce qu’il décide de rejoindre officiellement l’association.</div><div class="action-row"><button class="btn btn-primary" onclick="showDirTab('platform')">Voir les non actifs</button></div></div></div>
+      <div class="kpis"><div class="card kpi"><span>Membres plateforme</span><strong id="kPlatform">900</strong></div><div class="card kpi"><span>Non actifs</span><strong id="kInactive">900</strong></div><div class="card kpi"><span>Dossiers en attente</span><strong id="kPending">0</strong></div><div class="card kpi"><span>Adhérents actifs</span><strong id="kActive">0</strong></div><div class="card kpi"><span>Adhésions encaissées</span><strong id="kRevenue">0 €</strong></div></div>
+      <div class="grid2"><div class="card panel"><div class="panel-head"><div><h3>Logique de campagne</h3><p>De la plateforme à l’adhérent actif.</p></div></div><div class="workflow" style="grid-template-columns:repeat(3,1fr)"><div class="wstep done"><b>1</b><span><strong>Base plateforme</strong><small>Importer les 900 membres existants</small></span></div><div class="wstep active"><b>2</b><span><strong>Campagne d’adhésion</strong><small>Profil, fiche, signature, paiement</small></span></div><div class="wstep"><b>3</b><span><strong>Adhérent actif</strong><small>Validation et bascule automatique</small></span></div></div></div><div class="card panel"><div class="panel-head"><div><h3>Campagne de relance</h3><p>Concentrer les relances sur les membres encore non actifs.</p></div></div><div class="info-box">La base historique reste intacte. Un membre non adhérent reste « non actif » jusqu’à ce qu’il décide de rejoindre officiellement l’association.</div><div class="action-row"><button class="btn btn-primary" onclick="showDirTab('platform')">Voir les non actifs</button></div></div></div>
     </section>
 
     <section id="dir-platform" class="hidden"><div class="card panel"><div class="panel-head"><div><h3>Base plateforme</h3><p>La liste Excel existante sera importée ici. L’outil doit permettre de retrouver rapidement un nom et de voir son statut.</p></div><span class="badge badge-info" id="platformImportBadge">Import à faire</span></div><div class="toolbar"><input id="platformSearch" placeholder="Rechercher un nom…" oninput="renderPlatform()"><input id="csvImport" type="file" accept=".csv,text/csv"><button class="btn btn-light" onclick="importCSV()">Importer CSV</button><button class="btn btn-primary" onclick="downloadPlatformTemplate()">Modèle CSV</button></div><div class="table-wrap"><table class="table"><thead><tr><th>Nom</th><th>Contact</th><th>Pays</th><th>Profession / expertise</th><th>Statut</th><th>Action</th></tr></thead><tbody id="platformRows"></tbody></table></div></div></section>
@@ -783,7 +783,7 @@
 
 <div class="modal" id="aboutModal"><div class="modal-card"><div class="modal-head"><div><h3>Pourquoi rejoindre la Confédération G10 ?</h3><p class="muted">Mettre en réseau la diaspora et transformer ses compétences en actions utiles au Gabon.</p></div><button class="close" onclick="closeModal('aboutModal')">×</button></div><div style="display:grid;gap:11px;line-height:1.58;color:#4f6277">
 <div><b>Contribuer au développement du Gabon</b><br>La Confédération favorise les actions sociales, culturelles, éducatives, techniques et technologiques, ainsi que le partage d’expertises et de compétences.</div>
-<div><b>Structurer une communauté d’adhérents</b><br>Les 910 personnes présentes sur la plateforme ne sont pas automatiquement adhérentes. La campagne permet de constituer une liste officielle d’adhérents actifs.</div>
+<div><b>Structurer une communauté d’adhérents</b><br>Les 900 personnes présentes sur la plateforme ne sont pas automatiquement adhérentes. La campagne permet de constituer une liste officielle d’adhérents actifs.</div>
 <div><b>Participer autrement que par l’argent</b><br>La contribution peut aussi prendre la forme de formations, d’expertise professionnelle, de compétences, de partenariats et de projets collectifs.</div>
 <div><b>Financer les actions de l’association</b><br>Le droit d’adhésion est actuellement fixé à 10 € une seule fois. Les cotisations restent paramétrables afin de suivre les décisions de l’Assemblée générale.</div>
 </div></div></div>
@@ -932,7 +932,7 @@ async function loadPublicSettings(){
   if(!db)return;
   try{
     const snap=await db.collection('settings').doc('public').get();
-    if(snap.exists){settings={...DEFAULT_SETTINGS,...snap.data()};localStorage.setItem('g10_settings_v2',JSON.stringify(settings));refreshLanding();}
+    if(snap.exists){settings={...DEFAULT_SETTINGS,...snap.data()};publicSettingsLoaded=true;localStorage.setItem('g10_settings_v2',JSON.stringify(settings));refreshLanding();}
   }catch(err){console.warn('Paramètres publics non chargés',err)}
 }
 async function loadMemberFromFirebase(user){
@@ -1027,8 +1027,12 @@ async function loginFromHome(){
   }catch(err){console.error(err);homeMessage(firebaseErrorMessage(err),true)}
 }
 
-const DEFAULT_SETTINGS={membershipFee:10,monthlyContribution:10,installments:2,airtel:'+241 07 64 12 449',bank:'',platformCount:910};
-let settings=JSON.parse(localStorage.getItem('g10_settings_v2')||'null')||DEFAULT_SETTINGS;
+const DEFAULT_SETTINGS={membershipFee:10,monthlyContribution:10,installments:2,airtel:'+241 07 64 12 449',bank:'',platformCount:900,activeCount:0};
+let settings={...DEFAULT_SETTINGS,...(JSON.parse(localStorage.getItem('g10_settings_v2')||'null')||{})};
+// V6.5.11: neutralise les anciennes valeurs locales avant la lecture Firebase.
+settings.platformCount=900;
+settings.activeCount=0;
+let publicSettingsLoaded=false;
 let currentMember=null;
 let applications=[];
 let platform=[];
@@ -1353,7 +1357,7 @@ function exportActiveCSV(){const rows=[['id','prenom','nom','email','telephone',
 function downloadCSV(name,rows){const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replaceAll('"','""')+'"').join(',')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
 function hydrateSettings(){setVal('setPlatformCount',settings.platformCount);setVal('setMembershipFee',settings.membershipFee);setVal('setMonthly',settings.monthlyContribution);setVal('setInstallments',settings.installments);setVal('setAirtel',settings.airtel);setVal('setBank',settings.bank)}
 function saveSettings(){settings.platformCount=Number(val('setPlatformCount'))||0;settings.membershipFee=Number(val('setMembershipFee'))||0;settings.monthlyContribution=Number(val('setMonthly'))||0;settings.installments=Number(val('setInstallments'))||1;settings.airtel=val('setAirtel');settings.bank=val('setBank');persist();saveSettingsToFirebase().catch(console.error);refreshDirection();refreshLanding();hydrateMember();alert('Paramètres enregistrés et synchronisés dans Firebase.');}
-function refreshLanding(){document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:settings.platformCount;const liveActive=activeMembers.filter(a=>a&&a.active===true).length;document.getElementById('landingActiveCount').textContent=isPrivilegedRole()?liveActive:Number(settings.activeCount||0);document.getElementById('landingMonthlyFee').textContent=(settings.monthlyContribution*12)+' € / an';document.getElementById('landingFee').textContent=settings.membershipFee+' €'}
+function refreshLanding(){document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:(publicSettingsLoaded?Number(settings.platformCount||900):900);const liveActive=activeMembers.filter(a=>a&&a.active===true).length;document.getElementById('landingActiveCount').textContent=isPrivilegedRole()?liveActive:(publicSettingsLoaded?Number(settings.activeCount||0):0);document.getElementById('landingMonthlyFee').textContent=(settings.monthlyContribution*12)+' € / an';document.getElementById('landingFee').textContent=settings.membershipFee+' €'}
 function refreshDirection(){const pc=platform.length||settings.platformCount;document.getElementById('kPlatform').textContent=pc;document.getElementById('kInactive').textContent=Math.max(0,pc-activeMembers.length);document.getElementById('kPending').textContent=applications.filter(a=>!a.active).length;document.getElementById('kActive').textContent=activeMembers.length;document.getElementById('kRevenue').textContent=(activeMembers.length*settings.membershipFee)+' €';document.getElementById('dirMonthly').textContent=settings.monthlyContribution+' € × 12';document.getElementById('dirAnnual').textContent=(settings.monthlyContribution*12)+' €';document.getElementById('dirSemesters').textContent=(settings.monthlyContribution*6)+' € + '+(settings.monthlyContribution*6)+' €';renderApplications();renderActive();renderPlatform();renderHistory();renderContributionPayments()}
 
 // V6.2 — améliorations UX validées
@@ -1409,7 +1413,7 @@ loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
 
-<script src="./v65.js?v=6590"></script>
+<script src="./v65.js?v=65110"></script>
 
 
 <script>

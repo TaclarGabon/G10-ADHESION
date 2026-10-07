@@ -482,7 +482,7 @@
   };
   refreshLanding=function(){
     document.getElementById('landingPlatformCount').textContent=platform.length?platform.length:settings.platformCount;
-    document.getElementById('landingActiveCount').textContent=activeMembers.length||Number(settings.activeCount||0);
+    document.getElementById('landingActiveCount').textContent=activeMembers.filter(function(a){return a&&a.active===true}).length;
     document.getElementById('landingMonthlyFee').textContent=annualAmount()+' € / an';
     document.getElementById('landingFee').textContent=settings.membershipFee+' €';
   };
