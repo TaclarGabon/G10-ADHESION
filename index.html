@@ -1406,7 +1406,74 @@ loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
 
-<script src="./v65.js?v=6550"></script>
+<script src="./v65.js?v=6560"></script>
+
+
+<script>
+/* V6.5.6 — persistance renforcée du profil et de la signature Firebase */
+(function(){
+  const PROFILE_FIELDS=['civility','lastName','lastName2','firstName','firstName2','birthDate','birthPlace','nationality','address','postal','city','country','idType','idNumber','idIssue','idExpiry','email','phone','profession','degree','expertise'];
+  const REQUIRED_FIELDS=['civility','lastName','firstName','birthDate','birthPlace','nationality','address','city','country','idType','idNumber','idIssue','idExpiry','email','phone'];
+  const BACKUP_PREFIX='g10_member_backup_v656_';
+  function backupKey(user){return BACKUP_PREFIX+String((user&&user.uid)||(user&&user.email)||'').toLowerCase()}
+  function meaningful(v){return v!==undefined&&v!==null&&String(v).trim()!==''}
+  function score(m){if(!m)return 0;let n=0;PROFILE_FIELDS.forEach(k=>{if(meaningful(m[k]))n++});if(m.profileComplete)n+=20;if(m.formSigned)n+=20;if(m.paymentDeclared)n+=20;if(m.paymentConfirmed)n+=20;if(m.active)n+=20;return n}
+  function mergeRich(base,extra){const out=Object.assign({},base||{});Object.keys(extra||{}).forEach(k=>{const v=extra[k];if((!meaningful(out[k])&&meaningful(v))||(typeof v==='boolean'&&v===true))out[k]=v});return out}
+  function saveBackup(m){try{if(!m)return;localStorage.setItem(backupKey(currentAuthUser||{email:m.email}),JSON.stringify(m))}catch(e){console.warn('Sauvegarde locale profil',e)}}
+  function readBackup(user){try{return JSON.parse(localStorage.getItem(backupKey(user))||'null')}catch(e){return null}}
+  async function verifiedSave(m){if(!db||!currentAuthUser||!m)throw new Error('Connexion Firebase indisponible.');m.firebaseUid=currentAuthUser.uid;m.updatedAt=new Date().toISOString();await db.collection('members').doc(currentAuthUser.uid).set(cleanForFirestore(m),{merge:true});const check=await db.collection('members').doc(currentAuthUser.uid).get();if(!check.exists)throw new Error('Le profil n’a pas pu être relu après sauvegarde.');const saved=Object.assign({},check.data(),{firebaseUid:currentAuthUser.uid,email:check.data().email||currentAuthUser.email||'',emailVerified:!!currentAuthUser.emailVerified});currentMember=saved;saveBackup(saved);return saved}
+
+  window.loadMemberFromFirebase=async function(user){
+    if(!db||!user)return;
+    const ref=db.collection('members').doc(user.uid);
+    const snap=await ref.get();
+    let cloud=snap.exists?Object.assign({},snap.data(),{firebaseUid:user.uid,email:snap.data().email||user.email||'',emailVerified:!!user.emailVerified}):null;
+    const local=readBackup(user);
+    // Récupération de secours : si un ancien document du même courriel contient davantage d'informations, on le réassocie au compte courant.
+    let legacy=null;
+    try{
+      if(user.email){const q=await db.collection('members').where('email','==',user.email).get();q.docs.forEach(d=>{const x=Object.assign({},d.data(),{firebaseUid:user.uid});if(score(x)>score(legacy))legacy=x})}
+    }catch(e){console.warn('Recherche profil historique',e)}
+    let best=cloud||createMemberForEmail(user.email||'');
+    [local,legacy].forEach(x=>{if(x&&score(x)>score(best))best=mergeRich(best,x);else if(x)best=mergeRich(best,x)});
+    best.firebaseUid=user.uid;best.email=best.email||user.email||'';best.emailVerified=!!user.emailVerified;
+    currentMember=best;
+    saveBackup(best);
+    if(!snap.exists||score(best)>score(cloud))await ref.set(cleanForFirestore(best),{merge:true});
+  };
+
+  window.saveProfile=async function(){
+    if(!currentMember){currentMember=createMemberForEmail((currentAuthUser&&currentAuthUser.email)||'');currentMember.firebaseUid=currentAuthUser&&currentAuthUser.uid}
+    for(const id of REQUIRED_FIELDS){if(!val(id)){alert('Merci de compléter tous les champs obligatoires.');document.getElementById(id)?.focus();return}}
+    if(!validInternationalPhone(val('phone'))){alert('Saisissez le numéro Téléphone / WhatsApp au format international, avec + et l’indicatif du pays. Exemple : +241 07 12 34 56 78.');document.getElementById('phone')?.focus();return}
+    if(!document.getElementById('diasporaEligibility')?.checked){alert('Merci de confirmer les conditions d’adhésion.');return}
+    if(!val('profession')&&!val('degree')&&!val('expertise')){alert('Merci d’indiquer au moins votre métier/profession, votre diplôme ou votre expertise.');return}
+    PROFILE_FIELDS.forEach(id=>currentMember[id]=val(id));
+    currentMember.phone=formatInternationalPhone(currentMember.phone);currentMember.eligibilityConfirmed=true;currentMember.profileComplete=true;currentMember.status='Profil complété';
+    const matchedIndex=findPlatformByEmail(currentMember.email);if(matchedIndex>=0){currentMember.platformIndex=matchedIndex;platform[matchedIndex]=Object.assign({},platform[matchedIndex],{firstName:currentMember.firstName,firstName2:currentMember.firstName2,lastName:currentMember.lastName,lastName2:currentMember.lastName2,email:currentMember.email,phone:currentMember.phone,country:currentMember.country,profession:currentMember.profession,expertise:currentMember.expertise,status:currentMember.active?'Actif':'Inscrit — adhésion en cours'})}
+    try{upsertApplication();saveBackup(currentMember);await verifiedSave(currentMember);upsertApplication();hydrateMember();if(typeof stepUi==='function')stepUi(true);alert('Profil enregistré et synchronisé. Il restera prérempli lors de vos prochaines connexions.')}catch(e){console.error(e);alert('Le profil n’a pas pu être synchronisé avec Firebase. Ne poursuivez pas le paiement et réessayez. Détail : '+(e.message||e))}
+  };
+
+  window.validateSmartForm=async function(){
+    if(!currentMember?.profileComplete){alert('Enregistrez d’abord votre profil.');return}
+    if(!val('signPlace')||!val('signDate')||!document.getElementById('acceptRules')?.checked||!document.getElementById('acceptInitials')?.checked){alert('Complétez le lieu, la date et les deux validations de signature.');return}
+    currentMember.signPlace=val('signPlace');currentMember.signDate=val('signDate');currentMember.signatureMode='electronic';currentMember.formSigned=true;currentMember.status='Fiche signée électroniquement';
+    try{upsertApplication();saveBackup(currentMember);await verifiedSave(currentMember);upsertApplication();hydrateMember();closeModal('smartFormModal');if(typeof stepUi==='function')stepUi(true);alert('Fiche et signature enregistrées et synchronisées.')}catch(e){console.error(e);alert('La signature n’a pas pu être synchronisée avec Firebase. Réessayez avant de poursuivre. Détail : '+(e.message||e))}
+  };
+
+  const oldManual=window.saveManualSignedForm;
+  window.saveManualSignedForm=async function(){
+    if(!currentMember?.profileComplete){alert('Enregistrez d’abord votre profil.');return}
+    const input=document.getElementById('manualSignedFile'),file=input?.files?.[0];if(!file){alert('Merci de sélectionner la fiche remplie et signée.');return}
+    currentMember.signatureMode='manual';currentMember.manualSignedFileName=file.name;currentMember.manualSignedAt=new Date().toISOString();currentMember.formSigned=true;currentMember.status='Fiche manuscrite transmise';
+    try{upsertApplication();saveBackup(currentMember);await verifiedSave(currentMember);upsertApplication();hydrateMember();const st=document.getElementById('manualFileStatus');if(st)st.textContent='Document enregistré : '+file.name;alert('Fiche manuscrite enregistrée et synchronisée.')}catch(e){console.error(e);alert('La fiche n’a pas pu être synchronisée avec Firebase. Réessayez avant de poursuivre.')}
+  };
+
+  // Sauvegarde locale de sécurité après chaque hydratation réussie.
+  const previousHydrate=window.hydrateMember;
+  window.hydrateMember=function(){previousHydrate();if(currentMember)saveBackup(currentMember)};
+})();
+</script>
 
 <script>
 if ('serviceWorker' in navigator) {
