@@ -431,3 +431,121 @@ var hm=window.hydrateMember;window.hydrateMember=function(){hm();setTimeout(rend
 setTimeout(restoreDocumentAreas,0);
 console.info('G10 Adhésion V6.5.15 FINAL chargé — connexion Direction + documents séparés');
 })();
+
+/* G10-ADHESION V6.5.16 — restauration états validés + listes Direction cohérentes */
+(function(){
+'use strict';
+window.G10_APP_VERSION='6.5.16';
+function validated(m){return !!(m&&(m.paymentConfirmed===true||m.membershipValidatedAt||m.paymentValidatedAt||m.receiptSequence));}
+function normalizeValidated(m){
+ if(!m)return m;
+ if(validated(m)){m.paymentConfirmed=true;if(!m.status||/vérifier|paiement/i.test(m.status))m.status='Adhésion validée';}
+ if(typeof g10IsActive==='function')m.active=g10IsActive(m); // actif uniquement après cotisation à jour
+ return m;
+}
+function uniq(list){
+ var map={},order=[];(list||[]).forEach(function(m){m=normalizeValidated(m);var k=String(m.id||('mail:'+String(m.email||'').toLowerCase()));if(!map[k]){map[k]=m;order.push(k)}else if(typeof mergeOne==='function')map[k]=normalizeValidated(mergeOne(map[k],m));else map[k]=Object.assign({},map[k],m)});return order.map(function(k){return map[k]});
+}
+function confirmedMembers(){return uniq(applications||[]).filter(validated)}
+function trulyActive(){return uniq(applications||[]).filter(function(m){return typeof g10IsActive==='function'?g10IsActive(m):!!m.active})}
+window.renderApplications=function(){
+ var p=uniq(applications||[]).filter(function(a){return !validated(a)}),c=document.getElementById('appCount'),b=document.getElementById('applicationRows');
+ if(c)c.textContent=p.length+' dossier'+(p.length>1?'s':'');if(!b)return;
+ b.innerHTML=p.length?p.map(function(a){var pr=(a.paymentProofData&&a.paymentProofData.data)?'<br><button class="btn btn-light" onclick="g10Proof(\''+esc(a.id)+'\')">Voir justificatif</button>':'',can=a.profileComplete&&a.formSigned&&a.paymentDeclared&&a.paymentProofData&&a.paymentProofData.data;return '<tr><td><b>'+esc(a.id)+'</b></td><td>'+esc(mname(a)||'À compléter')+'<br><small>'+esc(a.email||'')+'</small></td><td>'+(a.profileComplete?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-warn">À compléter</span>')+'</td><td>'+(a.formSigned?'<span class="badge badge-ok">Signée</span>':'<span class="badge badge-warn">À signer</span>')+'</td><td>'+(a.paymentDeclared?'<span class="badge badge-warn">À vérifier</span>':'<span class="badge badge-off">Non déclaré</span>')+pr+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><button class="btn btn-green" '+(!can?'disabled':'')+' onclick="validateApplication(\''+esc(a.id)+'\')">Valider adhésion</button></td></tr>'}).join(''):'<tr><td colspan="7" class="muted">Aucun dossier en attente de validation.</td></tr>';
+};
+window.renderHistory=function(){
+ var rows=confirmedMembers(),c=document.getElementById('historyCount'),b=document.getElementById('historyRows');if(c)c.textContent=rows.length+' dossier'+(rows.length>1?'s':'');if(!b)return;
+ b.innerHTML=rows.length?rows.map(function(a){var s=contributionSummary(a),name=mname(a)||a.email||'—';return '<tr><td><b>'+esc(a.id)+'</b></td><td><b>'+esc(name)+'</b><br><small>'+esc(a.email||'')+'</small></td><td><span class="badge badge-ok">Payée & validée</span></td><td>'+esc(s.label)+'</td><td>'+(a.membershipValidatedAt?formatDateFr(a.membershipValidatedAt.slice(0,10)):'—')+'</td><td><div class="history-actions"><button class="btn btn-light" onclick="editHistoryApplication(\''+esc(a.id)+'\')">Éditer</button><button class="btn btn-danger" onclick="deleteHistoryApplication(\''+esc(a.id)+'\')">Supprimer</button></div></td></tr>'}).join(''):'<tr><td colspan="6" class="muted">Aucune adhésion validée pour le moment.</td></tr>';
+};
+window.renderActive=function(){
+ activeMembers=trulyActive();var b=document.getElementById('activeRows');if(!b)return;
+ b.innerHTML=activeMembers.length?activeMembers.map(function(a){var s=contributionSummary(a);return '<tr><td>'+esc(a.id)+'</td><td><b>'+esc(mname(a)||'—')+'</b></td><td>'+esc(a.email||a.phone||'—')+'</td><td>'+esc(a.country||'—')+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><span class="badge badge-ok">Payée & validée</span></td><td><span class="badge badge-ok">'+esc(s.label)+'</span></td><td><button class="btn btn-light" onclick="g10Receipt(\''+esc(a.id)+'\',\'membership\')">Reçu adhésion</button></td></tr>'}).join(''):'<tr><td colspan="8" class="muted">Aucun adhérent actif pour le moment.</td></tr>';
+};
+window.refreshDirection=function(){
+ applications=uniq(applications||[]);activeMembers=trulyActive();var paid=confirmedMembers(),pc=platform.length||settings.platformCount||900;
+ var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v};set('kPlatform',pc);set('kInactive',Math.max(0,pc-activeMembers.length));set('kPending',applications.filter(function(a){return !validated(a)}).length);set('kActive',activeMembers.length);set('kRevenue',(paid.length*Number(settings.membershipFee||10))+' €');set('dirMonthly',settings.monthlyContribution+' € × 12');set('dirAnnual',(settings.monthlyContribution*12)+' €');set('dirSemesters',(settings.monthlyContribution*6)+' € + '+(settings.monthlyContribution*6)+' €');
+ renderApplications();renderActive();renderPlatform();renderHistory();renderContributionPayments();
+};
+var oldLoad=window.loadMemberFromFirebase;window.loadMemberFromFirebase=async function(user){await oldLoad(user);normalizeValidated(currentMember);if(validated(currentMember)&&db&&user){try{await db.collection('members').doc(user.uid).set(cleanForFirestore({paymentConfirmed:true,status:currentMember.status,active:currentMember.active,updatedAt:new Date().toISOString()}),{merge:true})}catch(e){console.warn('Restauration validation',e)}}};
+var oldSituation=window.renderMemberSituation;window.renderMemberSituation=function(){normalizeValidated(currentMember);oldSituation();if(!currentMember)return;var mem=document.getElementById('situationMembership'),badge=document.getElementById('situationBadge');if(mem&&validated(currentMember))mem.textContent='Adhésion validée';if(badge&&validated(currentMember)&&!currentMember.active){badge.textContent='Adhésion validée — cotisation à démarrer';badge.className='badge badge-info'}};
+var oldHydrate=window.hydrateMember;window.hydrateMember=function(){normalizeValidated(currentMember);oldHydrate()};
+console.info('G10 Adhésion V6.5.16 chargé — états validés restaurés et listes Direction corrigées');
+})();
+
+/* G10-ADHESION V6.5.19 — Mes documents personnels : rendu robuste */
+(function(){
+'use strict';
+window.G10_APP_VERSION='6.5.18';
+function personalDocsV6518(){
+  var host=document.getElementById('g10PersonalDocsHost');
+  if(!host)return;
+  var m=currentMember;
+  if(!m){host.innerHTML='<div class="card panel"><span class="muted">Chargement de vos documents…</span></div>';return;}
+  var rows=[];
+  var pd=m.paymentProofData;
+  if(pd&&pd.data) rows.push('<button class="btn btn-light" id="g10OpenMembershipProofV6518">Justificatif du droit d’adhésion'+(pd.name?' — '+esc(pd.name):'')+'</button>');
+  if(m.paymentConfirmed===true||m.membershipValidatedAt||m.paymentValidatedAt||m.receiptSequence) rows.push('<button class="btn btn-light" onclick="g10Receipt(\''+esc(m.id)+'\',\'membership\')">Reçu d’adhésion</button>');
+  (m.contributionPayments||[]).forEach(function(p){
+    if(p&&p.proofData&&p.proofData.data) rows.push('<button class="btn btn-light" onclick="openProof((currentMember.contributionPayments||[]).find(function(x){return x.id===\''+esc(p.id)+'\'}).proofData)">Justificatif cotisation '+esc(p.date||'')+'</button>');
+    if(p&&p.status==='Confirmé') rows.push('<button class="btn btn-light" onclick="g10Receipt(\''+esc(m.id)+'\',\'contribution\',\''+esc(p.id)+'\')">Reçu cotisation '+esc(p.date||'')+'</button>');
+  });
+  host.innerHTML='<div class="card panel" id="g10PersonalDocs"><div class="panel-head"><div><h3>Mes documents</h3><p>Justificatifs et reçus personnels conservés dans votre dossier.</p></div><span class="badge badge-info">Personnel</span></div><div class="action-row">'+(rows.length?rows.join(''):'<span class="muted">Aucun document personnel disponible pour le moment.</span>')+'</div></div>';
+  var b=document.getElementById('g10OpenMembershipProofV6518');if(b)b.onclick=function(){openProof(currentMember&&currentMember.paymentProofData)};
+}
+window.g10PersonalDocs=personalDocsV6518;
+var oldShow=window.showMemberView;window.showMemberView=function(v,b){var r=oldShow(v,b);if(v==='personaldocs')setTimeout(personalDocsV6518,0);return r};
+var oldHyd=window.hydrateMember;window.hydrateMember=function(){var r=oldHyd();setTimeout(personalDocsV6518,0);return r};
+var oldEnter=window.enterMember;window.enterMember=function(){var r=oldEnter();setTimeout(personalDocsV6518,0);return r};
+setTimeout(personalDocsV6518,0);
+console.info('G10 Adhésion V6.5.19 — Mes documents personnels corrigé');
+})();
+
+/* V6.5.19 — justificatif persistant et ouverture fiable */
+(function(){
+  function dataUrlToBlobUrl(dataUrl){
+    var parts=String(dataUrl||'').split(','), meta=parts[0]||'', raw=parts.slice(1).join(',');
+    var mime=(meta.match(/data:([^;]+)/)||[])[1]||'application/octet-stream';
+    var bin=meta.indexOf(';base64')>=0?atob(raw):decodeURIComponent(raw);
+    var bytes=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes],{type:mime}));
+  }
+  window.g10OpenStoredProof=function(p){
+    if(!p||!p.data){alert('Aucun justificatif enregistré.');return;}
+    try{var u=dataUrlToBlobUrl(p.data);var w=window.open(u,'_blank','noopener');if(!w){alert('Le navigateur a bloqué l’ouverture. Autorisez les fenêtres contextuelles pour ce site.');URL.revokeObjectURL(u);return;}setTimeout(function(){URL.revokeObjectURL(u)},60000)}catch(e){alert('Impossible d’ouvrir le justificatif enregistré.');}
+  };
+  openProof=function(p){window.g10OpenStoredProof(p)};
+
+  async function saveProofOnly(){
+    if(!currentMember)return alert('Ouvrez d’abord votre dossier.');
+    var input=document.getElementById('paymentProof'), file=input&&input.files&&input.files[0];
+    if(!file)return alert('Choisissez d’abord le justificatif à enregistrer.');
+    try{
+      var pd=await proof(file);
+      currentMember.paymentProofData=pd;
+      currentMember.paymentProofName=pd.name||file.name;
+      currentMember.paymentProofType=pd.type||file.type;
+      currentMember.paymentProofUpdatedAt=new Date().toISOString();
+      syncMemberEverywhere(currentMember);persist();await saveMemberToFirebase(currentMember);
+      hydrateMember();if(typeof personalDocsV6518==='function')personalDocsV6518();
+      alert('Justificatif enregistré dans votre dossier. Votre paiement et son statut n’ont pas été modifiés.');
+    }catch(e){alert(e.message||'Impossible d’enregistrer le justificatif.');}
+  }
+  window.g10SaveProofOnly=saveProofOnly;
+
+  function installProofSave(){
+    var input=document.getElementById('paymentProof'); if(!input||document.getElementById('g10SaveProofOnly'))return;
+    var b=document.createElement('button');b.type='button';b.id='g10SaveProofOnly';b.className='btn btn-light';b.textContent='Enregistrer le justificatif';
+    b.onclick=saveProofOnly;
+    var row=input.closest('.field'); if(row)row.appendChild(b);
+  }
+
+  var oldPersonal=personalDocsV6518;
+  personalDocsV6518=function(){
+    oldPersonal();
+    var b=document.getElementById('g10OpenMembershipProofV6518');
+    if(b)b.onclick=function(){window.g10OpenStoredProof(currentMember&&currentMember.paymentProofData)};
+  };
+  var oldHyd2=window.hydrateMember;window.hydrateMember=function(){var r=oldHyd2();setTimeout(function(){installProofSave();personalDocsV6518()},0);return r};
+  var oldShow2=window.showMemberView;window.showMemberView=function(v,b){var r=oldShow2(v,b);setTimeout(function(){installProofSave();if(v==='personaldocs')personalDocsV6518()},0);return r};
+  setTimeout(installProofSave,0);
+})();

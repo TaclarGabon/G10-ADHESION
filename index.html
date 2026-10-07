@@ -952,6 +952,25 @@ async function loadMemberFromFirebase(user){
     await saveMemberToFirebase(currentMember);
   }
 }
+function dedupeApplicationsById(rows){
+  const byKey=new Map();
+  for(const row of (rows||[])){
+    if(!row)continue;
+    const key=String(row.id||row.firebaseUid||row.email||'').trim().toLowerCase();
+    if(!key){continue;}
+    if(!byKey.has(key)){byKey.set(key,row);continue;}
+    const prev=byKey.get(key);
+    // Garder le dossier le plus avancé/récent sans modifier Firebase.
+    const score=x=>(x.active?64:0)+(x.paymentConfirmed?32:0)+(x.paymentDeclared?16:0)+(x.formSigned?8:0)+(x.profileComplete?4:0)+(x.updatedAt?2:0)+(x.membershipValidatedAt?1:0);
+    const preferred=score(row)>score(prev)?row:prev;
+    const other=preferred===row?prev:row;
+    const merged={...other,...preferred};
+    ['profileComplete','formSigned','paymentDeclared','paymentConfirmed','active'].forEach(k=>merged[k]=!!(prev[k]||row[k]));
+    if((!merged.contributionPayments||!merged.contributionPayments.length)){merged.contributionPayments=prev.contributionPayments||row.contributionPayments||[];}
+    byKey.set(key,merged);
+  }
+  return Array.from(byKey.values());
+}
 async function loadDirectionData(){
   if(!db||!isPrivilegedRole())return;
   const [membersSnap,settingsSnap,platformSnap]=await Promise.all([
@@ -959,7 +978,7 @@ async function loadDirectionData(){
     db.collection('settings').doc('public').get(),
     db.collection('platform').orderBy('order').get()
   ]);
-  applications=membersSnap.docs.map(d=>({...d.data(),firebaseUid:d.id}));
+  applications=dedupeApplicationsById(membersSnap.docs.map(d=>({...d.data(),firebaseUid:d.id})));
   activeMembers=applications.filter(a=>a&&a.active===true);
   if(settingsSnap.exists)settings={...DEFAULT_SETTINGS,...settingsSnap.data()};
   else await saveSettingsToFirebase();
@@ -1418,7 +1437,7 @@ loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
 
-<script src="./v65.js?v=65150"></script>
+<script src="./v65.js?v=65170"></script>
 
 
 <script>

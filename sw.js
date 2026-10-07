@@ -1,5 +1,5 @@
-const CACHE='g10-adhesion-pwa-v6-5-11-valeurs-heritees-nettoyees';
-const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65120'];
+const CACHE='g10-adhesion-pwa-v6-5-17-propre';
+const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65170'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
@@ -19,7 +19,6 @@ self.addEventListener('activate',event=>{
 
 self.addEventListener('fetch',event=>{
   if(event.request.method!=='GET') return;
-
   event.respondWith(
     fetch(event.request,{cache:'no-store'})
       .then(response=>{
