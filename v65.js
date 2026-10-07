@@ -351,3 +351,83 @@ var oldHM=window.hydrateMember;window.hydrateMember=function(){oldHM();docsVisib
 setTimeout(docsVisible,0);
 console.info('G10 Adhésion V6.5.14 chargé — dédoublonnage + Mes documents');
 })();
+
+/* G10-ADHESION V6.5.15 — FINAL : connexion Direction + séparation Documents officiels / Mes documents */
+(function(){
+'use strict';
+window.G10_APP_VERSION='6.5.15';
+
+/* La V6.5.14 renommait par erreur Documents officiels. On restaure les deux espaces distincts. */
+function restoreDocumentAreas(){
+  var navs=document.querySelectorAll('#memberApp .side-nav .navbtn');
+  navs.forEach(function(b){
+    var oc=b.getAttribute('onclick')||'';
+    if(oc.indexOf("'docs'")>=0)b.innerHTML='📄 Documents officiels';
+    if(oc.indexOf("'personaldocs'")>=0)b.innerHTML='📁 Mes documents';
+  });
+  var off=document.getElementById('member-docs');
+  if(off){var h=off.querySelector('.topbar h2'),p=off.querySelector('.topbar p');if(h)h.textContent='Documents officiels';if(p)p.textContent='Bibliothèque de référence de la Confédération.';}
+  var box=document.getElementById('g10PersonalDocs'),host=document.getElementById('g10PersonalDocsHost');
+  if(box&&host&&box.parentNode!==host)host.appendChild(box);
+}
+function renderPersonalDocsFinal(){
+  restoreDocumentAreas();
+  if(typeof g10PersonalDocs==='function')g10PersonalDocs();
+  restoreDocumentAreas();
+}
+
+/* Connexion : l'authentification ne doit plus être annulée si une écriture de synthèse échoue. */
+async function loadDirectionSafe(){
+  if(!db||!isPrivilegedRole())return;
+  var rs=await Promise.allSettled([
+    db.collection('members').get(),
+    db.collection('settings').doc('public').get(),
+    db.collection('platform').orderBy('order').get()
+  ]);
+  if(rs[0].status==='fulfilled'){
+    applications=rs[0].value.docs.map(function(d){return Object.assign({},d.data(),{firebaseUid:d.id})});
+    if(typeof uniqueApps==='function')applications=uniqueApps(applications);
+    activeMembers=applications.filter(function(a){return a&&a.active===true});
+  }
+  if(rs[1].status==='fulfilled'&&rs[1].value.exists)settings=Object.assign({},DEFAULT_SETTINGS,rs[1].value.data());
+  if(rs[2].status==='fulfilled')platform=rs[2].value.docs.map(function(d){return Object.assign({},d.data(),{firebaseDocId:d.id})});
+  settings.activeCount=(activeMembers||[]).filter(function(a){return a&&a.active===true}).length;
+  try{localStorage.setItem('g10_settings_v2',JSON.stringify(settings))}catch(e){}
+  try{hydrateSettings()}catch(e){}
+  try{refreshLanding()}catch(e){}
+  try{refreshDirection()}catch(e){}
+  /* Mise à jour publique non bloquante : une règle Firestore ne doit jamais empêcher l'accès Direction. */
+  try{await updatePublicSummary()}catch(e){console.warn('Synthèse publique non mise à jour',e)}
+}
+window.loginFromHome=async function(){
+  if(!auth){homeMessage('Firebase n’est pas disponible.',true);return}
+  var email=normalizeEmail(val('homeEmail')),password=val('homePassword');
+  if(!email||!password){homeMessage('Entrez votre adresse courriel et votre mot de passe.',true);return}
+  try{
+    homeMessage('Connexion…');
+    var cr=await auth.signInWithEmailAndPassword(email,password);
+    try{localStorage.setItem('g10_last_email_v65',email)}catch(e){}
+    currentAuthUser=cr.user;currentUserRole=roleForEmail(cr.user.email||email);
+    if(isPrivilegedRole()){
+      await loadDirectionSafe();
+      enterDirection();
+      if(typeof dirRT==='function')try{dirRT()}catch(e){console.warn(e)}
+    }else{
+      await loadMemberFromFirebase(cr.user);enterMember();
+    }
+  }catch(err){
+    console.error('Connexion',err);
+    var code=String(err&&err.code||'');
+    if(/invalid-credential|wrong-password|user-not-found/.test(code))homeMessage('Compte introuvable ou mot de passe incorrect.',true);
+    else if(/too-many-requests/.test(code))homeMessage('Trop de tentatives. Réessayez dans quelques instants.',true);
+    else homeMessage('Connexion Firebase impossible ('+(code||'erreur réseau')+'). Réessayez.',true);
+  }
+};
+
+var smv=window.showMemberView;
+window.showMemberView=function(v,b){var r=smv(v,b);if(v==='personaldocs')setTimeout(renderPersonalDocsFinal,0);if(v==='docs')setTimeout(restoreDocumentAreas,0);return r};
+var em=window.enterMember;window.enterMember=function(){var r=em();setTimeout(renderPersonalDocsFinal,0);return r};
+var hm=window.hydrateMember;window.hydrateMember=function(){hm();setTimeout(renderPersonalDocsFinal,0)};
+setTimeout(restoreDocumentAreas,0);
+console.info('G10 Adhésion V6.5.15 FINAL chargé — connexion Direction + documents séparés');
+})();
