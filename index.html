@@ -1406,22 +1406,26 @@ loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
 
-<script src="./v65.js?v=6560"></script>
+<script src="./v65.js?v=6570"></script>
 
 
 <script>
-/* V6.5.6 — persistance renforcée du profil et de la signature Firebase */
+/* V6.5.7 — persistance Firebase verrouillée + contrôle après relecture */
 (function(){
+  window.G10_APP_VERSION='6.5.7';
   const PROFILE_FIELDS=['civility','lastName','lastName2','firstName','firstName2','birthDate','birthPlace','nationality','address','postal','city','country','idType','idNumber','idIssue','idExpiry','email','phone','profession','degree','expertise'];
   const REQUIRED_FIELDS=['civility','lastName','firstName','birthDate','birthPlace','nationality','address','city','country','idType','idNumber','idIssue','idExpiry','email','phone'];
-  const BACKUP_PREFIX='g10_member_backup_v656_';
+  const BACKUP_PREFIX='g10_member_backup_v657_';
   function backupKey(user){return BACKUP_PREFIX+String((user&&user.uid)||(user&&user.email)||'').toLowerCase()}
   function meaningful(v){return v!==undefined&&v!==null&&String(v).trim()!==''}
   function score(m){if(!m)return 0;let n=0;PROFILE_FIELDS.forEach(k=>{if(meaningful(m[k]))n++});if(m.profileComplete)n+=20;if(m.formSigned)n+=20;if(m.paymentDeclared)n+=20;if(m.paymentConfirmed)n+=20;if(m.active)n+=20;return n}
   function mergeRich(base,extra){const out=Object.assign({},base||{});Object.keys(extra||{}).forEach(k=>{const v=extra[k];if((!meaningful(out[k])&&meaningful(v))||(typeof v==='boolean'&&v===true))out[k]=v});return out}
   function saveBackup(m){try{if(!m)return;localStorage.setItem(backupKey(currentAuthUser||{email:m.email}),JSON.stringify(m))}catch(e){console.warn('Sauvegarde locale profil',e)}}
   function readBackup(user){try{return JSON.parse(localStorage.getItem(backupKey(user))||'null')}catch(e){return null}}
-  async function verifiedSave(m){if(!db||!currentAuthUser||!m)throw new Error('Connexion Firebase indisponible.');m.firebaseUid=currentAuthUser.uid;m.updatedAt=new Date().toISOString();await db.collection('members').doc(currentAuthUser.uid).set(cleanForFirestore(m),{merge:true});const check=await db.collection('members').doc(currentAuthUser.uid).get();if(!check.exists)throw new Error('Le profil n’a pas pu être relu après sauvegarde.');const saved=Object.assign({},check.data(),{firebaseUid:currentAuthUser.uid,email:check.data().email||currentAuthUser.email||'',emailVerified:!!currentAuthUser.emailVerified});currentMember=saved;saveBackup(saved);return saved}
+  async function verifiedSave(m){if(!db||!currentAuthUser||!m)throw new Error('Connexion Firebase indisponible.');m.firebaseUid=currentAuthUser.uid;m.updatedAt=new Date().toISOString();await db.collection('members').doc(currentAuthUser.uid).set(cleanForFirestore(m),{merge:true});const check=await db.collection('members').doc(currentAuthUser.uid).get();if(!check.exists)throw new Error('Le profil n’a pas pu être relu après sauvegarde.');const saved=Object.assign({},check.data(),{firebaseUid:currentAuthUser.uid,email:check.data().email||currentAuthUser.email||'',emailVerified:!!currentAuthUser.emailVerified});
+    if(m.profileComplete){const missing=REQUIRED_FIELDS.filter(k=>!meaningful(saved[k]));if(missing.length||!saved.profileComplete)throw new Error('Firebase n’a pas confirmé toutes les données du profil ('+missing.join(', ')+').');}
+    if(m.formSigned&&!saved.formSigned)throw new Error('Firebase n’a pas confirmé la signature.');
+    currentMember=saved;saveBackup(saved);return saved}
 
   window.loadMemberFromFirebase=async function(user){
     if(!db||!user)return;
