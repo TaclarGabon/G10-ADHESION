@@ -1029,7 +1029,7 @@ async function loginFromHome(){
 
 const DEFAULT_SETTINGS={membershipFee:10,monthlyContribution:10,installments:2,airtel:'+241 07 64 12 449',bank:'',platformCount:900,activeCount:0};
 let settings={...DEFAULT_SETTINGS,...(JSON.parse(localStorage.getItem('g10_settings_v2')||'null')||{})};
-// V6.5.11: neutralise les anciennes valeurs locales avant la lecture Firebase.
+// V6.5.12: neutralise les anciennes valeurs locales avant la lecture Firebase.
 settings.platformCount=900;
 settings.activeCount=0;
 let publicSettingsLoaded=false;
@@ -1462,14 +1462,14 @@ if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRo
     PROFILE_FIELDS.forEach(id=>currentMember[id]=val(id));
     currentMember.phone=formatInternationalPhone(currentMember.phone);currentMember.eligibilityConfirmed=true;currentMember.profileComplete=true;currentMember.status='Profil complété';
     const matchedIndex=findPlatformByEmail(currentMember.email);if(matchedIndex>=0){currentMember.platformIndex=matchedIndex;platform[matchedIndex]=Object.assign({},platform[matchedIndex],{firstName:currentMember.firstName,firstName2:currentMember.firstName2,lastName:currentMember.lastName,lastName2:currentMember.lastName2,email:currentMember.email,phone:currentMember.phone,country:currentMember.country,profession:currentMember.profession,expertise:currentMember.expertise,status:currentMember.active?'Actif':'Inscrit — adhésion en cours'})}
-    try{upsertApplication();saveBackup(currentMember);await verifiedSave(currentMember);upsertApplication();hydrateMember();if(typeof stepUi==='function')stepUi(true);alert('Profil enregistré et synchronisé. Il restera prérempli lors de vos prochaines connexions.')}catch(e){console.error(e);alert('Le profil n’a pas pu être synchronisé avec Firebase. Ne poursuivez pas le paiement et réessayez. Détail : '+(e.message||e))}
+    try{upsertApplication();saveBackup(currentMember);await verifiedSave(currentMember);upsertApplication();hydrateMember();alert('Profil enregistré et synchronisé. Il restera prérempli lors de vos prochaines connexions.')}catch(e){console.error(e);alert('Le profil n’a pas pu être synchronisé avec Firebase. Ne poursuivez pas le paiement et réessayez. Détail : '+(e.message||e))}
   };
 
   window.validateSmartForm=async function(){
     if(!currentMember?.profileComplete){alert('Enregistrez d’abord votre profil.');return}
     if(!val('signPlace')||!val('signDate')||!document.getElementById('acceptRules')?.checked||!document.getElementById('acceptInitials')?.checked){alert('Complétez le lieu, la date et les deux validations de signature.');return}
     currentMember.signPlace=val('signPlace');currentMember.signDate=val('signDate');currentMember.signatureMode='electronic';currentMember.formSigned=true;currentMember.status='Fiche signée électroniquement';
-    try{upsertApplication();saveBackup(currentMember);await verifiedSave(currentMember);upsertApplication();hydrateMember();closeModal('smartFormModal');if(typeof stepUi==='function')stepUi(true);alert('Fiche et signature enregistrées et synchronisées.')}catch(e){console.error(e);alert('La signature n’a pas pu être synchronisée avec Firebase. Réessayez avant de poursuivre. Détail : '+(e.message||e))}
+    try{upsertApplication();saveBackup(currentMember);await verifiedSave(currentMember);upsertApplication();hydrateMember();closeModal('smartFormModal');alert('Fiche et signature enregistrées et synchronisées.')}catch(e){console.error(e);alert('La signature n’a pas pu être synchronisée avec Firebase. Réessayez avant de poursuivre. Détail : '+(e.message||e))}
   };
 
   const oldManual=window.saveManualSignedForm;

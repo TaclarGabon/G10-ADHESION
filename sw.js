@@ -1,5 +1,5 @@
-const CACHE='g10-adhesion-pwa-v6-5-11-valeurs-heritees-nettoyees';
-const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65110'];
+const CACHE='g10-adhesion-pwa-v6-5-12-stepui-corrige';
+const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65120'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
