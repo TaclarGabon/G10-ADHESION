@@ -13,7 +13,7 @@
   }
   function halfAnnualAmount(){return annualAmount()/2}
   function rtmNumber(){
-    return String((settings&&settings.rtm)||(settings&&settings.airtel)||'+241 76 41 24 49').trim();
+    return String((settings&&settings.rtm)||(settings&&settings.airtel)||'+241 07 64 12 449').trim();
   }
   function whatsappDestinationNumber(){
     // Temporary WhatsApp-only test override: add ?wa=<international number> to the app URL.
@@ -510,7 +510,7 @@
       var testBtn=[].slice.call(document.querySelectorAll('button')).find(function(b){
         return /WhatsApp/i.test(b.textContent||'');
       });
-      if(testBtn)testBtn.textContent='Envoyer sur WhatsApp TEST ('+waDest+')';
+      if(testBtn)testBtn.textContent='Envoyer sur WhatsApp officiel ('+waDest+')';
     }
     var msg='Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : '+name+
       '\nDossier : '+currentMember.id+
@@ -530,7 +530,7 @@
     if(dest){
       var waDest=whatsappDestinationNumber();
       var waTest=waDest.replace(/\D/g,'')!==rtmNumber().replace(/\D/g,'');
-      dest.textContent='Airtel Money officiel : '+rtmNumber()+(waTest?'  •  WhatsApp TEST : '+waDest:'');
+      dest.textContent='Airtel Money officiel : '+rtmNumber()+(waTest?'  •  WhatsApp officiel : '+waDest:'');
       if(waTest){
         dest.style.fontWeight='700';
         dest.style.color='#0b6b3a';

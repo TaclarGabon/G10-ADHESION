@@ -467,7 +467,7 @@
 <meta name="apple-mobile-web-app-title" content="G10 Adhésion">
 </head>
 <body>
-<!-- G10-ADHESION V6.5 — UX mobile, synchro temps réel, WhatsApp TEST -->
+<!-- G10-ADHESION V6.5 — UX mobile, synchro temps réel, WhatsApp officiel -->
 <div id="landing" class="screen landing">
   <div class="container">
     <div class="landing-shell final-home">
@@ -620,13 +620,13 @@
           <button class="btn btn-primary" onclick="showMemberView('payments')">Gérer mes cotisations</button>
         </div>
 
-        <div id="membershipPaymentForm"><div class="notice"><b>Version test / démonstration :</b> Airtel Money est le moyen actuellement prévu. Les autres moyens affichés sont des propositions qui devront être validées par la Direction.</div>
+        <div id="membershipPaymentForm"><div class="notice"><b>Phase de validation :</b> Airtel Money est le moyen actuellement prévu. Les autres moyens affichés sont des propositions qui devront être validées par la Direction.</div>
           <div class="payment-options">
-            <label class="payment-option"><input type="radio" name="payMethod" value="Airtel Money" checked><div><strong>Airtel Money</strong><small>Envoyez le règlement au numéro officiel +241 76 41 24 49 et conservez la référence de transaction.</small></div></label>
+            <label class="payment-option"><input type="radio" name="payMethod" value="Airtel Money" checked><div><strong>Airtel Money</strong><small>Envoyez le règlement au numéro officiel +241 07 64 12 449 et conservez la référence de transaction.</small></div></label>
             <label class="payment-option" style="opacity:.62"><input type="radio" name="payMethod" value="Carte bancaire" disabled><div><strong>Carte bancaire — option à l’étude</strong><small>Non active pour le moment. Cette possibilité sera soumise à la Direction avant toute mise en service.</small></div></label>
             <label class="payment-option" style="opacity:.62"><input type="radio" name="payMethod" value="Virement bancaire" disabled><div><strong>Virement bancaire — option à l’étude</strong><small>Non actif pour le moment. Aucun compte bancaire G10 n’est encore proposé dans cette version.</small></div></label>
           </div>
-          <div class="payment-highlight"><strong>Montant à payer : <span id="paymentAmount">10 €</span></strong><br>Référence dossier : <span id="paymentReference">G10-ADH-DEMO</span><br><span id="paymentDestination">Airtel Money officiel : +241 76 41 24 49 • Mode test — Romanic (WhatsApp) : +241 07 47 34 334</span><br><small>Après le paiement, saisissez la référence de transaction puis transmettez la déclaration à la Direction.</small></div>
+          <div class="payment-highlight"><strong>Montant à payer : <span id="paymentAmount">10 €</span></strong><br>Référence dossier : <span id="paymentReference">G10-ADH-DEMO</span><br><span id="paymentDestination">Airtel Money / WhatsApp officiel : +241 07 64 12 449</span><br><small>Après le paiement, saisissez la référence de transaction puis transmettez la déclaration à la Direction.</small></div>
           <div class="form-grid" style="margin-top:12px">
             <div class="field"><label>Référence / N° transaction *</label><input id="transactionRef"></div>
             <div class="field"><label>Date du paiement *</label><input id="paymentDate" type="date"></div>
@@ -689,7 +689,7 @@
           <div id="contributionNextBox" class="payment-highlight" style="margin-top:12px"></div>
 
           <div class="payment-options" style="margin-top:12px">
-            <label class="payment-option"><input type="radio" name="contributionMethod" value="Airtel Money" checked><div><strong>Airtel Money</strong><small id="contributionAirtelText">Numéro officiel : +241 76 41 24 49</small></div></label>
+            <label class="payment-option"><input type="radio" name="contributionMethod" value="Airtel Money" checked><div><strong>Airtel Money</strong><small id="contributionAirtelText">Numéro officiel : +241 07 64 12 449</small></div></label>
             <label class="payment-option"><input type="radio" name="contributionMethod" value="Carte bancaire"><div><strong>Carte bancaire</strong><small>Mode prévu pour la version connectée ; déclaration simulée dans cette démo.</small></div></label>
             <label class="payment-option"><input type="radio" name="contributionMethod" value="Virement bancaire"><div><strong>Virement bancaire</strong><small>Coordonnées gérées par la Direction.</small></div></label>
           </div>
@@ -1024,7 +1024,7 @@ async function loginFromHome(){
   }catch(err){console.error(err);homeMessage(firebaseErrorMessage(err),true)}
 }
 
-const DEFAULT_SETTINGS={membershipFee:10,monthlyContribution:10,installments:2,airtel:'+241 76 41 24 49',bank:'',platformCount:910};
+const DEFAULT_SETTINGS={membershipFee:10,monthlyContribution:10,installments:2,airtel:'+241 07 64 12 449',bank:'',platformCount:910};
 let settings=JSON.parse(localStorage.getItem('g10_settings_v2')||'null')||DEFAULT_SETTINGS;
 let currentMember=null;
 let applications=[];
@@ -1162,7 +1162,7 @@ function renderContributionMember(){
   const at=document.getElementById('contributionAirtelText');
   if(mp)mp.textContent=(settings.monthlyContribution*12)+' € en une seule fois ('+settings.monthlyContribution+' € × 12).';
   if(tp)tp.textContent=(settings.monthlyContribution*6)+' € maintenant puis '+(settings.monthlyContribution*6)+' € six mois plus tard.';
-  if(at)at.textContent='Numéro officiel : '+(settings.airtel||'+241 76 41 24 49');
+  if(at)at.textContent='Numéro officiel : '+(settings.airtel||'+241 07 64 12 449');
 
   const existing=currentMember.contributionPayments||[];
   const selected=existing.length?(existing[0].plan||currentMember.contributionPlan||'monthly'):(currentMember.contributionPlan||'monthly');
@@ -1304,8 +1304,8 @@ function sendWhatsAppPayment(){
   const ref=val('transactionRef')||currentMember.transactionRef||'à renseigner';
   const date=val('paymentDate')||currentMember.paymentDate||'à renseigner';
   const name=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||'Adhérent';
-  const phone=String(settings.airtel||'+241 76 41 24 49').replace(/\D/g,'');
-  const msg=`Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : ${name}\nDossier : ${currentMember.id}\nMontant : ${settings.membershipFee} €\nAirtel Money : ${settings.airtel||'+241 76 41 24 49'}\nRéférence transaction : ${ref}\nDate : ${date}\nMerci de vérifier et valider mon adhésion.`;
+  const phone=String(settings.airtel||'+241 07 64 12 449').replace(/\D/g,'');
+  const msg=`Bonjour Direction G10, je confirme mon paiement du droit d’adhésion.\nNom : ${name}\nDossier : ${currentMember.id}\nMontant : ${settings.membershipFee} €\nAirtel Money : ${settings.airtel||'+241 07 64 12 449'}\nRéférence transaction : ${ref}\nDate : ${date}\nMerci de vérifier et valider mon adhésion.`;
   window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener');
 }
 
@@ -1406,7 +1406,7 @@ loadPublicSettings();
 if(auth){auth.onAuthStateChanged(user=>{currentAuthUser=user||null;currentUserRole=user?roleForEmail(user.email):'guest';});}
 </script>
 
-<script src="./v65.js?v=6542"></script>
+<script src="./v65.js?v=6550"></script>
 
 <script>
 if ('serviceWorker' in navigator) {
