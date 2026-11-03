@@ -1,0 +1,11 @@
+</div></div></div>
+
+<div class="modal" id="welcomeThanksModal"><div class="modal-card thanks-modal-card">
+  <div class="thanks-hero">
+    <button class="close" style="position:absolute;right:16px;top:14px" onclick="closeMemberThanks()">×</button>
+    <div class="thanks-check">✓</div>
+    <h3>Bienvenue au G10</h3>
+    <p>Votre paiement a été vérifié et votre adhésion est maintenant <b>validée</b>. Merci de rejoindre la Confédération de la Diaspora Gabonaise Multi-Continentale.</p>
+  </div>
+  <div class="thanks-body">
+    <div class="thanks-message"><b>Un message pour vous</b><br>La Coordinatrice générale souhaite vous adresser personnellement un message de remerciement pour votre adhésion.</div>
