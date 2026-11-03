@@ -1,0 +1,21 @@
+    <div class="thanks-actions"><button class="btn btn-primary" onclick="playVideoById('memberThanksVideo')">▶ Lire le message</button><button class="btn btn-light" onclick="minimizeVideoModal('welcomeThanksModal','memberThanksVideo','Message de bienvenue du G10')">— Réduire</button><button class="btn btn-light" onclick="closeMemberThanks()">Fermer</button></div>
+  </div>
+</div></div>
+
+<div id="videoMiniBar" class="video-mini-bar hidden" aria-live="polite">
+  <div class="video-mini-copy"><small>Vidéo en pause</small><b id="videoMiniLabel">Vidéo G10</b></div>
+  <div class="video-mini-actions"><button class="btn btn-primary" onclick="resumeMinimizedVideo()">▶ Reprendre</button><button class="video-mini-close" onclick="dismissMinimizedVideo()" aria-label="Fermer la vidéo réduite">×</button></div>
+</div>
+
+<div class="modal" id="infoCardModal"><div class="modal-card"><div class="modal-head"><div><h3 id="infoCardTitle">Information</h3></div><button class="close" onclick="closeModal('infoCardModal')">×</button></div><div id="infoCardText" style="line-height:1.6;color:#4f6277"></div></div></div>
+
+<div class="modal" id="aboutModal"><div class="modal-card g10-content-modal"><div class="modal-head"><div><h3>Découvrir le G10</h3><p class="muted">Une force de réflexion, de propositions et d’actions au service du Gabon.</p></div><button class="close" onclick="closeModal('aboutModal')">×</button></div>
+<div class="about-intro"><h4>Qui sommes-nous ?</h4><p>Le G10 est une association de droit gabonais créée en février 2024 et à caractère multi-continental. Elle rassemble des Gabonaises et Gabonais de la diaspora autour d’une ambition commune : contribuer collectivement au développement du Gabon.</p><p>La Confédération est <b>apolitique, non partisane et à but non lucratif</b>. Elle met en réseau des compétences et des expertises de la diaspora afin de soutenir des initiatives sociales, culturelles, techniques, technologiques et économiques.</p></div>
+<div class="about-grid">
+  <section class="about-panel"><h4>Nos valeurs</h4><div class="value-chips"><span>Solidarité</span><span>Unité</span><span>Excellence</span><span>Intégrité</span><span>Innovation</span><span>Engagement pour le Gabon</span></div></section>
+  <section class="about-panel credo-panel"><h4>Notre credo</h4><blockquote>« Être une force de réflexion, de propositions et d’actions. »</blockquote></section>
+</div>
+<section class="about-panel commitments"><h4>Nos engagements</h4><div class="commitment-grid"><div><b>Visibilité de la diaspora</b><p>Accroître la visibilité et la représentation de la diaspora gabonaise.</p></div><div><b>Développement économique</b><p>Être un acteur économique clé du développement du Gabon.</p></div><div><b>Développement global</b><p>Promouvoir le développement social, culturel, technique et technologique du Gabon.</p></div></div></section>
+<section class="about-panel join-panel"><h4>Pourquoi adhérer ?</h4><p>L’adhésion permet de rejoindre officiellement la Confédération, de participer à ses réflexions et à ses actions, de mettre son expertise au service de projets collectifs et de contribuer à la construction d’une diaspora mieux structurée.</p></section>
+</div></div>
+
