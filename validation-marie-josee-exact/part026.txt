@@ -1,0 +1,3 @@
+
+<div class="modal" id="officialDocsModal"><div class="modal-card"><div class="modal-head"><div><h3 id="officialDocsTitle">Document officiel</h3><p class="muted">Document de référence de la Confédération.</p></div><button class="close" onclick="closeModal('officialDocsModal')">×</button></div><div class="action-row" style="margin-top:0;margin-bottom:10px"><button class="btn btn-light" id="officialDocsOpenTab" type="button">Ouvrir dans un nouvel onglet</button></div><iframe class="pdf-frame" id="officialDocsFrame"></iframe></div></div>
+
