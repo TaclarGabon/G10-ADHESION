@@ -1,0 +1,682 @@
+
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.19.0/firebase-storage-compat.js"></script>
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCGytZOhaEGJT-WT15HdQ105w28oyshaxo",
+  authDomain: "g10-adhesion.firebaseapp.com",
+  projectId: "g10-adhesion",
+  storageBucket: "g10-adhesion.firebasestorage.app",
+  messagingSenderId: "101361225290",
+  appId: "1:101361225290:web:a339a6b77ae5b9c0bfa0b3"
+};
+let auth=null, db=null, storage=null;
+try{
+  if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  auth=firebase.auth();
+  db=firebase.firestore();
+  storage=firebase.storage();
+}catch(firebaseInitError){
+  console.error('Initialisation Firebase impossible',firebaseInitError);
+}
+
+function openJoinModal(){openModal('joinModal')}
+function openAchievements(){openModal('achievementsModal')}
+function openCoordinatorMessage(){prepareVideo(document.getElementById('coordinatorWelcomeVideo'));openModal('coordinatorModal')}
+function openInfoCard(title,text){document.getElementById('infoCardTitle').textContent=title;document.getElementById('infoCardText').innerHTML=text;openModal('infoCardModal')}
+function openMembersInfo(){openInfoCard('Membres sur la plateforme','Le nombre affiché est géré par la Direction dans <b>Paramètres</b>. Il peut être ajusté sans modifier l’application. La présence dans cette base ne signifie pas encore que la personne est adhérente active.')}
+function openActiveInfo(){openInfoCard('Adhérents actifs','Ce compteur est alimenté automatiquement lorsqu’un dossier d’adhésion est validé et que la personne passe au statut <b>Adhérent actif</b>.')}
+function openMembershipInfo(){openInfoCard('Droit d’adhésion','Le droit d’adhésion est obligatoire pour devenir adhérent actif. Il est actuellement fixé à <b>'+settings.membershipFee+' €</b> et se paie <b>une seule fois</b>.')}
+function openContributionInfo(){const m=settings.monthlyContribution;openInfoCard('Cotisation annuelle','La cotisation annuelle est calculée sur une base de <b>'+m+' € × 12</b>, soit <b>'+(m*12)+' €</b>.<br><br><b>Option 1 — En une fois :</b> '+(m*12)+' € en un seul paiement.<br><b>Option 2 — En deux fois :</b> '+(m*6)+' € lors du premier versement puis '+(m*6)+' € six mois plus tard.<br><br>Le montant reste modifiable par la Direction selon les décisions de l’Assemblée générale.')}
+
+
+const ACCOUNT_KEY='g10_accounts_v5';
+localStorage.removeItem(ACCOUNT_KEY); // ancienne démo : ne jamais conserver les mots de passe en clair
+
+const DIRECTION_EMAIL='contact@g10.ga';
+const ADMIN_TEST_EMAIL='judicael.edangomo@gmail.com';
+let currentAuthUser=null;
+let currentUserRole='guest';
+
+function normalizeEmail(v){return String(v||'').trim().toLowerCase()}
+function roleForEmail(email){
+  const e=normalizeEmail(email);
+  if(e===DIRECTION_EMAIL)return'direction';
+  if(e===ADMIN_TEST_EMAIL)return'admin_test';
+  return'adherent';
+}
+function isPrivilegedRole(){return currentUserRole==='direction'||currentUserRole==='admin_test'}
+function homeMessage(text,isError=false){
+  const el=document.getElementById('homeLoginMessage');
+  if(!el)return;
+  el.textContent=text||'';
+  el.style.color=isError?'#a02b2b':'#0d4b8b';
+}
+function toggleHomePassword(){
+  const e=document.getElementById('homePassword');
+  if(e)e.type=e.type==='password'?'text':'password';
+}
+function firebaseErrorMessage(err){
+  const code=String(err?.code||'');
+  if(code.includes('invalid-credential')||code.includes('wrong-password')||code.includes('user-not-found'))return'Adresse courriel ou mot de passe incorrect.';
+  if(code.includes('email-already-in-use'))return'Un compte existe déjà avec cette adresse. Utilisez Se connecter.';
+  if(code.includes('weak-password'))return'Le mot de passe doit comporter au moins 6 caractères.';
+  if(code.includes('invalid-email'))return'Adresse courriel invalide.';
+  if(code.includes('too-many-requests'))return'Trop de tentatives. Réessayez dans quelques instants.';
+  return'Connexion impossible pour le moment. Vérifiez votre connexion et réessayez.';
+}
+async function forgotPassword(){
+  if(!auth){homeMessage('Firebase n’est pas disponible pour le moment.',true);return}
+  const email=normalizeEmail(val('homeEmail'));
+  if(!email||!email.includes('@')){homeMessage('Entrez d’abord votre adresse courriel.',true);return}
+  try{
+    await auth.sendPasswordResetEmail(email);
+    homeMessage('Si ce compte existe, un courriel de réinitialisation vient d’être envoyé.');
+  }catch(err){
+    console.warn(err);
+    homeMessage('Si ce compte existe, un courriel de réinitialisation sera envoyé à cette adresse.');
+  }
+}
+function cleanForFirestore(obj){return JSON.parse(JSON.stringify(obj||{}))}
+async function saveMemberToFirebase(member=currentMember){
+  if(!db||!currentAuthUser||!member)return;
+  const uid=member.firebaseUid||currentAuthUser.uid;
+  if(!uid)return;
+  const copy=cleanForFirestore({...member,firebaseUid:uid,updatedAt:new Date().toISOString()});
+  await db.collection('members').doc(uid).set(copy,{merge:true});
+}
+async function saveAnyMemberToFirebase(member){
+  if(!db||!isPrivilegedRole()||!member?.firebaseUid)return;
+  const copy=cleanForFirestore({...member,updatedAt:new Date().toISOString()});
+  await db.collection('members').doc(member.firebaseUid).set(copy,{merge:true});
+}
+async function deleteMemberFromFirebase(member){
+  if(!db||!isPrivilegedRole()||!member?.firebaseUid)return;
+  await db.collection('members').doc(member.firebaseUid).delete();
+}
+async function saveSettingsToFirebase(){
+  if(!db||!isPrivilegedRole())return;
+  const payload=cleanForFirestore({...settings,activeCount:activeMembers.length,updatedAt:new Date().toISOString()});
+  await db.collection('settings').doc('public').set(payload,{merge:true});
+}
+async function updatePublicSummary(){
+  if(!db||!isPrivilegedRole())return;
+  await db.collection('settings').doc('public').set({
+    platformCount:platform.length||settings.platformCount||0,
+    activeCount:activeMembers.length,
+    membershipFee:Number(settings.membershipFee||0),
+    monthlyContribution:Number(settings.monthlyContribution||0),
+    updatedAt:new Date().toISOString()
+  },{merge:true});
+}
+async function savePlatformEntryToFirebase(index){
+  if(!db||!isPrivilegedRole()||!platform[index])return;
+  const item=platform[index];
+  const id=item.firebaseDocId||('p-'+String(index).padStart(5,'0'));
+  item.firebaseDocId=id;
+  await db.collection('platform').doc(id).set(cleanForFirestore({...item,order:index}),{merge:true});
+}
+async function savePlatformToFirebase(items){
+  if(!db||!isPrivilegedRole())return;
+  const old=await db.collection('platform').get();
+  for(let i=0;i<old.docs.length;i+=400){
+    const batch=db.batch();old.docs.slice(i,i+400).forEach(d=>batch.delete(d.ref));await batch.commit();
+  }
+  for(let i=0;i<items.length;i+=400){
+    const batch=db.batch();
+    items.slice(i,i+400).forEach((p,j)=>{
+      const order=i+j,id='p-'+String(order).padStart(5,'0');
+      p.firebaseDocId=id;
+      batch.set(db.collection('platform').doc(id),cleanForFirestore({...p,order}));
+    });
+    await batch.commit();
+  }
+}
+async function loadPublicSettings(){
+  if(!db)return;
+  try{
+    const snap=await db.collection('settings').doc('public').get();
+    if(snap.exists){settings={...DEFAULT_SETTINGS,...snap.data()};localStorage.setItem('g10_settings_v2',JSON.stringify(settings));refreshLanding();}
+  }catch(err){console.warn('Paramètres publics non chargés',err)}
+}
+async function loadMemberFromFirebase(user){
+  if(!db||!user)return;
+  const snap=await db.collection('members').doc(user.uid).get();
+  if(snap.exists){
+    currentMember={...snap.data(),firebaseUid:user.uid,email:snap.data().email||user.email||'',emailVerified:!!user.emailVerified};
+    // Migration V6.8 : un adhérent déjà validé avant l'ajout du pop-up doit quand même le recevoir une fois.
+    const needsWelcomeMigration=!!(currentMember.active&&currentMember.paymentConfirmed&&!currentMember.welcomeThanksSeenAt&&currentMember.welcomeThanksAvailable!==true);
+    if(needsWelcomeMigration){
+      currentMember.welcomeThanksAvailable=true;
+      currentMember.welcomeThanksPending=true;
+      try{await saveMemberToFirebase(currentMember)}catch(err){console.warn('Migration message de bienvenue non sauvegardée',err)}
+    }
+  }else{
+    currentMember=createMemberForEmail(user.email||'');
+    currentMember.firebaseUid=user.uid;
+    currentMember.emailVerified=!!user.emailVerified;
+    await withTimeout(saveMemberToFirebase(currentMember),15000,'Firebase ne répond pas pendant l’enregistrement du dossier.');
+  }
+}
+async function loadDirectionData(){
+  if(!db||!isPrivilegedRole())return;
+  const [membersSnap,settingsSnap,platformSnap]=await Promise.all([
+    db.collection('members').get(),
+    db.collection('settings').doc('public').get(),
+    db.collection('platform').orderBy('order').get()
+  ]);
+  applications=membersSnap.docs.map(d=>({...d.data(),firebaseUid:d.id}));
+  activeMembers=applications.filter(a=>a.active);
+  if(settingsSnap.exists)settings={...DEFAULT_SETTINGS,...settingsSnap.data()};
+  else await saveSettingsToFirebase();
+  platform=platformSnap.docs.map(d=>({...d.data(),firebaseDocId:d.id}));
+  localStorage.setItem('g10_settings_v2',JSON.stringify(settings));
+  hydrateSettings();refreshLanding();refreshDirection();
+}
+function findPlatformByEmail(email){
+  email=normalizeEmail(email);
+  return platform.findIndex(p=>normalizeEmail(p.email)===email);
+}
+function createMemberForEmail(email){
+  const pIndex=findPlatformByEmail(email);
+  if(pIndex>=0){
+    const p=platform[pIndex];
+    return {
+      id:makeId(),source:'Plateforme',platformIndex:pIndex,status:'Dossier en préparation',
+      profileComplete:false,formSigned:false,paymentDeclared:false,paymentConfirmed:false,active:false,
+      lastName:p.lastName||p.name||'',firstName:p.firstName||'',firstName2:p.firstName2||'',
+      lastName2:p.lastName2||'',email:email,phone:p.phone||'',country:p.country||'',
+      profession:p.profession||'',expertise:p.expertise||''
+    };
+  }
+  return {
+    id:makeId(),source:'Nouveau',status:'Dossier en préparation',
+    profileComplete:false,formSigned:false,paymentDeclared:false,paymentConfirmed:false,active:false,email:email
+  };
+}
+async function createAccountFromHome(){
+  if(!auth){homeMessage('Firebase n’est pas disponible pour le moment.',true);return}
+  const email=normalizeEmail(val('homeEmail'));
+  const password=val('homePassword');
+  if(!email||!email.includes('@')){homeMessage('Entrez une adresse courriel valide.',true);return}
+  if(password.length<6){homeMessage('Choisissez un mot de passe d’au moins 6 caractères.',true);return}
+  try{
+    homeMessage('Création du compte…');
+    const credential=await auth.createUserWithEmailAndPassword(email,password);
+    currentAuthUser=credential.user;
+    currentUserRole=roleForEmail(email);
+    currentMember=createMemberForEmail(email);
+    currentMember.firebaseUid=credential.user.uid;
+    currentMember.emailVerified=!!credential.user.emailVerified;
+    await saveMemberToFirebase(currentMember);
+    try{await credential.user.sendEmailVerification()}catch(e){console.warn('Vérification e-mail non envoyée',e)}
+    homeMessage('Compte créé. Un courriel de vérification a été envoyé.');
+    enterMember();
+  }catch(err){console.error(err);homeMessage(firebaseErrorMessage(err),true)}
+}
+async function loginFromHome(){
+  if(!auth){homeMessage('Firebase n’est pas disponible pour le moment.',true);return}
+  const email=normalizeEmail(val('homeEmail'));
+  const password=val('homePassword');
+  if(!email||!password){homeMessage('Entrez votre adresse courriel et votre mot de passe.',true);return}
+  try{
+    homeMessage('Connexion…');
+    const credential=await auth.signInWithEmailAndPassword(email,password);
+    currentAuthUser=credential.user;
+    currentUserRole=roleForEmail(credential.user.email||email);
+    if(isPrivilegedRole()){
+      await loadDirectionData();
+      enterDirection();
+    }else{
+      await loadMemberFromFirebase(credential.user);
+      homeMessage(credential.user.emailVerified?'Connexion réussie.':'Connexion réussie — adresse courriel encore non vérifiée.');
+      enterMember();
+    }
+  }catch(err){console.error(err);homeMessage(firebaseErrorMessage(err),true)}
+}
+
+const DEFAULT_SETTINGS={membershipFee:10,monthlyContribution:10,installments:2,airtel:'+241 76 41 24 49',bank:'',platformCount:910};
+let settings=JSON.parse(localStorage.getItem('g10_settings_v2')||'null')||DEFAULT_SETTINGS;
+let currentMember=null;
+let applications=[];
+let platform=[];
+let activeMembers=[];
+let memberRealtimeUnsubscribe=null;
+function persist(){
+  localStorage.setItem('g10_settings_v2',JSON.stringify(settings));
+  if(currentAuthUser&&currentMember){
+    if(currentMember.firebaseUid===currentAuthUser.uid||!isPrivilegedRole())saveMemberToFirebase(currentMember).catch(err=>console.error('Sauvegarde membre Firebase',err));
+    else saveAnyMemberToFirebase(currentMember).catch(err=>console.error('Sauvegarde membre Direction',err));
+  }
+}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():''}function setVal(id,v){const e=document.getElementById(id);if(e)e.value=v??''}function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function makeId(){return 'G10-ADH-'+String(Date.now()).slice(-6)}function initials(n){return [n.firstName,n.firstName2,n.lastName,n.lastName2].filter(Boolean).map(x=>(x.trim()[0]||'')).join('').toUpperCase()||'ADH'}
+
+function formatDateFr(iso){if(!iso)return '—';const d=new Date(iso+'T12:00:00');if(Number.isNaN(d.getTime()))return iso;return new Intl.DateTimeFormat('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d)}
+
+function toggleMemberAccordion(key,forceOpen){
+  const card=document.getElementById('memberAccordion-'+key);
+  const body=document.getElementById('memberAccordionBody-'+key);
+  const head=document.getElementById('memberAccordionHead-'+key);
+  if(!card||!body||!head)return;
+  const open=typeof forceOpen==='boolean'?forceOpen:body.hasAttribute('hidden');
+  if(open){
+    body.removeAttribute('hidden');
+    card.classList.add('open');
+    card.classList.remove('member-accordion-collapsed');
+  }else{
+    body.setAttribute('hidden','');
+    card.classList.remove('open');
+    card.classList.add('member-accordion-collapsed');
+  }
+  head.setAttribute('aria-expanded',String(open));
+}
+function accordionKey(event,key){
+  if(event.key==='Enter'||event.key===' '){
+    event.preventDefault();
+    toggleMemberAccordion(key);
+  }
+}
+function resetMemberAccordions(){
+  ['profile','form','payment'].forEach(k=>toggleMemberAccordion(k,false));
+}
+
+function setFormMode(mode,saveChange=true){
+  if(!currentMember)return;
+  const changed=currentMember.signatureMode!==mode;
+  currentMember.signatureMode=mode;
+  const e=document.getElementById('electronicFormBlock'),m=document.getElementById('manualFormBlock');
+  if(e)e.classList.toggle('hidden',mode!=='electronic');
+  if(m)m.classList.toggle('hidden',mode!=='manual');
+  document.getElementById('modeElectronicBtn')?.classList.toggle('active',mode==='electronic');
+  document.getElementById('modeManualBtn')?.classList.toggle('active',mode==='manual');
+  const b=document.getElementById('formModeBadge');if(b)b.textContent=mode==='manual'?'Signature manuscrite':'Signature électronique';
+  // Important : l'hydratation Firebase ne doit jamais réécrire la même valeur,
+  // sinon on crée une boucle onSnapshot -> hydrate -> persist -> onSnapshot.
+  if(saveChange&&changed)persist();
+}
+function saveManualSignedForm(){
+  if(!currentMember?.profileComplete){alert('Enregistrez d’abord votre profil.');return}
+  const input=document.getElementById('manualSignedFile');
+  const file=input?.files?.[0];
+  if(!file){alert('Merci de sélectionner la fiche remplie et signée.');return}
+  currentMember.signatureMode='manual';currentMember.manualSignedFileName=file.name;currentMember.manualSignedAt=new Date().toISOString();currentMember.formSigned=true;currentMember.status='Fiche manuscrite transmise';
+  upsertApplication();syncMemberEverywhere(currentMember);persist();hydrateMember();
+  const s=document.getElementById('manualFileStatus');if(s)s.textContent='Document enregistré pour la démonstration : '+file.name;
+  alert('Fiche manuscrite enregistrée. Elle est prête pour le contrôle de la Direction.');
+}
+function contributionSummary(member){
+  const all=Array.isArray(member?.contributionPayments)?member.contributionPayments:[];
+  const plan=member?.contributionPlan||(all[0]?.plan)||'';
+  const same=plan?all.filter(p=>p.plan===plan):[];
+  const confirmed=same.filter(p=>p.status==='Confirmé');
+  const pending=same.find(p=>p.status!=='Confirmé');
+  const max=plan==='two'?2:1;
+  const interval=plan==='two'?6:12;
+  let label='Non commencée',next='—';
+  if(plan){label=confirmed.length+'/'+max+' paiement'+(confirmed.length>1?'s':'')+' confirmé'+(confirmed.length>1?'s':'');}
+  if(pending){label+=(confirmed.length?' · ':'')+'1 à vérifier';next='En attente de validation Direction';}
+  else if(plan&&confirmed.length>=max){next='Cotisation annuelle à jour';}
+  else if(plan&&confirmed.length){const last=confirmed[confirmed.length-1];next='Au plus tard le '+formatDateFr(addMonthsIso(last.date,interval));}
+  else if(plan){next='À démarrer';}
+  return {plan,confirmed:confirmed.length,max,label,next};
+}
+function renderMemberSituation(){
+  if(!currentMember)return;
+  const mem=document.getElementById('situationMembership'),cot=document.getElementById('situationContribution'),due=document.getElementById('situationNextDue'),badge=document.getElementById('situationBadge');
+  if(mem)mem.textContent=currentMember.paymentConfirmed?'Payée & validée':currentMember.paymentDeclared?'Paiement à vérifier':'À finaliser';
+  const s=contributionSummary(currentMember);if(cot)cot.textContent=s.label;if(due)due.textContent=s.next;
+  if(badge){badge.textContent=currentMember.active?'Adhérent actif':'Dossier en cours';badge.className='badge '+(currentMember.active?'badge-ok':'badge-info');}
+}
+function editHistoryApplicationByUid(uid){const i=applications.findIndex(a=>a.firebaseUid===uid);if(i<0)return;const a=applications[i];const first=prompt('Prénom 1 :',a.firstName||'');if(first===null)return;const last=prompt('Nom 1 :',a.lastName||'');if(last===null)return;const email=prompt('Adresse courriel :',a.email||'');if(email===null)return;a.firstName=first.trim();a.lastName=last.trim();a.email=email.trim();applications[i]=a;const ai=activeMembers.findIndex(x=>x.firebaseUid===uid);if(ai>=0)activeMembers[ai]=JSON.parse(JSON.stringify(a));if(currentMember?.firebaseUid===uid)currentMember=JSON.parse(JSON.stringify(a));persist();saveAnyMemberToFirebase(a).catch(console.error);updatePublicSummary().catch(console.error);refreshDirection();renderHistory();renderActive();}
+function editHistoryApplication(id){const a=applications.find(x=>x.id===id);if(a?.firebaseUid)editHistoryApplicationByUid(a.firebaseUid)}
+
+function resetDemoData(){
+  alert('La remise à zéro globale est désactivée dans la version Firebase afin de protéger les vrais dossiers. Un compte de test peut être réinitialisé séparément sans toucher aux adhérents réels.');
+}
+
+function deleteHistoryApplicationByUid(uid){const a=applications.find(x=>x.firebaseUid===uid);if(!a)return;const name=[a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' ')||a.email||a.id;if(!confirm('Supprimer définitivement ce dossier de l’historique : '+name+' ?'))return;applications=applications.filter(x=>x.firebaseUid!==uid);activeMembers=activeMembers.filter(x=>x.firebaseUid!==uid);const stillActive=applications.some(x=>x.active&&((a.id&&x.id===a.id)||(a.email&&normalizeEmail(x.email)===normalizeEmail(a.email))));if(!stillActive&&a.platformIndex!==undefined&&platform[a.platformIndex])platform[a.platformIndex].status='Non actif';if(currentMember?.firebaseUid===uid)currentMember=null;persist();deleteMemberFromFirebase(a).catch(console.error);updatePublicSummary().catch(console.error);refreshDirection();renderHistory();renderActive();refreshLanding();}
+function deleteHistoryApplication(id){const a=applications.find(x=>x.id===id);if(a?.firebaseUid)deleteHistoryApplicationByUid(a.firebaseUid)}
+function renderHistory(){const rows=applications.filter(a=>a.active);const c=document.getElementById('historyCount');if(c)c.textContent=rows.length+' dossier'+(rows.length>1?'s':'');const body=document.getElementById('historyRows');if(!body)return;body.innerHTML=rows.length?rows.map(a=>{const s=contributionSummary(a);const name=[a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' ')||a.email||'—';const uid=a.firebaseUid||'';const dup=isLogicalDuplicate(a)?'<br><span class="badge badge-warn">Doublon détecté</span>':'';return `<tr><td><b>${esc(a.id)}</b>${dup}</td><td><b>${esc(name)}</b><br><small>${esc(a.email||'')}</small></td><td><span class="badge badge-ok">Payée & validée</span></td><td>${esc(s.label)}</td><td>${a.membershipValidatedAt?formatDateFr(a.membershipValidatedAt.slice(0,10)):'—'}</td><td><div class="history-actions"><button class="btn btn-light" onclick="editHistoryApplicationByUid('${uid}')">Éditer</button><button class="btn btn-danger" onclick="deleteHistoryApplicationByUid('${uid}')">Supprimer</button></div></td></tr>`}).join(''):'<tr><td colspan="6" class="muted">Aucune adhésion archivée pour le moment.</td></tr>'}
+
+
+
+function safeFileName(name){return String(name||'justificatif').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-120)}
+function proofHasFile(proof){return !!(proof&&(proof.url||proof.dataUrl))}
+function withTimeout(promise,ms,message){
+  return Promise.race([
+    promise,
+    new Promise((_,reject)=>setTimeout(()=>reject(new Error(message||'Délai dépassé.')),ms))
+  ]);
+}
+function fileToDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(String(r.result||''));
+    r.onerror=()=>reject(new Error('Lecture du fichier impossible.'));
+    r.readAsDataURL(file);
+  });
+}
+async function openProofRecord(proof){
+  if(!proofHasFile(proof)){alert('Aucun justificatif n’est archivé.');return}
+  if(proof.url){window.open(proof.url,'_blank','noopener');return}
+  try{
+    const res=await fetch(proof.dataUrl);
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);
+    window.open(url,'_blank','noopener');
+    setTimeout(()=>URL.revokeObjectURL(url),120000);
+  }catch(err){
+    console.error(err);
+    alert('Le justificatif ne peut pas être ouvert.');
+  }
+}
+async function uploadProofFile(file,category,key){
+  if(!file) return null;
+  const max=12*1024*1024;
+  if(file.size>max) throw new Error('Le justificatif dépasse 12 Mo.');
+
+  const inlineMax=550*1024;
+  if(file.size<=inlineMax){
+    const dataUrl=await withTimeout(fileToDataUrl(file),10000,'Lecture du justificatif trop longue.');
+    return {
+      dataUrl,
+      storageMode:'firestore-inline',
+      name:file.name,
+      type:file.type||'application/octet-stream',
+      size:file.size,
+      uploadedAt:new Date().toISOString()
+    };
+  }
+
+  if(!storage||!currentAuthUser) throw new Error('Firebase Storage n’est pas disponible pour ce fichier volumineux.');
+  const uid=currentMember?.firebaseUid||currentAuthUser.uid;
+  if(!uid) throw new Error('Compte adhérent introuvable.');
+  const path=`payment-proofs/${uid}/${category}/${Date.now()}_${safeFileName(file.name)}`;
+  const ref=storage.ref().child(path);
+  const snap=await withTimeout(
+    ref.put(file,{contentType:file.type||'application/octet-stream',customMetadata:{memberId:String(currentMember?.id||''),paymentKey:String(key||'')}}),
+    20000,
+    'Le téléversement vers Firebase Storage ne répond pas.'
+  );
+  const url=await withTimeout(snap.ref.getDownloadURL(),10000,'Impossible d’obtenir le lien du justificatif.');
+  return {url,path,storageMode:'firebase-storage',name:file.name,type:file.type||'',size:file.size,uploadedAt:new Date().toISOString()};
+}
+function viewMembershipProof(){
+  const proof=currentMember?.membershipProof;
+  if(!proofHasFile(proof)){alert('Aucun justificatif n’est encore archivé pour ce paiement.');return}
+  openProofRecord(proof);
+}
+let pendingMembershipProofFile=null;
+
+function selectMembershipProof(input){
+  const file=input?.files?.[0]||null;
+  const selection=document.getElementById('membershipProofSelection');
+  const name=document.getElementById('membershipProofFileName');
+  const status=document.getElementById('membershipArchiveStatus');
+  pendingMembershipProofFile=file;
+  if(!file){
+    if(selection)selection.classList.add('hidden');
+    if(name)name.textContent='';
+    return;
+  }
+  if(name)name.innerHTML='<b>'+esc(file.name)+'</b><br><span class="muted">'+Math.max(1,Math.round(file.size/1024))+' Ko</span>';
+  if(selection)selection.classList.remove('hidden');
+  if(status)status.textContent='Fichier sélectionné. Cliquez sur « Enregistrer le justificatif » pour l’archiver.';
+}
+
+function previewPendingMembershipProof(){
+  const file=pendingMembershipProofFile;
+  if(!file){alert('Sélectionnez d’abord un justificatif.');return}
+  const url=URL.createObjectURL(file);
+  window.open(url,'_blank','noopener');
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+}
+
+function cancelSelectedMembershipProof(){
+  pendingMembershipProofFile=null;
+  const input=document.getElementById('membershipArchiveProofInput');
+  const selection=document.getElementById('membershipProofSelection');
+  const name=document.getElementById('membershipProofFileName');
+  const status=document.getElementById('membershipArchiveStatus');
+  if(input)input.value='';
+  if(selection)selection.classList.add('hidden');
+  if(name)name.textContent='';
+  if(status)status.textContent=proofHasFile(currentMember?.membershipProof)
+    ? 'Justificatif archivé : '+(currentMember.membershipProof.name||'document')
+    : 'Aucun justificatif archivé pour ce paiement.';
+}
+
+async function saveSelectedMembershipProof(){
+  const file=pendingMembershipProofFile;
+  if(!currentMember?.paymentConfirmed){alert('Votre adhésion doit d’abord être validée.');return}
+  if(!file){alert('Sélectionnez d’abord un justificatif.');return}
+  const status=document.getElementById('membershipArchiveStatus');
+  const saveBtn=document.getElementById('saveMembershipProofBtn');
+  try{
+    if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Enregistrement…'}
+    if(status)status.textContent='Enregistrement du justificatif dans votre dossier…';
+    const proof=await uploadProofFile(file,'membership',currentMember.id||'adhesion');
+    currentMember.membershipProof=proof;
+    syncMemberEverywhere(currentMember);
+    upsertApplication();
+    persist();
+    await saveMemberToFirebase(currentMember);
+    pendingMembershipProofFile=null;
+    const input=document.getElementById('membershipArchiveProofInput');
+    const selection=document.getElementById('membershipProofSelection');
+    if(input)input.value='';
+    if(selection)selection.classList.add('hidden');
+    hydrateMember();
+    refreshDirection();
+    const s=document.getElementById('membershipArchiveStatus');
+    if(s)s.textContent='Justificatif enregistré : '+proof.name;
+    alert('Justificatif enregistré. Vous pouvez maintenant cliquer sur « Voir justificatif ».');
+  }catch(err){
+    console.error(err);
+    if(status)status.textContent='Échec de l’enregistrement : '+(err.message||err);
+    alert('Le justificatif n’a pas pu être enregistré : '+(err.message||err));
+  }finally{
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Enregistrer le justificatif'}
+  }
+}
+function membershipCertificateCode(member){
+  const base=(member?.id||'G10-ADH').replace(/[^A-Z0-9-]/gi,'').toUpperCase();
+  const stamp=(member?.membershipValidatedAt||member?.updatedAt||new Date().toISOString()).slice(0,10).replace(/-/g,'');
+  return `${base}-${stamp}`;
+}
+function openMembershipCertificate(){
+  if(!currentMember?.paymentConfirmed||!currentMember?.active){alert('L’attestation est disponible après validation définitive de l’adhésion.');return}
+  const name=[currentMember.firstName,currentMember.firstName2,currentMember.lastName,currentMember.lastName2].filter(Boolean).join(' ')||currentMember.email||'Adhérent';
+  const validated=currentMember.membershipValidatedAt?new Date(currentMember.membershipValidatedAt).toLocaleDateString('fr-FR'):formatDateFr(currentMember.paymentDate||'');
+  const code=membershipCertificateCode(currentMember);
+  const amount=Number(settings.membershipFee||10);
+  const w=window.open('','_blank','width=900,height=1100');
+  if(!w){alert('Autorisez les fenêtres pop-up pour ouvrir l’attestation.');return}
+  const html=`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Attestation d’adhésion ${code}</title><style>body{font-family:Arial,sans-serif;margin:0;background:#eef4f9;color:#15314d}.page{width:760px;min-height:980px;margin:24px auto;background:#fff;padding:54px 62px;box-sizing:border-box;border:1px solid #d8e3ed}.head{text-align:center;border-bottom:3px solid #0d6fb8;padding-bottom:22px}.head h1{margin:10px 0 0;color:#0b355a;font-size:30px}.brand{font-weight:800;color:#0d6fb8;font-size:18px}.body{font-size:16px;line-height:1.65;margin-top:42px}.box{background:#f4f8fb;border:1px solid #dbe6ef;border-radius:10px;padding:18px;margin:24px 0}.code{font-family:monospace;font-weight:700}.sign{margin-top:72px;text-align:right}.sign b{display:block}.foot{margin-top:70px;padding-top:16px;border-top:1px solid #dce5ef;font-size:11px;color:#63788d}.actions{text-align:center;margin:20px}.actions button{padding:12px 18px;border:0;border-radius:8px;background:#0d6fb8;color:white;font-weight:700;cursor:pointer}@media print{body{background:#fff}.page{margin:0;border:0;width:auto;min-height:auto}.actions{display:none}}</style></head><body><div class="actions"><button onclick="window.print()">Imprimer / Enregistrer en PDF</button></div><div class="page"><div class="head"><div class="brand">CONFÉDÉRATION DE LA DIASPORA GABONAISE MULTI-CONTINENTALE — G10</div><h1>ATTESTATION D’ADHÉSION</h1></div><div class="body"><p>La Direction de la Confédération atteste que :</p><div class="box"><strong>${esc(name)}</strong><br>N° de dossier : <strong>${esc(currentMember.id||'—')}</strong><br>Adresse courriel : ${esc(currentMember.email||'—')}</div><p>a satisfait aux formalités d’adhésion enregistrées dans l’application G10 et que son droit d’adhésion d’un montant de <strong>${amount} €</strong> a été confirmé par la Direction.</p><p>L’adhésion est enregistrée comme <strong>active</strong> à compter du <strong>${esc(validated||'—')}</strong>.</p><div class="box">Code de validation : <span class="code">${esc(code)}</span><br>Référence de paiement : ${esc(currentMember.transactionRef||'—')}</div><div class="sign"><b>Pour la Direction G10</b><span>Validation électronique de l’adhésion</span></div><div class="foot">Document généré depuis l’espace adhérent G10. Cette attestation confirme la validation électronique enregistrée dans le dossier. Elle ne reproduit aucune signature manuscrite.</div></div></div></body></html>`;
+  w.document.open();w.document.write(html);w.document.close();
+}
+function normalizeContributionState(){
+  if(!currentMember)return;
+  if(!Array.isArray(currentMember.contributionPayments))currentMember.contributionPayments=[];
+  if(!currentMember.contributionPlan)currentMember.contributionPlan='';
+}
+function addMonthsIso(dateStr,months){
+  if(!dateStr)return'';
+  const d=new Date(dateStr+'T12:00:00Z');
+  const day=d.getUTCDate();
+  const tm=d.getUTCMonth()+months;
+  const y=d.getUTCFullYear()+Math.floor(tm/12);
+  const m=((tm%12)+12)%12;
+  const last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
+  return new Date(Date.UTC(y,m,Math.min(day,last))).toISOString().slice(0,10);
+}
+function syncMemberEverywhere(member){
+  if(!member)return;
+  const uid=member.firebaseUid||'';
+  const ai=applications.findIndex(a=>uid?a.firebaseUid===uid:a.id===member.id);
+  if(ai>=0)applications[ai]=JSON.parse(JSON.stringify(member));
+  const xi=activeMembers.findIndex(a=>uid?a.firebaseUid===uid:a.id===member.id);
+  if(xi>=0)activeMembers[xi]=JSON.parse(JSON.stringify(member));
+  if(currentMember&&(uid?currentMember.firebaseUid===uid:currentMember.id===member.id))currentMember=JSON.parse(JSON.stringify(member));
+}
+function contributionPaymentLabel(p){
+  if(p.plan==='monthly')return 'Cotisation annuelle / 1';
+  return p.sequence===1?'1er versement / 2':'2e versement / 2';
+}
+function renderContributionMember(){
+  if(!currentMember)return;
+  normalizeContributionState();
+  const locked=document.getElementById('contributionLocked');
+  const unlocked=document.getElementById('contributionUnlocked');
+  const badge=document.getElementById('contributionStatus');
+  const active=!!(currentMember.active&&currentMember.paymentConfirmed);
+  if(locked)locked.classList.toggle('hidden',active);
+  if(unlocked)unlocked.classList.toggle('hidden',!active);
+  if(badge){
+    badge.textContent=active?'Cotisations ouvertes':'En attente d’activation';
+    badge.className='badge '+(active?'badge-ok':'badge-info');
+  }
+  if(!active)return;
+
+  const mp=document.getElementById('monthlyPlanText');
+  const tp=document.getElementById('twoPlanText');
+  const at=document.getElementById('contributionAirtelText');
+  if(mp)mp.textContent=(settings.monthlyContribution*12)+' € en une seule fois ('+settings.monthlyContribution+' € × 12).';
+  if(tp)tp.textContent=(settings.monthlyContribution*6)+' € maintenant puis '+(settings.monthlyContribution*6)+' € six mois plus tard.';
+  if(at)at.textContent='Numéro officiel : '+(settings.airtel||'+241 76 41 24 49');
+
+  const existing=currentMember.contributionPayments||[];
+  const selected=existing.length?(existing[0].plan||currentMember.contributionPlan||'monthly'):(currentMember.contributionPlan||'monthly');
+  currentMember.contributionPlan=selected;
+  document.querySelectorAll('input[name=contributionPlan]').forEach(r=>{r.checked=r.value===selected;r.disabled=existing.length>0&&r.value!==selected});
+  refreshContributionForm();
+
+  const rows=currentMember.contributionPayments||[];
+  const body=document.getElementById('memberContributionRows');
+  if(body){
+    body.innerHTML=rows.length?rows.map((p,idx)=>`<tr><td>${esc(contributionPaymentLabel(p))}</td><td>${p.amount} €</td><td>${esc(p.date||'—')}</td><td>${esc(p.method||'—')}</td><td>${esc(p.reference||'—')}</td><td><span class="badge ${p.status==='Confirmé'?'badge-ok':'badge-warn'}">${esc(p.status||'À vérifier')}</span></td><td>${proofHasFile(p.proof)?`<button class="btn btn-light" onclick="viewCurrentContributionProof(${idx})">Voir</button>`:'—'}</td></tr>`).join(''):'<tr><td colspan="7" class="muted">Aucune cotisation déclarée pour le moment.</td></tr>';
+  }
+}
+function refreshContributionForm(){
+  if(!currentMember)return;
+  normalizeContributionState();
+  const plan=document.querySelector('input[name=contributionPlan]:checked')?.value||currentMember.contributionPlan||'monthly';
+  currentMember.contributionPlan=plan;
+  const payments=currentMember.contributionPayments||[];
+  const same=payments.filter(p=>p.plan===plan);
+  const nextSequence=same.length+1;
+  const box=document.getElementById('contributionNextBox');
+  if(!box)return;
+
+  const pending=same.find(p=>p.status!=='Confirmé');
+  if(pending){
+    box.innerHTML=`<strong>${contributionPaymentLabel(pending)} déjà déclaré - ${pending.amount} €.</strong><br>Statut : en attente de confirmation par la Direction.`;
+    return;
+  }
+  if(plan==='monthly'){
+    if(nextSequence>1){
+      box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Le paiement annuel a été confirmé.';
+      return;
+    }
+    box.innerHTML=`<strong>Cotisation annuelle : ${settings.monthlyContribution*12} € en une seule fois</strong><br>Base de calcul : ${settings.monthlyContribution} € × 12.<br>Après déclaration, la Direction vérifiera la réception.`;
+  }else{
+    if(nextSequence>2){
+      box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Les deux versements ont été confirmés.';
+      return;
+    }
+    const first=same[0];
+    const due=nextSequence===2&&first?.date?addMonthsIso(first.date,6):'';
+    box.innerHTML=`<strong>${nextSequence===1?'Premier':'Deuxième'} versement : ${settings.monthlyContribution*6} €</strong>${due?'<br>À régler au plus tard le '+formatDateFr(due):''}<br>Après déclaration, la Direction vérifiera la réception.`;
+  }
+}
+async function declareContributionPayment(){
+  if(!currentMember?.active||!currentMember?.paymentConfirmed){
+    alert('Votre adhésion doit d’abord être validée par la Direction.');
+    return;
+  }
+  normalizeContributionState();
+  const plan=document.querySelector('input[name=contributionPlan]:checked')?.value||'monthly';
+  const reference=val('contributionRef');
+  const date=val('contributionDate');
+  const method=document.querySelector('input[name=contributionMethod]:checked')?.value||'Airtel Money';
+  if(!reference||!date){alert('Merci de renseigner la référence et la date du paiement.');return}
+
+  const same=currentMember.contributionPayments.filter(p=>p.plan===plan);
+  if(same.some(p=>p.status!=='Confirmé')){alert('Le paiement précédent doit d’abord être confirmé par la Direction.');return}
+  const sequence=same.length+1;
+  const max=plan==='monthly'?1:2;
+  if(sequence>max){alert('Toutes les échéances de ce plan ont déjà été confirmées.');return}
+  const amount=plan==='monthly'?settings.monthlyContribution*12:settings.monthlyContribution*6;
+  const id='COT-'+Date.now();
+  const file=document.getElementById('contributionProof')?.files?.[0]||null;
+  let proof=null;
+  if(file){try{proof=await uploadProofFile(file,'contributions',id)}catch(err){console.error(err);alert('Le justificatif n’a pas pu être archivé : '+(err.message||err));return}}
+  const payment={
+    id,plan,sequence,amount,date,method,reference,proof,
+    status:'À vérifier',
+    dueDate:plan==='two'&&sequence===1?addMonthsIso(date,6):''
+  };
+  currentMember.contributionPlan=plan;
+  currentMember.contributionPayments.push(payment);
+  syncMemberEverywhere(currentMember);
+  persist();
+  await saveMemberToFirebase(currentMember).catch(console.error);
+  setVal('contributionRef','');
+  setVal('contributionDate','');
+  const inp=document.getElementById('contributionProof');if(inp)inp.value='';
+  renderContributionMember();
+  renderMemberSituation();
+  refreshDirection();
+  alert('Cotisation déclarée. Elle est maintenant visible par la Direction pour confirmation.'+(proof?' Le justificatif est archivé dans votre dossier.':''));
+}
+function renderContributionPayments(){
+  const rows=[];
+  applications.forEach(a=>{
+    (a.contributionPayments||[]).forEach(p=>rows.push({member:a,payment:p}));
+  });
+  const pending=rows.filter(x=>x.payment.status!=='Confirmé').length;
+  const counter=document.getElementById('contributionPendingCount');
+  if(counter)counter.textContent=pending+' à vérifier';
+  const body=document.getElementById('contributionPaymentRows');
+  if(!body)return;
+  body.innerHTML=rows.length?rows.map(({member,payment})=>{
+    const name=[member.firstName,member.firstName2,member.lastName,member.lastName2].filter(Boolean).join(' ')||member.email||member.id;
+    const plan=payment.plan==='monthly'?'Annuel — 1 fois':'2 fois';
+    const uid=member.firebaseUid||'';
+    const action=payment.status==='Confirmé'
+      ?'<span class="badge badge-ok">Confirmé</span>'
+      :`<button class="btn btn-green" onclick="confirmContributionPaymentByUid('${uid}','${payment.id}')">Confirmer</button>`;
+    return `<tr><td><b>${esc(name)}</b><br><small>${esc(member.id)}</small></td><td>${plan}</td><td>${esc(contributionPaymentLabel(payment))}</td><td>${payment.amount} €</td><td>${esc(payment.date||'—')}</td><td>${esc(payment.method||'—')}</td><td>${esc(payment.reference||'—')}</td><td>${proofHasFile(payment.proof)?`<button class="btn btn-light" onclick="viewMemberContributionProof('${uid}','${payment.id}')">Voir</button>`:'—'}</td><td>${action}</td></tr>`;
+  }).join(''):'<tr><td colspan="9" class="muted">Aucune cotisation déclarée pour le moment.</td></tr>';
+}
+function confirmContributionPaymentByUid(uid,paymentId){
+  const i=applications.findIndex(a=>a.firebaseUid===uid);
+  if(i<0)return;
+  const member=applications[i];
+  const p=(member.contributionPayments||[]).find(x=>x.id===paymentId);
+  if(!p)return;
+  p.status='Confirmé';
+  p.confirmedAt=new Date().toISOString();
+  applications[i]=member;
+  const ai=activeMembers.findIndex(a=>a.firebaseUid===uid);
+  if(ai>=0)activeMembers[ai]=JSON.parse(JSON.stringify(member));
+  if(currentMember?.firebaseUid===uid)currentMember=JSON.parse(JSON.stringify(member));
+  persist();
+  saveAnyMemberToFirebase(member).catch(console.error);
+  renderContributionPayments();
+  renderActive();
+  if(currentMember?.firebaseUid===uid){renderContributionMember();renderMemberSituation();}
+  alert('Cotisation confirmée par la Direction.');
+}
+function confirmContributionPayment(memberId,paymentId){
+  const member=applications.find(a=>a.id===memberId);
+  if(member?.firebaseUid)confirmContributionPaymentByUid(member.firebaseUid,paymentId);
+}
+
+
+const OFFICIAL_DOCUMENTS={
+  charte:{title:'Charte de la Confédération',src:'https://adhesion.g10.ga/Charte_G10.pdf'},
