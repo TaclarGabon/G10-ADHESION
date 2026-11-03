@@ -16,6 +16,8 @@ small{color:#6c8194}
 <script>
 (async()=>{
   try{
+    if(location.search||location.hash){history.replaceState(null,'',location.pathname);}
+
     const base='/validation-marie-josee-v614-parts/';
     const urls=Array.from({length:51},(_,i)=>base+'part'+String(i).padStart(3,'0')+'.txt');
     const parts=await Promise.all(urls.map(u=>fetch(u,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(u+' '+r.status);return r.text()})));
@@ -28,6 +30,36 @@ small{color:#6c8194}
     if(tailStart<0) throw new Error('Base applicative introuvable');
     let html=partial.slice(0,cut)+current.slice(tailStart);
     html=html.replace('<title>G10 Adhésion — Version de validation Marie-Josée</title>','<title>G10 Adhésion — Validation Marie-Josée</title>');
+
+    const uiPatch=`<script id="marie-josee-login-ui-patch">
+(function(){
+  function normalizeMarieJoseeLogin(){
+    var root=document.getElementById('landing')||document;
+    var login=root.querySelector('button[onclick*="loginFromHome"]');
+    var create=root.querySelector('button[onclick*="createAccountFromHome"]');
+    if(login){login.textContent='Se connecter';}
+    if(create){create.textContent='Créer un compte';}
+    if(login&&create&&login.parentNode===create.parentNode&&login.nextElementSibling!==create){
+      login.parentNode.insertBefore(login,create);
+    }
+    root.querySelectorAll('.g10-first-help').forEach(function(el){el.remove();});
+    root.querySelectorAll('div,p,small').forEach(function(el){
+      var t=(el.textContent||'').trim();
+      if(t.indexOf('Première connexion ?')===0 && !el.querySelector('button')) el.remove();
+    });
+  }
+  normalizeMarieJoseeLogin();
+  document.addEventListener('DOMContentLoaded',normalizeMarieJoseeLogin);
+  window.addEventListener('load',normalizeMarieJoseeLogin);
+  setTimeout(normalizeMarieJoseeLogin,0);
+  setTimeout(normalizeMarieJoseeLogin,300);
+  setTimeout(normalizeMarieJoseeLogin,1200);
+  var observer=new MutationObserver(function(){normalizeMarieJoseeLogin();});
+  observer.observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+})();
+<\/script>`;
+    html=html.replace('</body>',uiPatch+'</body>');
+
     document.open();
     document.write(html);
     document.close();
