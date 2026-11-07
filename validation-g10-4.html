@@ -1933,5 +1933,180 @@ if (location.protocol !== 'file:' && 'serviceWorker' in navigator) {
 <script>
 (function(){function update(name){const selected=document.querySelector('input[name="'+name+'"]:checked');const box=document.getElementById(name+'OtherBox');const field=document.getElementById(name+'OtherDetail');if(!box)return;const active=selected&&selected.value==='Autre';box.style.display=active?'block':'none';if(field)field.required=!!active;}document.addEventListener('change',function(e){if(e.target&&['payMethod','contributionMethod'].includes(e.target.name))update(e.target.name)});document.addEventListener('DOMContentLoaded',function(){update('payMethod');update('contributionMethod')});})();
 </script>
+<script>
+/* G10.4 - Rattachement manuel Direction. Aucune liaison automatique. */
+(function(){
+'use strict';
+const state={platformIndex:null, candidates:[], selectedUid:null, selected:null};
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const mail=s=>String(s||'').trim().toLowerCase();
+const digits=s=>String(s||'').replace(/\D/g,'');
+function phoneMatch(a,b){const x=digits(a),y=digits(b);if(!x||!y)return false;if(x===y&&x.length>=8)return true;
+// Indicatif connu uniquement : pas de comparaison arbitraire des derniers chiffres.
+const variants=n=>{const v=new Set([n]);if(n.length===11&&n[0]==='1')v.add(n.slice(1));if(n.length===12&&n.startsWith('241'))v.add(n.slice(3));if(n.length===13&&n.startsWith('33'))v.add(n.slice(2));return v;};
+return [...variants(x)].some(v=>v.length>=8&&variants(y).has(v));}
+const personName=p=>[p.firstName,p.firstName2,p.lastName,p.lastName2].filter(Boolean).join(' ').trim()||p.name||'';
+function evidence(p,m){const e=[];if(mail(p.email)&&mail(p.email)===mail(m.email))e.push('Email identique');if(phoneMatch(p.verifiedWhatsAppPhone||p.phone,m.phone))e.push('Téléphone correspondant (WhatsApp vérifié)');const a=norm(personName(p)),b=norm(personName(m));if(a&&b&&a===b)e.push('Nom complet identique');return e;}
+function linkedUid(p){return String(p.linkedMemberUid||'').trim();}
+function currentP(){return platform[state.platformIndex];}
+function overlay(){let el=document.getElementById('g10-link-modal');if(el)return el;el=document.createElement('div');el.id='g10-link-modal';el.style.cssText='display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,22,47,.75);overflow:auto;padding:16px';el.innerHTML='<div role="dialog" aria-modal="true" aria-label="Rattachement au dossier adhérent" style="background:white;color:#142234;max-width:740px;margin:3vh auto;border-radius:16px;padding:22px;box-shadow:0 12px 35px #0003"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h2 style="margin:0">Rattacher au dossier adhérent</h2><button type="button" class="btn btn-light" id="g10-link-close">Fermer</button></div><p id="g10-link-info"></p><label for="g10-link-search">Rechercher dans les comptes adhérents</label><input id="g10-link-search" style="width:100%;padding:12px;margin:8px 0 16px;border:1px solid #bbc;border-radius:8px" placeholder="Nom, email ou téléphone" autocomplete="off"><div id="g10-link-candidates"></div><div id="g10-link-confirm" style="margin-top:15px"></div><p id="g10-link-status" role="status" style="font-weight:bold"></p></div>';document.body.appendChild(el);el.querySelector('#g10-link-close').onclick=()=>el.style.display='none';el.addEventListener('click',ev=>{if(ev.target===el)el.style.display='none'});el.querySelector('#g10-link-search').addEventListener('input',renderCandidates);return el;}
+function show(index){if(!isPrivilegedRole()){alert('Accès Direction requis');return;}state.platformIndex=index;state.selectedUid=null;const p=currentP();if(!p)return;const el=overlay();el.querySelector('h2').textContent='Rattacher au dossier adhérent';el.style.display='block';el.querySelector('#g10-link-search').style.display='block';el.querySelector('label[for="g10-link-search"]').style.display='block';el.querySelector('#g10-link-search').value='';el.querySelector('#g10-link-info').textContent='Contact importé : '+personName(p)+' — '+(p.email||p.phone||'aucune coordonnée');el.querySelector('#g10-link-status').textContent='';renderCandidates();}
+function renderCandidates(){const el=overlay(),p=currentP();if(!p)return;const q=norm(el.querySelector('#g10-link-search').value),qd=digits(q),qe=mail(el.querySelector('#g10-link-search').value);const members=[...applications,...activeMembers].filter((m,i,arr)=>m.firebaseUid&&arr.findIndex(x=>x.firebaseUid===m.firebaseUid)===i);const scored=members.map(m=>({m,e:matchSignals(p,m)})).filter(x=>{if(q){const hay=norm(personName(x.m)+' '+x.m.email+' '+x.m.phone);return hay.includes(q)||(qd.length>=6&&digits(x.m.phone).includes(qd))||(qe.includes('@')&&mail(x.m.email).includes(qe));}return x.e.length>0;}).sort((a,b)=>b.e.length-a.e.length).slice(0,30);state.candidates=scored;const box=el.querySelector('#g10-link-candidates');box.innerHTML=scored.length?scored.map((x,i)=>'<div style="border:1px solid #dce5ef;padding:12px;border-radius:10px;margin:8px 0"><strong>'+esc(personName(x.m))+'</strong><div>'+esc(x.m.email||'—')+' · '+esc(x.m.phone||'—')+'</div><small>'+esc(x.e.join(' · ')||'Aucun élément commun vérifié')+'</small><div style="margin-top:8px"><button class="btn btn-light" type="button" data-candidate="'+i+'">Examiner ce compte</button></div></div>').join(''):'<p>Aucun compte correspondant. Affinez la recherche ou vérifiez les informations.</p>';box.querySelectorAll('[data-candidate]').forEach(btn=>btn.onclick=()=>choose(Number(btn.dataset.candidate)));el.querySelector('#g10-link-confirm').innerHTML='';}
+function choose(i){
+ const x=state.candidates[i];if(!x)return;
+ state.selectedUid=x.m.firebaseUid;
+ const el=overlay(),p=currentP();
+ const shared=evidence(p,x.m),linked=linkedUid(p);
+ const conflicts=platform.filter((other,j)=>j!==state.platformIndex&&linkedUid(other)===state.selectedUid);
+ const blocked=!!(linked&&linked!==state.selectedUid)||conflicts.length>0;
+ const missing=!shared.length;
+ el.querySelector('#g10-link-confirm').innerHTML='<div style="border-top:2px solid #dce5ef;padding-top:12px"><h3>Vérification avant confirmation</h3><p><b>Contact WhatsApp :</b> '+esc(personName(p))+'<br><b>Dossier adhérent :</b> '+esc(personName(x.m))+'</p><p><b>Éléments communs :</b> '+esc(shared.join(', ')||'Aucun')+'</p>'+
+ (conflicts.length?'<p style="color:#a22">Ce dossier est déjà lié à un autre contact.</p>':'')+
+ (linked&&linked!==state.selectedUid?'<p style="color:#a22">Ce contact est déjà rattaché à un autre dossier.</p>':'')+
+ (missing?'<div style="padding:12px;border:1px solid #e4c68b;border-radius:10px;background:#fffaf0"><p><b>Coordonnées absentes de l’import WhatsApp.</b> Vérifiez le numéro directement dans le profil WhatsApp du contact. Ne recopiez pas simplement le numéro du dossier adhérent.</p><label for="g10-verified-phone">Numéro lu dans WhatsApp</label><input id="g10-verified-phone" type="tel" placeholder="Ex. +1 604 000 0000" style="width:100%;padding:10px;margin:8px 0;border:1px solid #bbc;border-radius:8px"><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="g10-verified-source" style="margin-top:4px"><span>Je confirme avoir vérifié ce numéro dans le profil WhatsApp du contact concerné.</span></label><p id="g10-verified-result" role="status" style="font-weight:bold"></p></div>':'')+
+ '<p>Le rattachement ne modifie ni le dossier adhérent, ni son paiement, ni son statut.</p><button type="button" class="btn btn-green" id="g10-link-save" '+(blocked||missing?'disabled':'')+'>Confirmer le rattachement</button></div>';
+ if(missing){const input=el.querySelector('#g10-verified-phone'),check=el.querySelector('#g10-verified-source'),result=el.querySelector('#g10-verified-result'),btn=el.querySelector('#g10-link-save');const verify=()=>{const val=input.value.trim(),ok=phoneMatch(val,x.m.phone)&&digits(val).length>=8;result.textContent=!val?'':ok?'Numéro correspondant au dossier adhérent.':'Numéro non concordant : rattachement bloqué.';result.style.color=ok?'#13734b':'#a22';btn.disabled=blocked||!ok||!check.checked;};input.addEventListener('input',verify);check.addEventListener('change',verify);}
+ el.querySelector('#g10-link-save').onclick=save;
+}
+async function save(){
+ const p=currentP(),uid=state.selectedUid,el=overlay(),status=el.querySelector('#g10-link-status');
+ if(!db||!isPrivilegedRole()||!p?.firebaseDocId||!uid){status.textContent='Impossible de vérifier la connexion ou les identifiants.';return;}
+ const selected=[...applications,...activeMembers].find(m=>m.firebaseUid===uid);
+ const input=el.querySelector('#g10-verified-phone'),check=el.querySelector('#g10-verified-source');
+ const verifiedPhone=input?.value.trim()||'';
+ if(input&&(!check?.checked||!selected||!phoneMatch(verifiedPhone,selected.phone)||digits(verifiedPhone).length<8)){status.textContent='Vérification du numéro WhatsApp requise.';return;}
+ const btn=el.querySelector('#g10-link-save');btn.disabled=true;status.textContent='Vérification en cours…';
+ try{
+ const pref=db.collection('platform').doc(p.firebaseDocId),mref=db.collection('members').doc(uid);
+ await db.runTransaction(async tx=>{
+ const [ps,ms]=await Promise.all([tx.get(pref),tx.get(mref)]);
+ if(!ps.exists||!ms.exists)throw Error('Un dossier est introuvable.');
+ const pd=ps.data(),md=ms.data();
+ if(pd.linkedMemberUid&&pd.linkedMemberUid!==uid)throw Error('Contact déjà rattaché.');
+ const common=evidence(pd,md);
+ if(!common.length&&(!verifiedPhone||!check?.checked||!phoneMatch(verifiedPhone,md.phone)||digits(verifiedPhone).length<8))throw Error('Numéro WhatsApp non concordant.');
+ if(platform.some((other,j)=>j!==state.platformIndex&&linkedUid(other)===uid))throw Error('Dossier déjà lié à un autre contact.');
+ const patch={linkedMemberUid:uid,linkedAt:firebase.firestore.FieldValue.serverTimestamp(),linkedBy:currentAuthUser?.uid||'',linkMethod:common.length?'manual-confirmed':'manual-whatsapp-phone-verified'};
+ if(!common.length){patch.verifiedWhatsAppPhone=verifiedPhone;patch.verifiedWhatsAppAt=firebase.firestore.FieldValue.serverTimestamp();patch.verifiedWhatsAppBy=currentAuthUser?.uid||'';}
+ tx.update(pref,patch);
+ });
+ p.linkedMemberUid=uid;if(verifiedPhone)p.verifiedWhatsAppPhone=verifiedPhone;status.textContent='Rattachement enregistré. Le dossier adhérent original est conservé.';renderPlatform();
+ el.querySelector('#g10-link-confirm').innerHTML='<button class="btn btn-green" id="g10-link-open">Ouvrir le dossier adhérent</button>';
+ el.querySelector('#g10-link-open').onclick=()=>openLinked(state.platformIndex);
+ }catch(err){console.error('Rattachement refusé',err);status.textContent='Échec du rattachement : '+(err.message||'autorisation ou connexion à vérifier');btn.disabled=false;}
+}
+function openLinked(i, directUid){
+ if(!isPrivilegedRole()){alert('Accès Direction requis.');return;}
+ const p=(i===null||i===undefined)?null:platform[i],uid=directUid||(p?linkedUid(p):null);
+ const m=[...applications,...activeMembers].find(a=>a.firebaseUid===uid);
+ if(!uid||!m){alert('Dossier adhérent non chargé. Actualisez la Direction et réessayez.');return;}
+ const el=overlay();el.style.display='block';
+ el.querySelector('h2').textContent='Dossier adhérent — '+personName(m);
+ el.querySelector('#g10-link-info').textContent='Dossier original Firebase • Lecture seule • Direction';
+ el.querySelector('#g10-link-search').style.display='none';
+ el.querySelector('label[for="g10-link-search"]').style.display='none';
+ const field=(key,label)=>({key,label});
+ const groups=[
+ ['Identité et état du dossier',[field('civility','Civilité'),field('lastName','Nom'),field('lastName2','Deuxième nom'),field('firstName','Prénom'),field('firstName2','Autre prénom'),field('birthDate','Date de naissance'),field('birthPlace','Lieu de naissance'),field('nationality','Nationalité'),field('status','Statut du dossier')]],
+ ['Coordonnées',[field('email','Email'),field('phone','Téléphone'),field('address','Adresse'),field('postal','Code postal'),field('city','Ville'),field('country','Pays')]],
+ ['Identité administrative',[field('idType','Type de pièce'),field('idNumber','Numéro de pièce'),field('idIssue','Date de délivrance'),field('idExpiry','Date d’expiration')]],
+ ['Profession et expertise',[field('profession','Profession'),field('degree','Diplôme'),field('expertise','Expertise')]],
+ ['Signature et inscription',[field('signPlace','Lieu de signature'),field('signDate','Date de signature'),field('signatureMode','Mode de signature')]],
+ ['Paiement et suivi',[field('transactionRef','Référence de transaction'),field('paymentDate','Date du paiement')]]
+ ];
+ const row=(label,value)=>'<div style="display:grid;grid-template-columns:minmax(125px,38%) 1fr;gap:10px;padding:8px 0;border-bottom:1px solid #edf0f4"><strong>'+esc(label)+'</strong><span style="overflow-wrap:anywhere">'+esc(String(value??'—'))+'</span></div>';
+ const sections=groups.map(([heading,fields])=>'<section style="margin:18px 0"><h3 style="margin:0 0 8px;color:#123d69">'+esc(heading)+'</h3>'+fields.map(({key,label})=>row(label,m[key]||'—')).join('')+'</section>').join('');
+ const bool=(v,yes,no)=>v?yes:no;
+ const stateRows=row('Profil',bool(m.profileComplete,'Complet','À compléter'))+row('Formulaire',bool(m.formSigned,'Signé','Non signé'))+row('Paiement',m.paymentConfirmed?'Confirmé':m.paymentDeclared?'Déclaré — à vérifier':'Non déclaré')+row('Adhésion',m.active?'Active':'Non active');
+ const proof=typeof proofHasFile==='function'&&proofHasFile(m.membershipProof)?'<button type="button" class="btn btn-light" id="g10-linked-proof">Voir le justificatif archivé</button>':'<p style="color:#667">Aucun justificatif de paiement archivé accessible.</p>';
+ el.querySelector('#g10-link-candidates').innerHTML='<div style="max-height:65vh;overflow-y:auto;padding-right:8px"><p style="background:#eef6ff;padding:10px;border-radius:8px">Ce dossier est celui de l’adhérent inscrit. Aucune modification n’est possible depuis cet écran.</p><section><h3 style="color:#123d69">Validation</h3>'+stateRows+'</section>'+sections+'<section style="margin:18px 0"><h3 style="color:#123d69">Justificatif de paiement</h3>'+proof+'</section></div>';
+ el.querySelector('#g10-link-confirm').innerHTML='';el.querySelector('#g10-link-status').textContent='';
+ const proofBtn=el.querySelector('#g10-linked-proof');if(proofBtn)proofBtn.onclick=()=>{if(typeof openProofRecord==='function')openProofRecord(m.membershipProof);};
+}
+
+function matchSignals(p,m){
+ const signals=evidence(p,m);
+ const a=norm(personName(p)),b=norm(personName(m));
+ // Le prénom seul n'est qu'une piste, jamais une preuve d'identité.
+ const at=a.split(' ').filter(w=>w.length>=4),bt=b.split(' ').filter(w=>w.length>=4);
+ if(!signals.length&&at.some(w=>bt.includes(w)))signals.push('Prénom ou élément de nom commun — à vérifier');
+ return signals;
+}
+function matchStatus(p){
+ const uid=linkedUid(p);
+ if(uid){const member=[...applications,...activeMembers].find(m=>m.firebaseUid===uid);
+   return {kind:'linked',count:1,member};}
+ const candidates=[...applications,...activeMembers].filter(m=>m.firebaseUid).filter((m,i,arr)=>arr.findIndex(x=>x.firebaseUid===m.firebaseUid)===i).map(m=>({m,signals:matchSignals(p,m)})).filter(x=>x.signals.length);
+ return {kind:candidates.length?'possible':'none',count:candidates.length,candidates};
+}
+function render(){
+ const el=document.getElementById('platformRows');if(!el)return;
+ const q=(document.getElementById('platformSearch')?.value||'').toLowerCase();
+ const rows=platform.map((p,i)=>({...p,i})).filter(p=>!q||JSON.stringify(p).toLowerCase().includes(q));
+ let counts={linked:0,possible:0,none:0};
+ const table=rows.map(p=>{
+ const st=matchStatus(p);counts[st.kind]++;
+ const badge=st.kind==='linked'?'<span class="badge badge-ok" title="Lien enregistré dans la Base plateforme">● Vert — Rattaché</span>':st.kind==='possible'?'<span class="badge badge-warn" title="Correspondance possible, non confirmée">● Orange — '+st.count+' piste'+(st.count>1?'s':'')+' à vérifier</span>':'<span class="badge badge-off" title="Aucun rapprochement détecté, inscription indépendante possible">● Gris — Aucune piste</span>';
+ const action=st.kind==='linked'?'Ouvrir le dossier adhérent':st.kind==='possible'?'Vérifier le rapprochement':'Rechercher / rattacher';
+ // La Base plateforme affiche les informations du dossier lié sans les copier dans le contact WhatsApp.
+ const member=st.kind==='linked'?st.member:null;
+ const verifiedPhone=p.verifiedWhatsAppPhone||'';
+ const shownEmail=member?.email||p.email||'';
+ const shownPhone=verifiedPhone||p.phone||member?.phone||'';
+ const contactDisplay=[shownEmail,shownPhone].filter(Boolean).map(esc).join('<br>')||'—';
+ const memberStatus=member?(member.active?'Actif':(member.paymentDeclared&&!member.paymentConfirmed?'Inscrit — paiement à vérifier':'Inscrit')):(p.status||'Inactif');
+ const memberStatusClass=member?.active?'badge-ok':member?'badge-warn':p.status==='Actif'?'badge-ok':'badge-off';
+ return '<tr><td><b>'+esc(personName(p))+'</b></td><td>'+contactDisplay+'</td><td>'+esc(member?.country||p.country||'—')+'</td><td>'+esc(member?.profession||member?.expertise||p.profession||p.expertise||'—')+'</td><td><span class="badge '+memberStatusClass+'">'+esc(memberStatus)+'</span><div style="margin-top:5px">'+badge+'</div></td><td><button type="button" class="btn btn-light" data-link-index="'+p.i+'">'+action+'</button> <button type="button" class="btn btn-light" data-edit-contact="'+p.i+'" style="margin-top:5px">Compléter le contact</button></td></tr>';
+ }).join('');
+ el.innerHTML=rows.length?table:'<tr><td colspan="6" class="muted">Aucun contact.</td></tr>';
+ el.querySelectorAll('[data-link-index]').forEach(b=>b.onclick=()=>{const i=Number(b.dataset.linkIndex);if(linkedUid(platform[i]))openLinked(i);else show(i);});
+ el.querySelectorAll('[data-edit-contact]').forEach(b=>b.onclick=()=>editContact(Number(b.dataset.editContact)));
+ let info=document.getElementById('g10-match-legend');
+ if(!info){info=document.createElement('p');info.id='g10-match-legend';info.style.cssText='font-size:13px;margin:10px 0;color:inherit';const tableEl=el.closest('table');if(tableEl)tableEl.parentNode.insertBefore(info,tableEl);}
+ info.textContent='Rapprochements visibles : '+counts.linked+' rattaché(s) · '+counts.possible+' à vérifier · '+counts.none+' sans piste. Les couleurs sont indicatives : aucun rattachement automatique.';
+}
+
+function editContact(i){
+ if(!isPrivilegedRole()){alert('Accès Direction requis.');return;}
+ const p=platform[i];if(!p)return;
+ const el=overlay();state.platformIndex=i;state.selectedUid=null;el.style.display='block';
+ el.querySelector('h2').textContent='Compléter le contact WhatsApp';
+ el.querySelector('#g10-link-info').textContent='Contact importé : '+personName(p)+' — les données du dossier adhérent ne seront pas modifiées.';
+ el.querySelector('#g10-link-search').style.display='none';el.querySelector('label[for="g10-link-search"]').style.display='none';
+ el.querySelector('#g10-link-candidates').innerHTML='<div style="background:#f3f7fb;border-radius:10px;padding:15px"><p>Renseignez uniquement un numéro lu dans le profil WhatsApp du contact. Cette donnée sera conservée séparément des coordonnées de l’adhérent.</p><label for="g10-contact-phone">Téléphone WhatsApp vérifié</label><input id="g10-contact-phone" type="tel" style="display:block;width:100%;padding:11px;margin:8px 0;border:1px solid #bbc;border-radius:8px" placeholder="Ex. +1 604 367 6712"><label style="display:flex;align-items:flex-start;gap:8px"><input id="g10-contact-verified" type="checkbox" style="margin-top:4px"><span>J’ai lu et vérifié ce numéro directement dans WhatsApp.</span></label><p style="font-size:13px">L’email du dossier d’inscription ne sera pas recopié ici. Aucun rattachement ne sera créé par cet enregistrement.</p><button type="button" id="g10-contact-save" class="btn btn-green">Enregistrer le contact</button></div>';
+ el.querySelector('#g10-contact-phone').value=p.verifiedWhatsAppPhone||'';
+ el.querySelector('#g10-link-confirm').innerHTML='';el.querySelector('#g10-link-status').textContent='';
+ el.querySelector('#g10-contact-save').onclick=async()=>{
+  const input=el.querySelector('#g10-contact-phone'),check=el.querySelector('#g10-contact-verified'),btn=el.querySelector('#g10-contact-save'),status=el.querySelector('#g10-link-status');
+  const val=input.value.trim();if(digits(val).length<8||digits(val).length>15||!check.checked){status.textContent='Saisissez un numéro valide et confirmez sa vérification dans WhatsApp.';return;}
+  if(!db||!p.firebaseDocId){status.textContent='Contact Firebase introuvable : aucun changement effectué.';return;}
+  btn.disabled=true;status.textContent='Enregistrement en cours…';
+  try{
+   const ref=db.collection('platform').doc(p.firebaseDocId);
+   await db.runTransaction(async tx=>{const snap=await tx.get(ref);if(!snap.exists)throw Error('Contact supprimé ou introuvable.');
+    const old=snap.data();if(old.linkedMemberUid)throw Error('Contact déjà rattaché : aucune modification autorisée ici.');
+    if(old.verifiedWhatsAppPhone&&old.verifiedWhatsAppPhone!==p.verifiedWhatsAppPhone)throw Error('Contact modifié entre-temps : actualisez la page.');
+    tx.update(ref,{verifiedWhatsAppPhone:val,verifiedWhatsAppAt:firebase.firestore.FieldValue.serverTimestamp(),verifiedWhatsAppBy:currentAuthUser?.uid||''});
+   });
+   p.verifiedWhatsAppPhone=val;status.textContent='Numéro WhatsApp enregistré. Vous pouvez maintenant vérifier le rapprochement.';
+   renderPlatform();el.querySelector('#g10-link-confirm').innerHTML='<button type="button" class="btn btn-light" id="g10-contact-next">Vérifier le rapprochement</button>';
+   el.querySelector('#g10-contact-next').onclick=()=>show(i);
+  }catch(e){console.error('Enregistrement WhatsApp refusé',e);status.textContent='Échec : '+(e.message||'vérifiez les autorisations Firebase');btn.disabled=false;}
+ };
+}
+// La Direction consulte le véritable document members en lecture seule, sans changer de session.
+window.g10ViewApplication=function(uid){if(!isPrivilegedRole()){alert('Accès Direction requis.');return;}openLinked(null,uid);};
+const originalRenderApplications=renderApplications;
+renderApplications=function(){originalRenderApplications();const rows=document.querySelectorAll('#applicationRows tr');
+ rows.forEach((row,i)=>{const pending=applications.filter(a=>!a.active),m=pending[i];if(!m?.firebaseUid)return;const cell=row.lastElementChild;if(!cell||cell.querySelector('[data-view-member]'))return;
+ const btn=document.createElement('button');btn.type='button';btn.className='btn btn-light';btn.textContent='Voir le dossier';btn.style.margin='6px 0 0 0';btn.dataset.viewMember='1';btn.onclick=()=>window.g10ViewApplication(m.firebaseUid);cell.appendChild(document.createElement('br'));cell.appendChild(btn);
+ });};
+
+// Override ciblé : n'interfère pas avec les formulaires adhérents.
+renderPlatform=render;
+window.g10LinkModule={open:show,render};
+})();
+
+</script>
 </body>
 </html>
