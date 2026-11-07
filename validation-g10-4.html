@@ -2107,6 +2107,70 @@ renderPlatform=render;
 window.g10LinkModule={open:show,render};
 })();
 
+
+/* G10.4 TEST — Profil complet Direction, lecture seule, aucune écriture Firebase. */
+(function(){
+'use strict';
+const oldView=window.g10ViewApplication;
+const fields={civility:'civility',lastName:'lastName',lastName2:'lastName2',firstName:'firstName',firstName2:'firstName2',birthDate:'birthDate',birthPlace:'birthPlace',nationality:'nationality',address:'address',postal:'postal',city:'city',country:'country',idType:'idType',idNumber:'idNumber',idIssue:'idIssue',idExpiry:'idExpiry',email:'email',phone:'phone',profession:'profession',degree:'degree',expertise:'expertise',signPlace:'signPlace',signDate:'signDate',transactionRef:'transactionRef',paymentDate:'paymentDate'};
+function findMember(uid){return [...applications,...activeMembers].find(m=>m.firebaseUid===uid)}
+function makeModal(){
+ let wrap=document.getElementById('g10-fullprofile-test');if(wrap)return wrap;
+ wrap=document.createElement('div');wrap.id='g10-fullprofile-test';wrap.style.cssText='display:none;position:fixed;inset:0;z-index:999999;background:rgba(12,25,46,.82);padding:2vh 2vw;box-sizing:border-box';
+ wrap.innerHTML='<div style="background:#fff;border-radius:14px;max-width:1250px;height:96vh;margin:auto;display:flex;flex-direction:column;overflow:hidden">'+
+ '<header style="padding:12px 18px;border-bottom:1px solid #ddd;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'+
+ '<div style="flex:1"><strong id="g10-full-title">Profil adhérent</strong><div style="font-size:12px;color:#576779">Direction — lecture seule, aucune modification possible</div></div>'+
+ '<button type="button" id="g10-full-close" class="btn btn-light">← Retour à la Direction</button></header>'+
+ '<nav style="padding:9px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #eee">'+
+ '<button type="button" class="btn btn-primary" data-full-tab="account">Mon compte et étapes</button>'+
+ '<button type="button" class="btn btn-light" data-full-tab="docs">Documents officiels</button>'+
+ '<button type="button" class="btn btn-light" data-full-tab="payments">Paiements et cotisations</button></nav>'+
+ '<div id="g10-full-summary" style="padding:9px 18px;background:#f3f6fa;font-size:13px"></div>'+
+ '<iframe id="g10-full-frame" title="Profil adhérent en lecture seule" sandbox="allow-same-origin" style="flex:1;width:100%;border:0;background:white"></iframe></div>';
+ document.body.appendChild(wrap);
+ wrap.querySelector('#g10-full-close').onclick=()=>{wrap.style.display='none';wrap.querySelector('iframe').src='about:blank';};
+ wrap.addEventListener('click',e=>{if(e.target===wrap)wrap.querySelector('#g10-full-close').click()});
+ wrap.querySelectorAll('[data-full-tab]').forEach(btn=>btn.onclick=()=>switchTab(wrap,btn.dataset.fullTab));
+ return wrap;
+}
+function switchTab(wrap,tab){
+ const doc=wrap.querySelector('iframe').contentDocument;if(!doc)return;
+ ['account','docs','payments'].forEach(k=>{const section=doc.getElementById('member-'+k);if(section)section.classList.toggle('hidden',k!==tab)});
+ wrap.querySelectorAll('[data-full-tab]').forEach(b=>{b.className='btn '+(b.dataset.fullTab===tab?'btn-primary':'btn-light')});
+}
+window.g10ViewFullApplication=function(uid){
+ if(!isPrivilegedRole())return alert('Accès réservé à la Direction.');
+ const m=findMember(uid);if(!m)return alert('Dossier introuvable dans les données chargées. Actualisez la Direction.');
+ const wrap=makeModal(),frame=wrap.querySelector('iframe');wrap.style.display='block';
+ wrap.querySelector('#g10-full-title').textContent='Profil complet — '+[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ');
+ wrap.querySelector('#g10-full-summary').textContent='Profil : '+(m.profileComplete?'Complet':'À compléter')+'  •  Formulaire : '+(m.formSigned?'Signé':'À signer')+'  •  Paiement : '+(m.paymentConfirmed?'Confirmé':m.paymentDeclared?'Déclaré — à vérifier':'Non déclaré')+'  •  Adhésion : '+(m.active?'Active':'Non active');
+ const doc=frame.contentDocument;doc.open();doc.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>');doc.close();
+ document.querySelectorAll('style').forEach(style=>{const copy=doc.createElement('style');copy.textContent=style.textContent;doc.head.appendChild(copy)});
+ const original=document.getElementById('memberApp');if(!original){wrap.style.display='none';return alert('Interface adhérent introuvable.');}
+ const clone=original.cloneNode(true);clone.classList.remove('hidden');clone.style.display='flex';
+ clone.querySelectorAll('[onclick],[onchange],[onsubmit],[oninput]').forEach(el=>{['onclick','onchange','onsubmit','oninput'].forEach(a=>el.removeAttribute(a))});
+ clone.querySelectorAll('input,select,textarea').forEach(el=>{const key=fields[el.id];if(key){const v=String(m[key]??'');if(el.type==='checkbox'||el.type==='radio')el.checked=(el.value===v);else el.value=v;}else if(el.type==='checkbox'||el.type==='radio')el.checked=false;else el.value='';el.disabled=true;el.readOnly=true;});
+ clone.querySelectorAll('button').forEach(btn=>{btn.disabled=true;btn.style.pointerEvents='none'});
+ clone.querySelectorAll('a').forEach(a=>{a.removeAttribute('href');a.style.pointerEvents='none'});
+ // Les sections originales sont affichées sans lancer hydrateMember(), persist() ni les listeners Firebase.
+ const chip=clone.querySelector('#memberChipName');if(chip)chip.textContent=[m.firstName,m.lastName].filter(Boolean).join(' ');
+ const id=clone.querySelector('#memberChipId');if(id)id.textContent=m.id||'Dossier inscrit';
+ const status=clone.querySelector('#workflowStatus');if(status)status.textContent=m.formSigned?'Formulaire signé':'Dossier en cours';
+ const badge=clone.querySelector('#situationBadge');if(badge)badge.textContent=m.active?'Adhérent actif':'Dossier en cours';
+ const pay=clone.querySelector('#membershipPaymentStatus');if(pay)pay.textContent=m.paymentConfirmed?'Confirmé':m.paymentDeclared?'À vérifier':'Non déclaré';
+ // Accès aux accordéons originaux, sans permettre l'enregistrement.
+ ['profile','form','payment'].forEach(k=>{const head=clone.querySelector('#memberAccordionHead-'+k),body=clone.querySelector('#memberAccordionBody-'+k);if(head&&body){head.style.cursor='pointer';head.addEventListener('click',()=>{const open=body.hasAttribute('hidden');if(open)body.removeAttribute('hidden');else body.setAttribute('hidden','');});}});
+ // Les boutons d'action restent désactivés dans cette prévisualisation de sécurité.
+ doc.body.appendChild(clone);
+ const readOnly=doc.createElement('style');readOnly.textContent='body{margin:0!important}.app{min-height:100%!important}.sidebar{display:none!important}.main{width:100%!important;max-width:none!important;margin:0!important;padding:16px!important}button:disabled{opacity:.55!important}';doc.head.appendChild(readOnly);
+ switchTab(wrap,'account');
+};
+window.g10ViewApplication=function(uid){return oldView(uid)};
+// Bouton supplémentaire dans la liste Direction, sans remplacer le récapitulatif existant.
+const prevRender=renderApplications;
+renderApplications=function(){prevRender();const pending=applications.filter(a=>!a.active);document.querySelectorAll('#applicationRows tr').forEach((row,i)=>{const m=pending[i];if(!m?.firebaseUid||row.querySelector('[data-g10-full-profile]'))return;const cell=row.lastElementChild;if(!cell)return;const b=document.createElement('button');b.type='button';b.className='btn btn-light';b.textContent='Ouvrir le profil complet';b.dataset.g10FullProfile='1';b.style.margin='6px 0 0 5px';b.onclick=()=>window.g10ViewFullApplication(m.firebaseUid);cell.appendChild(b);});};
+})();
+
 </script>
 </body>
 </html>

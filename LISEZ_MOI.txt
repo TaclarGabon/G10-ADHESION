@@ -1,0 +1,11 @@
+G10.4 — Version de test : profil complet Direction en lecture seule
+
+Fichier inclus : validation-g10-4.html
+
+1. Décompressez le ZIP.
+2. Ouvrez validation-g10-4.html localement pour examiner l’interface (les fonctions connectées nécessitent le site et ses autorisations).
+3. Avant toute publication, sauvegardez la version actuelle de validation-g10-4.html sur GitHub.
+4. Remplacez uniquement validation-g10-4.html dans TaclarGabon/G10-ADHESION, branche main, après validation.
+5. Vérifiez sur le site officiel les deux accès au dossier, les onglets et l’absence d’écriture depuis la consultation Direction.
+
+Ce ZIP ne modifie ni Firebase ni GitHub. La fonctionnalité n’a pas fait l’objet d’un test de bout en bout en production.
