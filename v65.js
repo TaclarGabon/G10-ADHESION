@@ -214,7 +214,9 @@ function receiptHtml(member,type,payment){
  var thankTitle=membership?'Merci pour votre adhésion !':(two?'Merci pour votre paiement !':'Merci pour votre cotisation annuelle !');
  var thankText=membership?'Ensemble pour une communauté plus forte.':(two&&Number(payment.sequence)===1?'2ème échéance à régler selon le calendrier en vigueur.':(two?'Votre cotisation annuelle est entièrement réglée.':'Votre soutien contribue au développement de notre communauté.'));
  var name=mname(member)||member.email||member.id;
- var icon=(location.origin+location.pathname.replace(/[^/]*$/,'')+'g10-app-icon.svg');
+ var officialLogo=document.querySelector('#memberApp .sidebar img, #memberApp aside img, #memberApp .side-nav img, #memberApp img');
+ var icon=officialLogo&&(officialLogo.currentSrc||officialLogo.getAttribute('src'))||location.origin+location.pathname.replace(/[^/]*$/,'')+'g10-app-icon.svg';
+ if(!String(icon).startsWith('data:'))icon=new URL(icon,location.href).href;
  var period='01 janvier '+year+' – 31 décembre '+year;
  var meta=membership
    ?'<span>Nom complet</span><b>'+esc(name)+'</b><span>Dossier</span><b>'+esc(member.id||'—')+'</b><span>Pays</span><b>'+esc(member.country||'—')+'</b><span>Contact</span><b>'+esc(member.email||member.phone||'—')+'</b>'
