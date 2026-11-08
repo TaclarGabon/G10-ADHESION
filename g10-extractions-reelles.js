@@ -12,18 +12,18 @@ function g10Records(){
  const rows=[];
  members.forEach(m=>{
   const name=g10Name(m),slug=g10Slug(m),id=m.firebaseUid||m.id||name;
-  rows.push({id,name,op:'Adhésion unique',ref:'ADH-'+slug,date:g10Date(m.membershipValidatedAt),eur:g10Num(m.membershipFeePaid??m.membershipFee??settings.membershipFee),state:'Payé',kind:'adh',confirmed:true});
+  rows.push({id,name,op:'Adhésion unique',ref:'ADH-'+slug,date:g10Date(m.membershipValidatedAt),eur:g10Num(m.membershipFeePaid??m.membershipFee??settings.membershipFee),state:'Payé',kind:'adh',confirmed:true,xaf:Number.isFinite(Number(m.g10ReceivedXaf))&&Number(m.g10ReceivedXaf)>0?Number(m.g10ReceivedXaf):null});
   const paid=(m.contributionPayments||[]).filter(p=>p.status==='Confirmé').sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
   const rawPlan=String(m.contributionPlan||(paid[0]&&paid[0].plan)||'').trim().toLowerCase();
   const plan=['monthly','one','once','single','1','option1','option 1','une fois'].includes(rawPlan)?'monthly':(['two','2','option2','option 2','twice','deux fois'].includes(rawPlan)?'two':'');
   if(plan==='monthly'){
-    const p=paid[0];rows.push({id,name,op:'Cotisation option 1 — une fois',ref:'COT-1FOIS-'+slug,date:p?g10Date(p.date):'',eur:p?g10Num(p.amount):null,state:p?'Payé':'À venir',kind:'cot',confirmed:!!p});
+    const p=paid[0];rows.push({id,name,op:'Cotisation option 1 — une fois',ref:'COT-1FOIS-'+slug,date:p?g10Date(p.date):'',eur:p?g10Num(p.amount):null,state:p?'Payé':'À venir',kind:'cot',confirmed:!!p,xaf:p&&Number(p.g10ReceivedXaf)>0?Number(p.g10ReceivedXaf):null});
   } else if(plan==='two'){
-    for(let i=0;i<2;i++){const p=paid[i];rows.push({id,name,op:`Cotisation option 2 — ${i+1}/2`,ref:`COT-${i+1}SUR2-${slug}`,date:p?g10Date(p.date):(i===1&&paid[0]?'Échéance : '+g10Due(paid[0].date):''),eur:p?g10Num(p.amount):null,state:p?'Payé':'À venir',kind:'cot',confirmed:!!p});}
+    for(let i=0;i<2;i++){const p=paid[i];rows.push({id,name,op:`Cotisation option 2 — ${i+1}/2`,ref:`COT-${i+1}SUR2-${slug}`,date:p?g10Date(p.date):(i===1&&paid[0]?'Échéance : '+g10Due(paid[0].date):''),eur:p?g10Num(p.amount):null,state:p?'Payé':'À venir',kind:'cot',confirmed:!!p,xaf:p&&Number(p.g10ReceivedXaf)>0?Number(p.g10ReceivedXaf):null});}
   } else {
-    rows.push({id,name,op:'Cotisation option 1 — une fois',ref:'COT-1FOIS-'+slug,date:'',eur:null,state:'Non choisie',kind:'cot',confirmed:false});
-    rows.push({id,name,op:'Cotisation option 2 — 1/2',ref:'COT-1SUR2-'+slug,date:'',eur:null,state:'Non choisie',kind:'cot',confirmed:false});
-    rows.push({id,name,op:'Cotisation option 2 — 2/2',ref:'COT-2SUR2-'+slug,date:'',eur:null,state:'Non choisie',kind:'cot',confirmed:false});
+    rows.push({id,name,op:'Cotisation option 1 — une fois',ref:'COT-1FOIS-'+slug,date:'',eur:null,state:'Non choisie',kind:'cot',confirmed:false,xaf:null});
+    rows.push({id,name,op:'Cotisation option 2 — 1/2',ref:'COT-1SUR2-'+slug,date:'',eur:null,state:'Non choisie',kind:'cot',confirmed:false,xaf:null});
+    rows.push({id,name,op:'Cotisation option 2 — 2/2',ref:'COT-2SUR2-'+slug,date:'',eur:null,state:'Non choisie',kind:'cot',confirmed:false,xaf:null});
   }
  });return {members,rows};
 }
@@ -38,14 +38,14 @@ function g10LiveFinance(){g10LiveOpen();g10LiveRender('finance');}
 document.addEventListener('click',function(event){const button=event.target.closest('button,a');if(!button)return;const label=(button.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();if(label==='prévisualiser finances'||label==='previsualiser finances'){event.preventDefault();event.stopImmediatePropagation();g10LiveFinance();}},true);
 
 function g10LiveRender(tab){g10LiveTab=tab;const {members,rows}=g10Records();const total=rows.filter(r=>r.confirmed).reduce((s,r)=>s+r.eur,0),count=rows.filter(r=>r.confirmed).length;
- const kpis=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin:15px 0">${[['Adhérents actifs',members.length],['Paiements confirmés',count],['Total €',total.toLocaleString('fr-FR')+' €'],['Total FCFA',Math.round(total*665).toLocaleString('fr-FR')+' FCFA']].map(([a,b],i)=>`<div style="background:${['#dbeafe','#dcfce7','#ede9fe','#ffedd5'][i]};border-radius:14px;padding:14px 22px;color:#173b5b"><b>${a}</b><div style="font-size:22px;font-weight:800">${b}</div></div>`).join('')}</div>`;
+ const realTotal=rows.filter(r=>r.confirmed&&r.xaf!==null).reduce((sum,r)=>sum+r.xaf,0);const pendingCount=rows.filter(r=>r.confirmed&&r.xaf===null).length;const kpis=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin:15px 0">${[['Adhérents actifs',members.length],['Paiements confirmés',count],['Total €',total.toLocaleString('fr-FR')+' €'],['FCFA vérifiés',realTotal.toLocaleString('fr-FR')+' FCFA']].map(([a,b],i)=>`<div style="background:${['#dbeafe','#dcfce7','#ede9fe','#ffedd5'][i]};border-radius:14px;padding:14px 22px;color:#173b5b"><b>${a}</b><div style="font-size:22px;font-weight:800">${b}</div></div>`).join('')}</div>`;
  let header=[],data=[];
  if(tab==='members'){header=['Référence','Adhérent','Statut','Date validation','Contact'];data=members.map((m,i)=>['G10-'+String(i+1).padStart(3,'0'),g10Name(m),'Actif',g10Date(m.membershipValidatedAt),m.phone||m.email||'']);}
- if(tab==='finance'){header=['Adhérent','Opération','Référence','Date paiement / échéance','Montant €','Montant FCFA','État'];data=rows.map(r=>[r.name,r.op,r.ref,r.date,r.eur===null?'':r.eur,r.eur===null?'':Math.round(r.eur*665),r.state]);}
+ if(tab==='finance'){header=['Adhérent','Opération','Référence','Date paiement / échéance','Montant €','Montant FCFA','État'];data=rows.map(r=>[r.name,r.op,r.ref,r.date,r.eur===null?'':r.eur,r.xaf===null?'':r.xaf,r.state]);}
  if(tab==='history'){header=['Lot','Du','Au','Paiements','Total €','Total FCFA'];data=[];}
  window.g10LiveCurrent={header,data,tab,rows,members};
  const table=`<div style="overflow:auto"><table class="table" style="min-width:900px;width:100%;border-collapse:collapse"><thead><tr>${header.map(h=>`<th style="background:#176a9b;color:white;padding:12px">${g10Esc(h)}</th>`).join('')}</tr></thead><tbody>${data.map((r,i)=>`<tr style="background:${tab==='finance'?['#e3f0ff','#e8f7ec','#fff2db'][Math.max(0,members.findIndex(m=>g10Name(m)===r[0]))%3]:i%2?'#f1f6fc':'#ffffff'}">${r.map(v=>`<td style="padding:10px;border-bottom:1px solid #d9e5ef">${g10Esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
- document.getElementById('g10-live-content').innerHTML=kpis+(tab==='history'?'<p>Les lots historiques ne sont pas encore enregistrés dans Firebase. Aucun historique fictif ne sera affiché.</p>':table)+(tab==='finance'?`<p><b>Total encaissé : ${total.toLocaleString('fr-FR')} € — ${Math.round(total*665).toLocaleString('fr-FR')} FCFA</b></p><small>Conversion indicative de présentation : 1 € = 665 FCFA. Vérifier les montants réellement encaissés dans chaque devise avant usage comptable.</small>`:'');
+ document.getElementById('g10-live-content').innerHTML=kpis+(tab==='history'?'<p>Les lots historiques ne sont pas encore enregistrés dans Firebase. Aucun historique fictif ne sera affiché.</p>':table)+(tab==='finance'?`<p><b>Total FCFA vérifié : ${realTotal.toLocaleString('fr-FR')} FCFA</b> · ${pendingCount} paiement(s) sans montant FCFA validé.</p><small>Les montants FCFA non validés restent vides. Aucun taux indicatif n'est comptabilisé.</small>`:'');
 }
 async function g10LiveExcel(){
  if(!window.ExcelJS){alert('La bibliothèque Excel ne s’est pas chargée. Vérifiez la connexion Internet.');return;}
@@ -132,4 +132,139 @@ function g10LivePDF(){const c=document.getElementById('g10-live-content');if(!c)
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',()=>{installChoiceButton();adaptDirectionRows()},{once:true});
   }else{installChoiceButton();adaptDirectionRows()}
+})();
+
+
+/* G10 — vérification manuelle XAF et pièces complémentaires.
+ * Aucune confirmation ne crée de nouveau paiement ; les recettes restent vides jusqu'à vérification.
+ */
+(function(){
+'use strict';
+const id='g10-xaf-verify';
+const fmt=v=>Number(v).toLocaleString('fr-FR');
+const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+const members=()=>Array.isArray(applications)?applications:[];
+const privileged=()=>typeof isPrivilegedRole==='function'&&isPrivilegedRole();
+function match(mid){return members().find(m=>String(m.id)===String(mid));}
+function key(m){return String(m.id||'');}
+function refresh(){
+ if(typeof refreshDirection==='function')refreshDirection();
+ if(typeof g10LiveRender==='function'&&typeof g10LiveTab!=='undefined')g10LiveRender(g10LiveTab);
+ if(typeof hydrateMember==='function'&&typeof currentMember!=='undefined'&&currentMember)hydrateMember();
+}
+async function save(m){
+ if(typeof saveAnyMemberToFirebase!=='function')throw Error('La sauvegarde Firebase est indisponible.');
+ await saveAnyMemberToFirebase(m);
+ if(typeof persist==='function')persist();
+}
+function allPayments(){
+ const result=[];
+ members().filter(m=>m.paymentConfirmed).forEach(m=>{
+  result.push({m,p:null,label:'Droit d’adhésion',amount:Number(m.membershipFeePaid??m.membershipFee??settings.membershipFee)||10,received:m.g10ReceivedXaf,confirmedAt:m.membershipValidatedAt});
+  (m.contributionPayments||[]).filter(p=>p.status==='Confirmé').forEach(p=>result.push({m,p,label:'Cotisation '+(p.sequence||''),amount:Number(p.amount)||0,received:p.g10ReceivedXaf,confirmedAt:p.confirmedAt}));
+ });
+ return result;
+}
+function renderPanel(){
+ const box=document.getElementById('g10-live-content');
+ if(!box||!privileged())return;
+ let panel=document.getElementById(id);
+ if(!panel){panel=document.createElement('section');panel.id=id;panel.style.cssText='margin:18px 0;padding:18px;border:1px solid #c5d8e9;border-radius:14px;background:#f7fbff;color:#123c5f';}
+ const rows=allPayments();
+ panel.innerHTML='<h3 style="margin:0 0 8px">Vérification des montants réellement reçus en FCFA</h3>'+
+ '<p style="margin:0 0 12px">Cotisation de référence en euros · saisie du montant crédité en FCFA · double confirmation avant toute mise à jour. Aucun montant indicatif.</p>'+
+ (rows.length?rows.map((r,i)=>{
+ const v=Number(r.received),ok=Number.isSafeInteger(v)&&v>0;
+ return '<div style="padding:12px;border:1px solid #dce7f0;border-radius:9px;margin:8px 0;background:#fff">'+
+ '<b>'+safe(r.m.firstName||'')+' '+safe(r.m.lastName||'')+'</b> · '+safe(r.label)+
+ ' · Référence : '+safe(r.amount)+' €'+
+ '<div style="display:flex;flex-wrap:wrap;gap:9px;align-items:end;margin-top:8px"><label style="flex:1;min-width:170px">Montant reçu en FCFA<input aria-label="Montant reçu en FCFA" data-g10-amount="'+i+'" type="number" min="1" step="1" placeholder="Montant à vérifier" value="'+(ok?v:'')+'" style="display:block;width:100%;padding:9px;border:1px solid #aac4dc;border-radius:8px"></label>'+
+ '<button type="button" data-g10-confirm="'+i+'" class="btn btn-primary" style="padding:10px">'+(ok?'Corriger le montant':'Valider le montant')+'</button></div>'+
+ (ok?'<small>Montant validé : <b>'+fmt(v)+' FCFA</b></small>':'<small>À vérifier — aucun FCFA comptabilisé</small>')+
+ (Array.isArray(r.p?r.p.g10XafHistory:r.m.g10XafHistory)&& (r.p?r.p.g10XafHistory:r.m.g10XafHistory).length?'<details><summary>Historique des validations</summary>'+
+ (r.p?r.p.g10XafHistory:r.m.g10XafHistory).map(h=>'<div>'+safe(h.at)+' · '+safe(h.by)+' : '+safe(h.old??'—')+' → '+safe(h.value)+' FCFA</div>').join('')+'</details>':'')+
+ '</div>';
+ }).join(''):'<p>Aucun paiement confirmé.</p>');
+ box.prepend(panel);
+ panel.querySelectorAll('[data-g10-confirm]').forEach(b=>b.addEventListener('click',async()=>{
+  if(!privileged())return alert('Action réservée à la Direction.');
+  const idx=Number(b.dataset.g10Confirm),r=allPayments()[idx];
+  if(!r)return alert('Paiement introuvable. Actualisez la page.');
+  const inp=panel.querySelector('[data-g10-amount="'+idx+'"]');
+  const value=Number(inp&&inp.value);
+  if(!Number.isSafeInteger(value)||value<=0)return alert('Saisissez un montant entier en FCFA supérieur à zéro.');
+  const target=r.p||r.m;
+  const previous=Number(target.g10ReceivedXaf)||null;
+  if(previous===value)return alert('Ce montant est déjà enregistré.');
+  const verb=previous?'corriger':'valider';
+  if(!confirm('Voulez-vous '+verb+' le montant reçu de '+fmt(value)+' FCFA pour '+(r.m.firstName||'')+' '+(r.m.lastName||'')+' ('+r.label+') ?\n\nCette opération mettra à jour les extractions financières.'))return;
+  b.disabled=true;
+  try{
+   const who=(typeof auth!=='undefined'&&auth.currentUser&&(auth.currentUser.email||auth.currentUser.uid))||'Direction G10';
+   const history=[...(target.g10XafHistory||[])];
+   history.push({old:previous,value,at:new Date().toISOString(),by:who});
+   target.g10ReceivedXaf=value;target.g10XafHistory=history;
+   await save(r.m);
+   if(typeof currentMember!=='undefined'&&currentMember&&currentMember.id===r.m.id)Object.assign(currentMember,r.m);
+   refresh();
+   alert('Montant confirmé : '+fmt(value)+' FCFA. Les extractions ont été actualisées.');
+  }catch(e){target.g10ReceivedXaf=previous;alert('Enregistrement non confirmé. '+(e.message||e));b.disabled=false;}
+ }));
+}
+const oldRender=window.g10LiveRender;
+if(typeof oldRender==='function'){
+ window.g10LiveRender=function(tab){const res=oldRender(tab);if(tab==='finance')renderPanel();return res;};
+}
+function extras(m){
+ const out=[];
+ if(m.paymentProofData&&m.paymentProofData.data)out.push({name:'Justificatif initial',data:m.paymentProofData.data,type:m.paymentProofData.type});
+ (m.g10ExtraProofs||[]).forEach(x=>out.push(x));
+ return out;
+}
+function renderDocs(){
+ if(typeof currentMember==='undefined'||!currentMember)return;
+ const m=currentMember;
+ const host=document.getElementById('g10PersonalDocs');
+ if(!host)return;
+ let section=document.getElementById('g10-extra-docs');
+ if(!section){section=document.createElement('section');section.id='g10-extra-docs';section.style.cssText='margin-top:14px;padding:14px;border:1px solid #d4e2ed;border-radius:12px';host.appendChild(section);}
+ const x=extras(m);
+ section.innerHTML='<h3>Pièces complémentaires du paiement d’adhésion</h3><p>Les fichiers ajoutés ne remplacent pas le justificatif initial.</p>'+
+ x.map((f,i)=>'<div style="padding:7px"><button class="btn btn-light" type="button" data-open-proof="'+i+'">Ouvrir · '+safe(f.name||('Pièce '+(i+1)))+'</button></div>').join('')+
+ '<label>Ajouter un justificatif supplémentaire (PDF ou image, 250 Ko maximum par fichier)<input type="file" accept="application/pdf,image/*" id="g10-extra-proof-input"></label>'+
+ '<button class="btn btn-primary" type="button" id="g10-extra-proof-save">Ajouter sans remplacer</button><small style="display:block">Pour protéger les dossiers Firebase, les fichiers restent limités en taille. Aucun document n’est supprimé automatiquement.</small>';
+ section.querySelectorAll('[data-open-proof]').forEach(button=>button.onclick=()=>{
+  const f=extras(currentMember)[Number(button.dataset.openProof)];
+  if(!f||!f.data)return;
+  const w=window.open('','_blank');
+  if(!w)return alert('Autorisez les fenêtres contextuelles.');
+  w.document.write(f.type==='application/pdf'?'<iframe src="'+f.data+'" style="width:100%;height:98vh;border:0"></iframe>':'<img src="'+f.data+'" style="max-width:100%;height:auto">');
+  w.document.close();
+ });
+ const btn=section.querySelector('#g10-extra-proof-save');
+ btn.onclick=async()=>{
+  const file=section.querySelector('#g10-extra-proof-input').files[0];
+  if(!file)return alert('Sélectionnez un document.');
+  if(!(['application/pdf','image/jpeg','image/png','image/webp'].includes(file.type)))return alert('Formats acceptés : PDF, JPEG, PNG ou WebP.');
+  if(file.size>250000)return alert('Document trop volumineux. Limite : 250 Ko.');
+  if((m.g10ExtraProofs||[]).length>=3)return alert('Limite de 3 pièces complémentaires pour ce dossier. Contactez la Direction pour un archivage externe.');
+  const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(file);});
+  const old=[...(m.g10ExtraProofs||[])];
+  // Firestore limite la taille d'une fiche ; aucune écriture ne doit approcher 1 Mio.
+  const used=JSON.stringify(m).length+data.length;
+  if(used>850000)return alert('Le dossier est trop volumineux pour enregistrer cette pièce. Aucune pièce existante n’a été modifiée.');
+  if(!confirm('Ajouter « '+file.name+' » au dossier sans remplacer les justificatifs existants ?'))return;
+  btn.disabled=true;
+  m.g10ExtraProofs=[...old,{name:file.name,type:file.type,data,addedAt:new Date().toISOString()}];
+  try{await save(m);renderDocs();alert('Justificatif ajouté au dossier.');}
+  catch(e){m.g10ExtraProofs=old;btn.disabled=false;alert('Pièce non enregistrée : '+(e.message||e));}
+ };
+}
+const oldHydrate=window.hydrateMember;
+if(typeof oldHydrate==='function')window.hydrateMember=function(){const res=oldHydrate.apply(this,arguments);setTimeout(renderDocs,0);return res;};
+const oldShow=window.showMemberView;
+if(typeof oldShow==='function')window.showMemberView=function(){const res=oldShow.apply(this,arguments);setTimeout(renderDocs,0);return res;};
+const oldEnter=window.enterMember;
+if(typeof oldEnter==='function')window.enterMember=function(){const res=oldEnter.apply(this,arguments);setTimeout(renderDocs,0);return res;};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(renderDocs,200));else setTimeout(renderDocs,200);
 })();
