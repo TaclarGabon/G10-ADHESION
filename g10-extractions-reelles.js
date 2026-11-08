@@ -222,7 +222,7 @@ function renderPanel(){
    if(typeof currentMember!=='undefined'&&currentMember&&currentMember.id===r.m.id)Object.assign(currentMember,r.m);
    refresh();
    alert('Montant confirmé : '+fmt(value)+' FCFA. Les extractions ont été actualisées.');
-  }catch(e){target.g10ReceivedXaf=previous;target.g10XafHistory=history.slice(0,-1);alert('Enregistrement non confirmé. '+(e.message||e));b.disabled=false;}
+  }catch(e){target.g10ReceivedXaf=previous;if(Array.isArray(target.g10XafHistory))target.g10XafHistory=target.g10XafHistory.slice(0,-1);alert('Enregistrement non confirmé. '+(e.message||e));b.disabled=false;}
  }));
 }
 const oldRender=window.g10LiveRender;
