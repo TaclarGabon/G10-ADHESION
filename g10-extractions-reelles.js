@@ -57,7 +57,37 @@ async function g10LiveExcel(){
  ws.columns=header.map((h,i)=>({width:Math.min(55,Math.max(19,...data.map(row=>String(row[i]??'').length+4),h.length+5))}));ws.autoFilter={from:{row:3,column:1},to:{row:Math.max(3,data.length+3),column:header.length}};ws.views=[{state:'frozen',ySplit:3}];
  const bytes=await wb.xlsx.writeBuffer();const a=document.createElement('a');const u=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.href=u;a.download='G10_'+tab+'_reel.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);
 }
-function g10LivePDF(){const c=document.getElementById('g10-live-content');if(!c)return;const w=window.open('','_blank');if(!w){alert('Autorisez les fenêtres contextuelles pour imprimer.');return;}w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>G10 rapport</title><style>body{font:12px Arial;padding:22px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccd;padding:7px}@page{size:landscape}</style></head><body><h2>G10 — Extractions et rapports</h2>'+c.innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),350)}
+function g10OfficialBrandImage(){
+ const img=document.querySelector('#memberApp .sidebar img, #memberApp aside img, #memberApp .side-nav img, #dirApp .sidebar img, #dirApp aside img, #dirApp .side-nav img');
+ const src=img&&(img.currentSrc||img.getAttribute('src'))||'';
+ if(!src)return '';
+ try{return src.startsWith('data:image/')?src:new URL(src,location.href).href;}catch(e){return '';}
+}
+function g10BrandHeader(){
+ const src=g10OfficialBrandImage();
+ return '<header class="g10-print-header">'+(src?'<img src="'+g10Esc(src)+'" alt="Logo officiel G10">':'')+
+ '<div><strong>CONFÉDÉRATION DE LA DIASPORA GABONAISE MULTICONTINENTALE — G10</strong></div></header>';
+}
+function g10LivePDF(){
+ const {header,data,tab}=window.g10LiveCurrent||{};
+ if(!header||!Array.isArray(data))return alert('Ouvrez les extractions à imprimer.');
+ const w=window.open('','_blank');
+ if(!w)return alert('Autorisez les fenêtres contextuelles pour imprimer.');
+ const name=({members:'Adhérents',finance:'Finances',history:'Historique'})[tab]||'Extractions';
+ const table='<table><thead><tr>'+header.map(h=>'<th>'+g10Esc(h)+'</th>').join('')+'</tr></thead><tbody>'+
+ data.map(row=>'<tr>'+row.map(v=>'<td>'+g10Esc(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';
+ const html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>G10 — '+name+'</title>'+
+ '<style>@page{size:landscape;margin:13mm}body{font:12px Arial,sans-serif;color:#163754;margin:0}'+
+ '.g10-print-header{display:flex;align-items:center;gap:20px;border-bottom:2px solid #176a9b;padding:0 0 14px;margin:0 0 20px}'+
+ '.g10-print-header img{width:235px;max-height:86px;object-fit:contain;object-position:left center}'+
+ 'h2{font-size:20px;margin:0 0 15px}table{border-collapse:collapse;width:100%;table-layout:auto}thead{display:table-header-group}'+
+ 'th{background:#176a9b;color:white}th,td{border:1px solid #c6d4e0;padding:7px;text-align:left;word-break:break-word}tr{break-inside:avoid}'+
+ '.actions{margin:18px 0}@media print{.actions{display:none}}</style></head><body>'+
+ g10BrandHeader()+'<h2>Extractions et rapports — '+g10Esc(name)+'</h2>'+table+
+ '<div class="actions"><button onclick="window.print()">Imprimer / Enregistrer en PDF</button></div></body></html>';
+ w.document.open();w.document.write(html);w.document.close();w.focus();
+ setTimeout(()=>w.print(),450);
+}
 
 
 /* G10.4 — confirmation du choix de cotisation, distincte du paiement.
