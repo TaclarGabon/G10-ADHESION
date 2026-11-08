@@ -923,3 +923,129 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 (function(){const st=document.createElement('style');st.id='g10-amount-label-gap';st.textContent="\n/* Montant actuel séparé de son libellé. */\n#membershipSummary{display:flex!important;gap:15px!important;align-items:baseline!important;flex-wrap:wrap!important}\n";document.head.append(st);})();
+
+
+/* G10_DIRECTION_REVIEW_V1 — dossiers en lecture seule, suppression de fiches test strictement non payées.
+   N'efface pas les comptes Firebase Authentication ni d'autres données externes. */
+(function(){
+'use strict';
+const privileged=()=>typeof isPrivilegedRole==='function'&&isPrivilegedRole();
+const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+const members=()=>Array.isArray(applications)?applications:[];
+function findMember(id){
+ return members().find(m=>String(m?.id)===String(id))||
+ (Array.isArray(activeMembers)?activeMembers:[]).find(m=>String(m?.id)===String(id));
+}
+const keyLabel={
+ id:'Numéro de dossier',firstName:'Prénom',firstName2:'Autre prénom',
+ lastName:'Nom',lastName2:'Autre nom',email:'Adresse courriel',
+ phone:'Téléphone',country:'Pays',city:'Ville',address:'Adresse',
+ expertise:'Expertise',profession:'Profession',organization:'Organisation',
+ profileComplete:'Profil complété',formSigned:'Fiche signée',signPlace:'Fait à',
+ signDate:'Date de signature',signedAt:'Signature enregistrée le',
+ paymentDeclared:'Paiement déclaré',paymentConfirmed:'Paiement confirmé',
+ paymentMethod:'Moyen de paiement',paymentDate:'Date du paiement',
+ transactionRef:'Référence de transaction',g10ReceivedXaf:'FCFA vérifiés',
+ membershipValidatedAt:'Validation de l’adhésion',contributionPlan:'Formule de cotisation',
+ active:'Statut actif',status:'État du dossier'
+};
+const hidden=/password|token|secret|private|session|auth|firebase|raw|credential|data|blob|base64|html|uid|hash|url|storage|file|photo|image|pointer|documenturi/i;
+window.g10ReadOnlyMember=function(id){
+ if(!privileged())return alert('Accès réservé à la Direction.');
+ const m=findMember(id);if(!m)return alert('Dossier introuvable. Actualisez la page.');
+ document.getElementById('g10MemberReadOnlyDialog')?.remove();
+ const d=document.createElement('dialog');d.id='g10MemberReadOnlyDialog';
+ d.style.cssText='border:1px solid #c7d9e9;border-radius:15px;max-width:850px;width:calc(100vw - 30px);max-height:88dvh;padding:0;box-shadow:0 24px 60px #0b315855;color:#143754;background:#fff';
+ const name=[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ')||m.email||m.id;
+ const groups={Profil:[], 'Fiche et signature':[], 'Paiement d’adhésion':[], 'Informations complémentaires':[]};
+ for(const [k,v] of Object.entries(m)){
+  if(hidden.test(k)||v===undefined||v===null||typeof v==='object'||typeof v==='function'||String(v)==='')continue;
+  const target=/payment|transaction|g10Received|membershipValid/i.test(k)?'Paiement d’adhésion':/sign|form|profileComplete/i.test(k)?'Fiche et signature':/^(id|firstName|firstName2|lastName|lastName2|email|phone|country|city|address|expertise|profession|organization)$/i.test(k)?'Profil':'Informations complémentaires';
+  groups[target].push([keyLabel[k]||k,typeof v==='boolean'?(v?'Oui':'Non'):String(v)]);
+ }
+ const cards=Object.entries(groups).filter(([k,items])=>items.length).map(([k,items])=>'<section style="margin:17px 0"><h3 style="margin:0 0 9px">'+safe(k)+'</h3><table style="width:100%;border-collapse:collapse">'+items.map(([a,b])=>'<tr><th style="padding:8px;border:1px solid #d8e6ef;background:#f0f6fb;text-align:left;width:40%">'+safe(a)+'</th><td style="padding:8px;border:1px solid #d8e6ef;overflow-wrap:anywhere">'+safe(b)+'</td></tr>').join('')+'</table></section>').join('');
+ const cp=Array.isArray(m.contributionPayments)?m.contributionPayments:[];
+ const contributions=cp.length?'<section><h3>Cotisations enregistrées</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Date</th><th>Montant</th><th>État</th><th>Référence</th></tr></thead><tbody>'+
+ cp.map(p=>'<tr>'+[p.date||'',(p.amount??'')+(p.currency?' '+p.currency:''),p.status||'',p.reference||''].map(x=>'<td style="padding:8px;border:1px solid #d8e6ef">'+safe(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></section>':'';
+ d.innerHTML='<header style="position:sticky;top:0;display:flex;gap:8px;align-items:center;justify-content:space-between;background:#103c63;color:white;padding:16px 20px;z-index:1"><div><strong style="font-size:19px">Dossier en lecture seule</strong><div style="font-size:13px">'+safe(name)+' — '+safe(m.id)+'</div></div><button type="button" data-close style="border:0;border-radius:8px;background:#fff;color:#103c63;padding:10px 14px;cursor:pointer">Fermer</button></header>'+
+ '<div style="overflow:auto;max-height:calc(88dvh - 85px);padding:16px 20px"><p>Aucune modification n’est possible depuis cet écran.</p>'+cards+contributions+
+ (m.paymentProofData?.data?'<button type="button" data-proof class="btn btn-light">Voir le justificatif d’adhésion</button>':'')+'</div>';
+ document.body.append(d);
+ d.querySelector('[data-close]').onclick=()=>d.close();
+ d.querySelector('[data-proof]')?.addEventListener('click',()=>{if(typeof window.g10Proof==='function')window.g10Proof(m.id)});
+ d.addEventListener('close',()=>d.remove(),{once:true});
+ if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');
+};
+// Un dossier actif/payé ne peut jamais être supprimé depuis les dossiers en attente.
+window.g10DeletePendingMember=async function(id){
+ if(!privileged())return alert('Suppression réservée à la Direction.');
+ const m=findMember(id);
+ if(!m)return alert('Dossier introuvable.');
+ if(m.active||m.paymentConfirmed||m.paymentDeclared||(m.contributionPayments||[]).length||Number(m.g10ReceivedXaf)>0)
+  return alert('Suppression refusée : ce dossier comporte une adhésion ou des opérations à conserver.');
+ if(!m.firebaseUid||typeof db==='undefined'||!db)return alert('Impossible de retrouver de manière sûre le document Firebase à supprimer.');
+ const label=[m.firstName,m.lastName].filter(Boolean).join(' ')||m.email||m.id;
+ if(!confirm('Supprimer définitivement le dossier incomplet '+m.id+' ('+label+') ?\n\nCette action supprime sa fiche et son historique contenu dans Firebase. Elle ne supprime pas le compte de connexion Firebase Authentication, ni d’éventuels fichiers externes.'))return;
+ if(prompt('Deuxième confirmation : recopiez exactement le numéro '+m.id+' pour supprimer ce dossier.')!==m.id)return;
+ try{
+  const ref=db.collection('members').doc(m.firebaseUid);
+  const doc=await ref.get();
+  if(!doc.exists)return alert('Ce dossier n’existe déjà plus dans Firebase. Actualisez.');
+  const actual=doc.data()||{};
+  if(String(actual.id||'')!==String(m.id)||String(actual.email||'').toLowerCase()!==String(m.email||'').toLowerCase())
+   return alert('Identité Firebase différente : suppression annulée.');
+  if(actual.active||actual.paymentConfirmed||actual.paymentDeclared||(actual.contributionPayments||[]).length||Number(actual.g10ReceivedXaf)>0)
+   return alert('Le dossier a évolué ou comporte un paiement. Suppression annulée.');
+  await ref.delete();
+  applications=members().filter(x=>String(x.id)!==String(id));
+  if(Array.isArray(activeMembers))activeMembers=activeMembers.filter(x=>String(x.id)!==String(id));
+  if(typeof persist==='function')persist();
+  if(typeof renderApplications==='function')renderApplications();
+  if(typeof refreshDirection==='function')refreshDirection();
+  alert('Fiche incomplète supprimée de Firebase : '+id+'. Le compte de connexion, s’il existe, nécessite une suppression distincte.');
+ }catch(e){console.error(e);alert('Suppression non confirmée par Firebase : '+(e.message||e));}
+};
+function activeButtons(){
+ if(!privileged())return;
+ const t=document.querySelector('#dir-active thead tr');
+ if(t&&!t.querySelector('[data-g10-read-head]')){
+  const th=document.createElement('th');th.dataset.g10ReadHead='yes';th.textContent='Dossier';
+  const action=[...t.children].find(e=>/actions?/i.test(e.textContent||''))||t.lastElementChild;
+  if(action)t.insertBefore(th,action);
+ }
+ const body=document.getElementById('activeRows');if(!body)return;
+ for(const tr of body.querySelectorAll('tr')){
+  if(tr.querySelector('[data-g10-read-only]'))continue;
+  const id=tr.cells[0]?.textContent?.trim(),m=findMember(id);
+  if(!m)continue;
+  const td=document.createElement('td'),button=document.createElement('button');
+  button.type='button';button.className='btn btn-light';button.textContent='Voir le dossier';
+  button.dataset.g10ReadOnly='yes';button.addEventListener('click',()=>window.g10ReadOnlyMember(m.id));
+  td.append(button);
+  const last=tr.cells[tr.cells.length-1];if(last)tr.insertBefore(td,last);
+ }
+}
+function pendingButtons(){
+ if(!privileged())return;
+ const body=document.getElementById('applicationRows');if(!body)return;
+ for(const tr of body.querySelectorAll('tr')){
+  if(tr.querySelector('[data-g10-pending-delete]'))continue;
+  const id=tr.cells[0]?.textContent?.trim(),m=findMember(id);
+  if(!m||m.paymentConfirmed||m.active)continue;
+  const cell=tr.cells[tr.cells.length-1];if(!cell)continue;
+  const b=document.createElement('button');
+  b.type='button';b.className='btn btn-light';b.dataset.g10PendingDelete='yes';
+  b.textContent='Supprimer';b.style.cssText='display:block;margin-top:7px;background:#fff0f2;color:#a11d38;border:1px solid #f4bcc4';
+  b.addEventListener('click',()=>window.g10DeletePendingMember(m.id));
+  cell.append(b);
+ }
+}
+const previousActive=window.renderActive;
+if(typeof previousActive==='function')window.renderActive=function(){const out=previousActive.apply(this,arguments);activeButtons();return out;};
+const previousPending=window.renderApplications;
+if(typeof previousPending==='function')window.renderApplications=function(){const out=previousPending.apply(this,arguments);pendingButtons();return out;};
+const previousRefresh=window.refreshDirection;
+if(typeof previousRefresh==='function')window.refreshDirection=function(){const out=previousRefresh.apply(this,arguments);activeButtons();pendingButtons();return out;};
+function init(){activeButtons();pendingButtons();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
