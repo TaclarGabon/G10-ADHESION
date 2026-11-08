@@ -277,6 +277,50 @@ function renderDocs(){
 
 /* Exposer les documents personnels au même endroit que les archives d'adhésion.
    Le menu séparé est facultatif ; cette zone est accessible dans Paiements & cotisations. */
+
+/* Reçu G10 autonome : fonctionne même si l'ancien module v65.js n'est pas chargé.
+   N'invente ni signature nominative, ni montant reçu, ni numéro de reçu attribué. */
+function g10OpenMembershipReceipt(m){
+ if(!m||!m.paymentConfirmed){alert('Le paiement doit être confirmé par la Direction avant émission du reçu.');return;}
+ const received=Number(m.g10ReceivedXaf)||0;
+ if(!received){alert('Le montant FCFA doit d’abord être validé par la Direction pour établir le reçu.');return;}
+ const name=[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ').trim()||
+  [m.lastName,m.firstName].filter(Boolean).join(' ')||m.id||'Adhérent';
+ const ref=String(m.transactionRef||'Non renseignée');
+ const fmtDate=v=>{if(!v)return 'Non renseignée';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('fr-FR');};
+ const euro=Number(m.membershipFeePaid??m.membershipFee??10)||10;
+ const history=Array.isArray(m.g10XafHistory)?m.g10XafHistory:[];
+ const last=history.length?history[history.length-1]:null;
+ const proof=m.paymentProofData;
+ const embedded=proof&&proof.data&&String(proof.type||'').startsWith('image/')?
+  '<div class="proof"><h3>Justificatif original transmis</h3><img src="'+proof.data+'" alt="Justificatif de transfert"></div>':
+  '<p class="note">Le justificatif original est conservé dans le dossier G10 et consultable séparément depuis « Mes justificatifs et reçus ».</p>';
+ const html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>G10 — Reçu d’adhésion</title>'+
+ '<style>body{font-family:Arial,sans-serif;background:#eef3f8;color:#143754;margin:0}.sheet{max-width:760px;background:white;margin:25px auto;padding:40px;border-radius:14px}'+
+ 'h1{font-size:25px;margin:0;color:#104a72}.tag{display:inline-block;background:#def5e7;color:#116638;padding:9px 14px;border-radius:9px;margin-top:15px;font-weight:bold}'+
+ 'h2{margin:30px 0 16px}table{border-collapse:collapse;width:100%}td{padding:13px;border:1px solid #d6e4eb}td:first-child{width:42%;background:#f2f7fb}'+
+ '.amount{font-size:27px;color:#10633d;font-weight:bold}.note{color:#42566a;font-size:13px;line-height:1.5}.proof img{max-width:100%;max-height:750px;object-fit:contain}'+
+ '.actions{margin:20px auto;text-align:center}.actions button{padding:12px 20px;border:0;border-radius:8px;background:#176ba0;color:white;cursor:pointer}'+
+ '@media print{body{background:white}.sheet{margin:0;max-width:none;padding:12px}.actions{display:none}}</style></head><body>'+
+ '<div class="sheet"><h1>G10 — Reçu de paiement du droit d’adhésion</h1><div class="tag">Paiement validé par la Direction</div>'+
+ '<h2>Récapitulatif officiel</h2><table>'+
+ '<tr><td>Adhérent</td><td>'+safe(name)+'</td></tr>'+
+ '<tr><td>Identifiant du dossier</td><td>'+safe(m.id||'—')+'</td></tr>'+
+ '<tr><td>Nature du paiement</td><td>Droit d’adhésion</td></tr>'+
+ '<tr><td>Montant de référence</td><td>'+safe(euro)+' €</td></tr>'+
+ '<tr><td>Montant reçu et confirmé</td><td class="amount">'+fmt(received)+' FCFA</td></tr>'+
+ '<tr><td>Mode de paiement déclaré</td><td>'+safe(m.paymentMethod||'Non renseigné')+'</td></tr>'+
+ '<tr><td>Référence de transaction</td><td>'+safe(ref)+'</td></tr>'+
+ '<tr><td>Date du transfert déclarée</td><td>'+safe(fmtDate(m.paymentDate))+'</td></tr>'+
+ '<tr><td>Date de validation de l’adhésion</td><td>'+safe(fmtDate(m.membershipValidatedAt))+'</td></tr>'+
+ '<tr><td>Date de vérification du montant FCFA</td><td>'+safe(fmtDate(last&&last.at))+'</td></tr>'+
+ '</table><p class="note">Émis à partir des informations du dossier G10 après confirmation de l’adhésion et validation du montant reçu. Une cotisation annuelle distincte peut rester à régler.</p>'+
+ embedded+'<div class="actions"><button onclick="window.print()">Imprimer / Enregistrer en PDF</button></div></div></body></html>';
+ const w=window.open('','_blank');
+ if(!w){alert('Autorisez les fenêtres contextuelles pour ouvrir le reçu.');return;}
+ w.document.open();w.document.write(html);w.document.close();
+}
+
 function g10AttachDocsToPayments(){
  if(typeof currentMember==='undefined'||!currentMember||!currentMember.paymentConfirmed)return;
  const app=document.getElementById('memberApp');
@@ -316,8 +360,7 @@ function g10AttachDocsToPayments(){
    receipt.textContent='Ouvrir mon reçu officiel G10';
    target.appendChild(receipt);
  }
- receipt.onclick=()=>{if(typeof window.g10Receipt==='function')window.g10Receipt(currentMember.id,'membership');
-  else alert('La fonction de reçu est indisponible.');};
+ receipt.onclick=()=>g10OpenMembershipReceipt(currentMember);
  // Reprendre le même module de pièces : aucune modification de paymentProofData.
  let docs=target.querySelector('#g10PersonalDocs');
  if(!docs){
