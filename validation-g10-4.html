@@ -1439,12 +1439,6 @@ window.g10ExportFinanceCSV=function(){if(!isPrivilegedRole())return;const rows=[
 })();
 <\/script>
 
-<section id="g10-live-extractions" class="hidden" style="padding:24px;max-width:1500px;margin:auto">
- <div class="card panel"><h2>Extractions et rapports — données réelles</h2><p>Adhérents actifs et paiements confirmés uniquement. Les échéances non payées sont affichées sans montant encaissé.</p>
- <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button class="btn btn-light" onclick="g10LiveRender('members')">Adhérents</button><button class="btn btn-light" onclick="g10LiveRender('finance')">Finances</button><button class="btn btn-light" onclick="g10LiveRender('history')">Historique</button><button class="btn btn-green" onclick="g10LiveExcel()">Télécharger Excel</button><button class="btn btn-light" onclick="g10LivePDF()">Imprimer / PDF</button></div>
- <div id="g10-live-content"></div></div></section>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="./g10-extractions-reelles.js"></script>
 </body></html>`;
   w.document.open();w.document.write(html);w.document.close();
 }
@@ -2165,14 +2159,7 @@ window.g10ViewFullApplication=function(uid){
  const wrap=makeModal(),frame=wrap.querySelector('iframe');wrap.style.display='block';
  wrap.querySelector('#g10-full-title').textContent='Profil complet — '+[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ');
  wrap.querySelector('#g10-full-summary').textContent='Profil : '+(m.profileComplete?'Complet':'À compléter')+'  •  Formulaire : '+(m.formSigned?'Signé':'À signer')+'  •  Paiement : '+(m.paymentConfirmed?'Confirmé':m.paymentDeclared?'Déclaré — à vérifier':'Non déclaré')+'  •  Adhésion : '+(m.active?'Active':'Non active');
- const doc=frame.contentDocument;doc.open();doc.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
-<section id="g10-live-extractions" class="hidden" style="padding:24px;max-width:1500px;margin:auto">
- <div class="card panel"><h2>Extractions et rapports — données réelles</h2><p>Adhérents actifs et paiements confirmés uniquement. Les échéances non payées sont affichées sans montant encaissé.</p>
- <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0"><button class="btn btn-light" onclick="g10LiveRender('members')">Adhérents</button><button class="btn btn-light" onclick="g10LiveRender('finance')">Finances</button><button class="btn btn-light" onclick="g10LiveRender('history')">Historique</button><button class="btn btn-green" onclick="g10LiveExcel()">Télécharger Excel</button><button class="btn btn-light" onclick="g10LivePDF()">Imprimer / PDF</button></div>
- <div id="g10-live-content"></div></div></section>
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="./g10-extractions-reelles.js"></script>
-</body></html>');doc.close();
+ const doc=frame.contentDocument;doc.open();doc.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body></body></html>');doc.close();
  document.querySelectorAll('style').forEach(style=>{const copy=doc.createElement('style');copy.textContent=style.textContent;doc.head.appendChild(copy)});
  const original=document.getElementById('memberApp');if(!original){wrap.style.display='none';return alert('Interface adhérent introuvable.');}
  const clone=original.cloneNode(true);clone.classList.remove('hidden');clone.style.display='flex';
