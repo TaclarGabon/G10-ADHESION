@@ -529,6 +529,13 @@ obs.observe(document.body,{childList:true,subtree:false});
  let viewport=document.querySelector('meta[name="viewport"]');
  if(!viewport){viewport=document.createElement('meta');viewport.name='viewport';document.head.appendChild(viewport);}
  viewport.setAttribute('content','width=device-width, initial-scale=1');
+ // Le voile d'arrière-plan avait un contexte d'empilement supérieur à la barre latérale sur iOS.
+ // On le retire pour que les rubriques restent lisibles et surtout cliquables.
+ if(!document.getElementById('g10PortraitOverlayFix')){
+  const fix=document.createElement('style');fix.id='g10PortraitOverlayFix';
+  fix.textContent='@media(max-width:800px){#g10GlobalMobileShade,.g10-mobile-nav-backdrop{display:none!important;pointer-events:none!important}#memberApp.g10-portrait-visible .sidebar,#directionApp.g10-portrait-visible .sidebar{pointer-events:auto!important;opacity:1!important;filter:none!important}#memberApp.g10-portrait-visible,#directionApp.g10-portrait-visible{position:relative;z-index:2147483002!important}}';
+  document.head.appendChild(fix);
+ }
  if(!document.getElementById('g10PortraitV2CSS')){const style=document.createElement('style');style.id='g10PortraitV2CSS';style.textContent="@media(max-width:800px){\n#memberApp .sidebar,#directionApp .sidebar{position:fixed!important;top:0!important;left:0!important;bottom:0!important;width:min(86vw,320px)!important;height:100dvh!important;transform:translateX(-110%)!important;transition:transform .2s ease!important;z-index:2147483001!important;overflow-y:auto!important;display:block!important;visibility:visible!important}\n#memberApp.g10-portrait-visible .sidebar,#directionApp.g10-portrait-visible .sidebar{transform:translateX(0)!important}\n#memberApp .main,#directionApp .main{margin-left:0!important;width:100%!important;min-width:0!important;padding:65px 12px 20px!important;box-sizing:border-box!important}\n#memberApp:not(.hidden),#directionApp:not(.hidden){width:100%!important;min-width:0!important;max-width:100%!important}\n#memberApp .main>* ,#directionApp .main>*{min-width:0!important;max-width:100%;box-sizing:border-box}\n.g10-mobile-nav-trigger{display:none!important}\n#directionApp .g10-menu{display:none!important}\n}\n@media(min-width:801px){#g10GlobalMobileMenu,#g10GlobalMobileShade{display:none!important}}";document.head.appendChild(style);}
  const btn=document.createElement('button');btn.id='g10GlobalMobileMenu';btn.type='button';btn.textContent='☰ Menu';btn.setAttribute('aria-label','Ouvrir le menu de navigation');btn.setAttribute('aria-expanded','false');
  btn.style.cssText='position:fixed;top:12px;left:12px;z-index:2147483003;background:#0b4a7a;color:white;border:0;border-radius:10px;padding:12px 16px;box-shadow:0 3px 10px #0004;font:700 15px Arial,sans-serif;display:none';
@@ -553,7 +560,7 @@ obs.observe(document.body,{childList:true,subtree:false});
   const app=active();if(!app)return;
   const isOpen=app.classList.contains('g10-portrait-visible');
   close();
-  if(!isOpen){app.classList.add('g10-portrait-visible');shade.style.display='block';btn.textContent='✕ Fermer';btn.setAttribute('aria-expanded','true');current=app;}
+  if(!isOpen){app.classList.add('g10-portrait-visible');shade.style.display='none';btn.textContent='✕ Fermer';btn.setAttribute('aria-expanded','true');current=app;}
  };
  shade.onclick=close;
  document.addEventListener('click',e=>{if(current&&e.target.closest('.sidebar .navbtn,.sidebar a,.sidebar button')&&!e.target.closest('#g10GlobalMobileMenu'))close();},true);
