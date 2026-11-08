@@ -503,7 +503,18 @@ console.info('G10 Adhésion V6.5.16 chargé — états validés restaurés et li
 (function(){
  'use strict';
  const navSelector='#memberApp';
- function officialButton(){return [...document.querySelectorAll('#memberApp button, #memberApp a')].find(x=>x.id!=='g10PersonalDocsNav' && (x.textContent||'').replace(/\s+/g,' ').trim().includes('Documents officiels'));}
+ function officialButton(){
+  const root=document.getElementById('memberApp');
+  if(!root)return null;
+  const text=x=>(x.textContent||'').replace(/\s+/g,' ').trim();
+  const leaves=[...root.querySelectorAll('*')].filter(x=>x.id!=='g10PersonalDocsNav' && text(x)==='Documents officiels' && ![...x.children].some(c=>text(c)==='Documents officiels'));
+  for(const leaf of leaves){
+   const clickable=leaf.closest('button,a,[onclick],.navbtn,[role="button"]');
+   if(clickable&&root.contains(clickable))return clickable;
+   if(leaf.parentElement&&root.contains(leaf.parentElement))return leaf.parentElement;
+  }
+  return null;
+ }
  function installPersonalDocuments(){
    const official=officialButton();
    const nav=official&&official.parentElement;
@@ -514,7 +525,8 @@ console.info('G10 Adhésion V6.5.16 chargé — états validés restaurés et li
      button=document.createElement('button');
      button.type='button';
      button.id='g10PersonalDocsNav';
-     button.className=official?official.className:'navbtn';
+     button.className=official&&official.className?official.className:'navbtn';
+     button.style.cssText=official&&official.getAttribute('style')||'';
      button.removeAttribute('onclick');
      button.textContent='📁 Mes documents';
      if(official)official.insertAdjacentElement('afterend',button);else nav.appendChild(button);
