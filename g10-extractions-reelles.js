@@ -437,6 +437,7 @@ function openOfficialMembershipAttestation(){
  const name=[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ').trim()||m.id||'Adhérent';
  const date=v=>{if(!v)return 'Non renseignée';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('fr-FR');};
  const euro=Number(m.membershipFeePaid??m.membershipFee??10)||10;
+ const membershipReference=m.g10MembershipCurrency==='XAF'?(Number(m.g10MembershipReferenceXaf||6560).toLocaleString('fr-FR')+' FCFA'):(euro+' €');
  const received=Number(m.g10ReceivedXaf)||0;
  const logo=typeof g10BrandHeader==='function'?g10BrandHeader():'';
  const active=typeof g10IsActive==='function'?g10IsActive(m):false;
@@ -454,7 +455,7 @@ function openOfficialMembershipAttestation(){
  '<div class="detail"><p><strong>'+g10Esc(name)+'</strong></p>'+
  '<p>Numéro de dossier : <strong>'+g10Esc(m.id||'—')+'</strong></p>'+
  (m.email?'<p>Adresse courriel : '+g10Esc(m.email)+'</p>':'')+'</div>'+
- '<p>a satisfait aux formalités d’adhésion enregistrées dans l’application G10 et que son droit d’adhésion de <strong>'+g10Esc(euro)+' €</strong> a été confirmé par la Direction.</p>'+
+ '<p>a satisfait aux formalités d’adhésion enregistrées dans l’application G10 et que son droit d’adhésion de <strong>'+g10Esc(membershipReference)+'</strong> a été confirmé par la Direction.</p>'+
  (received?'<p>Montant effectivement reçu et vérifié : <strong>'+received.toLocaleString('fr-FR')+' FCFA</strong>.</p>':'')+
  '<p>Adhésion validée le <strong>'+g10Esc(date(m.membershipValidatedAt))+'</strong>.</p>'+
  '<p>Statut du dossier : <strong>'+(active?'Adhérent actif':'Adhésion validée')+'</strong>.</p>'+
