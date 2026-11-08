@@ -279,32 +279,51 @@ function renderDocs(){
    Le menu séparé est facultatif ; cette zone est accessible dans Paiements & cotisations. */
 function g10AttachDocsToPayments(){
  if(typeof currentMember==='undefined'||!currentMember||!currentMember.paymentConfirmed)return;
- const archive=document.getElementById('membershipPaidBox');
- if(!archive)return;
+ const app=document.getElementById('memberApp');
+ if(!app)return;
+ // Priorité à la section de paiement visible, quel que soit son habillage.
+ const paymentView=[...app.querySelectorAll('section,div')].filter(e=>e.children.length<12&&
+  [...e.children].some(c=>/Paiements\s*&\s*cotisations/i.test(c.textContent||''))&&e.getBoundingClientRect().width>0)
+  .sort((a,b)=>a.querySelectorAll('*').length-b.querySelectorAll('*').length)[0];
+ const archiveTitle=[...app.querySelectorAll('h2,h3,h4,strong,b')].find(e=>
+  /Archives de mon adhésion/i.test(e.textContent||''));
+ const archive=archiveTitle?archiveTitle.closest('.card,.panel,section,article')||archiveTitle.parentElement:
+  document.getElementById('membershipPaidBox');
+ const anchor=archive||document.getElementById('membershipPaidBox')||paymentView;
+ if(!anchor)return;
+ // Le bloc doit être propre aux archives de paiement, pas à la bibliothèque officielle.
  let host=document.getElementById('g10PaymentsPersonalFiles');
  if(!host){
-   host=document.createElement('div');
+   host=document.createElement('section');
    host.id='g10PaymentsPersonalFiles';
-   host.style.cssText='margin-top:16px;padding:14px;border:1px solid #d4e2ed;border-radius:12px;background:#fff';
-   archive.insertAdjacentElement('afterend',host);
+   host.style.cssText='margin-top:16px;padding:16px;border:1px solid #d4e2ed;border-radius:12px;background:#fff;color:#143754';
  }
- host.innerHTML='<h3>Mes justificatifs et reçus</h3><p>Retrouvez votre reçu officiel G10 et ajoutez des pièces sans remplacer la preuve initiale.</p>'+
- '<div id="g10PaymentsDocsHost"></div>';
- const receipts=host.querySelector('#g10PaymentsDocsHost');
- if(currentMember.paymentConfirmed&&typeof window.g10Receipt==='function'){
-  const btn=document.createElement('button');
-  btn.className='btn btn-light';btn.type='button';
-  btn.textContent='Voir mon reçu officiel d’adhésion';
-  btn.onclick=()=>window.g10Receipt(currentMember.id,'membership');
-  receipts.appendChild(btn);
+ // Placer après les archives plutôt que dans un bloc réécrit par l'application.
+ if(host.previousElementSibling!==anchor)anchor.insertAdjacentElement('afterend',host);
+ const exists=host.querySelector('#g10PaymentsDocsHost');
+ if(!exists){
+   host.innerHTML='<h3>Mes justificatifs et reçus</h3>'+
+    '<p>Justificatif initial conservé · reçu officiel G10 · ajout de pièces complémentaires.</p>'+
+    '<div id="g10PaymentsDocsHost"></div>';
  }
- const original=document.getElementById('g10PersonalDocs');
- if(original){
-  // Le bloc commun est déplacé, pas dupliqué ; ses justificatifs restent les mêmes.
-  receipts.appendChild(original);
- }else{
-  const container=document.createElement('div');container.id='g10PersonalDocs';
-  receipts.appendChild(container);
+ const target=host.querySelector('#g10PaymentsDocsHost');
+ let receipt=target.querySelector('#g10MembershipOfficialReceiptLink');
+ if(!receipt){
+   receipt=document.createElement('button');
+   receipt.id='g10MembershipOfficialReceiptLink';
+   receipt.type='button';
+   receipt.className='btn btn-light';
+   receipt.textContent='Ouvrir mon reçu officiel G10';
+   target.appendChild(receipt);
+ }
+ receipt.onclick=()=>{if(typeof window.g10Receipt==='function')window.g10Receipt(currentMember.id,'membership');
+  else alert('La fonction de reçu est indisponible.');};
+ // Reprendre le même module de pièces : aucune modification de paymentProofData.
+ let docs=target.querySelector('#g10PersonalDocs');
+ if(!docs){
+   docs=document.getElementById('g10PersonalDocs');
+   if(!docs){docs=document.createElement('div');docs.id='g10PersonalDocs';}
+   target.appendChild(docs);
  }
  renderDocs();
 }
