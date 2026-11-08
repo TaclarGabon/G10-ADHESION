@@ -842,3 +842,66 @@ const oldReport=window.g10LiveOpen;
 if(typeof oldReport==='function')window.g10LiveOpen=function(){const r=oldReport.apply(this,arguments);audit();return r;};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',audit,{once:true});else audit();
 })();
+
+
+/* G10_OFFICIAL_DOCS_081126
+   Active automatiquement les quatre documents officiels du 08/11/2026
+   lorsque les PDF originaux sont publiés à la racine de GitHub Pages.
+   Ne remplace pas les liens actifs par des fichiers 404.
+*/
+(function(){
+'use strict';
+const manifest=[
+ {key:'charte',file:'G10_Charte_2026-11-08.pdf',title:'Charte G10 — édition du 08/11/2026'},
+ {key:'statuts',file:'G10_Statuts_2026-11-08.pdf',title:'Statuts G10 — édition du 08/11/2026'},
+ {key:'reglement',file:'G10_Reglement_Interieur_2026-11-08.pdf',title:'Règlement intérieur G10 — édition du 08/11/2026'},
+ {key:'g10241',file:'G10_241_2026-11-08.pdf',title:'G10-241 — Délégation opérationnelle du G10'}
+];
+async function documentReady(filename){
+ try{
+  const u=new URL(filename,location.origin+location.pathname.replace(/[^/]*$/,''));
+  const res=await fetch(u.href,{method:'HEAD',cache:'no-store'});
+  const mime=(res.headers.get('content-type')||'').toLowerCase();
+  return res.ok&&(mime.includes('pdf')||mime.includes('octet-stream'))?u.href:null;
+ }catch(e){return null;}
+}
+function createCard(container){
+ if(container.querySelector('[data-g10-doc="g10241"]'))return;
+ const article=document.createElement('article');
+ article.className='doc';article.dataset.g10Doc='g10241';
+ article.innerHTML='<div class="icon statuts">PDF</div><h4>G10-241</h4><p>Délégation opérationnelle du G10 au Gabon — document officiel du 08/11/2026.</p>';
+ const b=document.createElement('button');b.className='btn btn-primary';b.type='button';b.textContent='Ouvrir';
+ b.onclick=()=>{if(typeof openOfficialDocument==='function')openOfficialDocument('g10241');};
+ article.appendChild(b);container.appendChild(article);
+}
+async function init(){
+ if(typeof OFFICIAL_DOCUMENTS==='undefined')return;
+ const missing=[];
+ for(const entry of manifest){
+  const url=await documentReady(entry.file);
+  if(!url){missing.push(entry.file);continue;}
+  if(entry.key==='g10241'){
+   OFFICIAL_DOCUMENTS.g10241={title:entry.title,src:url};
+   const member=document.querySelector('#member-docs .doc-grid');
+   if(member)createCard(member);
+   const dir=document.querySelector('#directionApp .doc-grid');
+   if(dir)createCard(dir);
+  }else if(OFFICIAL_DOCUMENTS[entry.key]){
+   OFFICIAL_DOCUMENTS[entry.key].title=entry.title;
+   OFFICIAL_DOCUMENTS[entry.key].src=url;
+  }
+ }
+ // Informe la Direction en cas de fichier absent : un ancien PDF peut encore être lié.
+ const root=document.querySelector('#directionApp .main');
+ if(root){
+  let notice=document.getElementById('g10OfficialDocsPublication');
+  if(!notice){notice=document.createElement('p');notice.id='g10OfficialDocsPublication';
+   notice.style.cssText='margin:10px 0;padding:12px 15px;border-radius:10px;border:1px solid #d7e0ec;font-size:13px';
+   root.prepend(notice);
+  }
+  if(missing.length){notice.style.background='#fff8e9';notice.textContent='Documents G10 du 08/11/2026 : publication en attente pour '+missing.length+' fichier(s). Ne pas considérer les anciennes versions comme les nouvelles.';}
+  else{notice.style.background='#e6f7eb';notice.textContent='Documents officiels G10 du 08/11/2026 disponibles : Charte, Statuts, Règlement intérieur et G10-241.';}
+ }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
