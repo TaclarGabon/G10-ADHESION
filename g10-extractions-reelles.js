@@ -495,3 +495,28 @@ document.addEventListener('click',function(e){
  ].join('\n');
  (document.head||document.documentElement).appendChild(style);
 })();
+
+
+/* G10 — menus en portrait Adhérent et Direction ; aucun changement des données. */
+(function(){
+'use strict';
+const css="@media(max-width:760px){\nhtml,body{max-width:100%;overflow-x:hidden}\n#memberApp:not(.hidden),#directionApp:not(.hidden){display:block!important;width:100%!important;min-width:0!important}\n#memberApp .sidebar,#directionApp .sidebar{display:block!important;position:fixed!important;left:0!important;top:0!important;width:min(84vw,320px)!important;height:100dvh!important;z-index:11002!important;transform:translateX(-110%)!important;transition:transform .2s ease!important;overflow-y:auto!important;visibility:visible!important}\n#memberApp.g10-mobile-open .sidebar,#directionApp.g10-mobile-open .sidebar{transform:translateX(0)!important}\n#memberApp .main,#directionApp .main{margin-left:0!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;padding:66px 12px 18px!important}\n#memberApp .main>*,#directionApp .main>*{max-width:100%;min-width:0;box-sizing:border-box}\n#memberApp .card,#directionApp .card,#memberApp .panel,#directionApp .panel{max-width:100%;min-width:0}\n#memberApp .table-wrap,#directionApp .table-wrap,#memberApp .table-scroll,#directionApp .table-scroll{overflow-x:auto!important;-webkit-overflow-scrolling:touch}\n#memberApp button,#directionApp button,#memberApp input,#directionApp input{max-width:100%}\n.g10-mobile-nav-trigger{display:flex!important;position:fixed!important;top:max(10px,env(safe-area-inset-top))!important;left:12px!important;z-index:11004!important;background:#0b4a7a!important;color:#fff!important;border:0!important;border-radius:11px!important;padding:11px 14px!important;align-items:center!important;gap:8px!important;font:700 14px Arial,sans-serif!important}\n.g10-mobile-nav-backdrop{display:none;position:fixed;inset:0;z-index:11001;background:rgba(8,24,40,.45)}\n.g10-mobile-nav-backdrop.is-open{display:block!important}\n#directionApp .g10-menu.g10-show{display:none!important}\n}\n@media(min-width:761px){.g10-mobile-nav-trigger,.g10-mobile-nav-backdrop{display:none!important}}";
+function setup(){
+ if(!document.getElementById('g10-mobile-portrait-css')){const st=document.createElement('style');st.id='g10-mobile-portrait-css';st.textContent=css;document.head.append(st);}
+ for(const id of ['memberApp','directionApp']){
+  const app=document.getElementById(id);
+  if(!app||!app.querySelector('.sidebar')||app.querySelector('.g10-mobile-nav-trigger'))continue;
+  const btn=document.createElement('button');btn.type='button';btn.className='g10-mobile-nav-trigger';btn.textContent='☰ Menu';btn.setAttribute('aria-label','Afficher les rubriques');btn.setAttribute('aria-expanded','false');
+  const backdrop=document.createElement('div');backdrop.className='g10-mobile-nav-backdrop';
+  const toggle=on=>{app.classList.toggle('g10-mobile-open',on);app.classList.remove('g10-open');backdrop.classList.toggle('is-open',on);btn.setAttribute('aria-expanded',on?'true':'false');btn.textContent=on?'✕ Fermer':'☰ Menu';};
+  btn.addEventListener('click',()=>toggle(!app.classList.contains('g10-mobile-open')));
+  backdrop.addEventListener('click',()=>toggle(false));
+  app.querySelector('.sidebar').addEventListener('click',e=>{if(e.target.closest('button,a,[role="button"],[onclick]'))toggle(false);});
+  app.prepend(backdrop);app.prepend(btn);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')toggle(false);});
+ }
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();
+const obs=new MutationObserver(()=>{if(!document.querySelector('#memberApp .g10-mobile-nav-trigger')||!document.querySelector('#directionApp .g10-mobile-nav-trigger'))setup();});
+obs.observe(document.body,{childList:true,subtree:false});
+})();
