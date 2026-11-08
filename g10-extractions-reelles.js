@@ -421,3 +421,55 @@ const oldEnter=window.enterMember;
 if(typeof oldEnter==='function')window.enterMember=function(){const res=oldEnter.apply(this,arguments);setTimeout(renderDocs,0);return res;};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(renderDocs,200));else setTimeout(renderDocs,200);
 })();
+
+
+/* Attestation G10 : modèle commun avec le logo officiel pour les dossiers validés.
+ * Génération à la demande depuis l'espace personnel ; aucune nouvelle validation en base.
+ */
+(function(){
+'use strict';
+function openOfficialMembershipAttestation(){
+ if(typeof currentMember==='undefined'||!currentMember||!currentMember.paymentConfirmed){
+  alert('L’attestation est disponible après validation de l’adhésion par la Direction.');return;
+ }
+ const m=currentMember;
+ const name=[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ').trim()||m.id||'Adhérent';
+ const date=v=>{if(!v)return 'Non renseignée';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('fr-FR');};
+ const euro=Number(m.membershipFeePaid??m.membershipFee??10)||10;
+ const received=Number(m.g10ReceivedXaf)||0;
+ const logo=typeof g10BrandHeader==='function'?g10BrandHeader():'';
+ const active=typeof g10IsActive==='function'?g10IsActive(m):false;
+ const html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>G10 — Attestation d’adhésion</title>'+
+ '<style>body{margin:0;background:#edf3f8;font:16px Arial,sans-serif;color:#123c5f}.sheet{max-width:760px;margin:22px auto;padding:45px;background:white;box-sizing:border-box;min-height:860px}'+
+ '.g10-print-header{display:flex;align-items:center;gap:20px;border-bottom:2px solid #176a9b;padding:0 0 15px;margin:0 0 32px}.g10-print-header img{width:265px;max-height:90px;object-fit:contain;object-position:left center}'+
+ '.g10-print-header strong{font-size:16px;color:#14649c}h1{text-align:center;margin:22px 0 38px;font-size:27px;color:#103756}'+
+ '.detail{margin:24px 0;padding:18px;background:#f2f7fc;border:1px solid #d5e3ee;border-radius:9px}'+
+ '.detail p{margin:8px 0}p{line-height:1.65}.sign{text-align:right;margin:55px 0 35px}.foot{font-size:12px;color:#557086;border-top:1px solid #dae4ec;padding-top:16px;margin-top:65px}'+
+ '.actions{text-align:center;margin:20px}.actions button{background:#126ba7;color:white;border:0;border-radius:7px;padding:12px 18px;cursor:pointer}'+
+ '@media print{body{background:white}.sheet{margin:0;padding:14px;max-width:none;min-height:auto}.actions{display:none}}</style></head><body>'+
+ '<div class="actions"><button onclick="window.print()">Imprimer / Enregistrer en PDF</button></div>'+
+ '<main class="sheet">'+logo+'<h1>ATTESTATION D’ADHÉSION</h1>'+
+ '<p>La Direction de la Confédération atteste que :</p>'+
+ '<div class="detail"><p><strong>'+g10Esc(name)+'</strong></p>'+
+ '<p>Numéro de dossier : <strong>'+g10Esc(m.id||'—')+'</strong></p>'+
+ (m.email?'<p>Adresse courriel : '+g10Esc(m.email)+'</p>':'')+'</div>'+
+ '<p>a satisfait aux formalités d’adhésion enregistrées dans l’application G10 et que son droit d’adhésion de <strong>'+g10Esc(euro)+' €</strong> a été confirmé par la Direction.</p>'+
+ (received?'<p>Montant effectivement reçu et vérifié : <strong>'+received.toLocaleString('fr-FR')+' FCFA</strong>.</p>':'')+
+ '<p>Adhésion validée le <strong>'+g10Esc(date(m.membershipValidatedAt))+'</strong>.</p>'+
+ '<p>Statut du dossier : <strong>'+(active?'Adhérent actif':'Adhésion validée')+'</strong>.</p>'+
+ '<div class="sign"><strong>Pour la Direction G10</strong><p>Validation électronique du dossier</p></div>'+
+ '<div class="foot">Attestation générée depuis l’espace personnel G10. Elle confirme la validation électronique du dossier et ne reproduit aucune signature manuscrite.</div>'+
+ '</main></body></html>';
+ const w=window.open('','_blank');if(!w)return alert('Autorisez les fenêtres contextuelles pour ouvrir l’attestation.');
+ w.document.open();w.document.write(html);w.document.close();
+}
+document.addEventListener('click',function(e){
+ const target=e.target.closest('button,a');if(!target)return;
+ const label=(target.textContent||'').replace(/\s+/g,' ').trim();
+ if(!/^Attestation d['’]adhésion$/i.test(label))return;
+ const member=document.getElementById('memberApp');
+ if(!member||!member.contains(target))return;
+ e.preventDefault();e.stopImmediatePropagation();
+ openOfficialMembershipAttestation();
+},true);
+})();
