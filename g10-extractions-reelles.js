@@ -473,3 +473,25 @@ document.addEventListener('click',function(e){
  openOfficialMembershipAttestation();
 },true);
 })();
+
+
+/* G10 — accueil fluide : le fond plein écran et la maquette utilisent
+   la même largeur de viewport. Aucune modification des dossiers ni des modes de paiement.
+   Le zoom du navigateur reste contrôlé par l'utilisateur (accessibilité). */
+(function(){
+ 'use strict';
+ const style=document.createElement('style');
+ style.id='g10-fluid-landing-2026';
+ style.textContent=[
+   '#landing{min-height:100vh;min-height:100dvh;background-size:cover;background-position:center center}',
+   '#landing>.container{width:calc(100% - clamp(24px,5vw,120px))!important;max-width:none!important;margin-inline:auto}',
+   '#landing .final-home{width:100%;grid-template-columns:minmax(0,1.4fr) minmax(340px, min(34vw,560px));gap:clamp(22px,3.5vw,78px)!important;min-height:100vh;min-height:100dvh}',
+   '#landing .final-left{width:100%;max-width:940px;min-width:0}',
+   '#landing .final-left .landing-copy{width:100%;max-width:940px}',
+   '#landing .home-login-card{width:100%;max-width:560px;justify-self:end}',
+   '@media(max-width:980px){#landing .final-home{grid-template-columns:minmax(0,1fr) minmax(300px,38%);gap:20px!important}}',
+   '@media(max-width:820px){#landing>.container{width:calc(100% - 28px)!important}#landing .final-home{grid-template-columns:1fr!important;gap:24px!important}#landing .home-login-card{justify-self:center;max-width:560px}}',
+   '@media(max-width:520px){#landing>.container{width:calc(100% - 18px)!important}#landing .final-home{gap:18px!important}}'
+ ].join('\n');
+ (document.head||document.documentElement).appendChild(style);
+})();
