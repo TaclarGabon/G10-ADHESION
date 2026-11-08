@@ -596,7 +596,20 @@ const RATES=Object.freeze({membership:6560,annual:80000,half:40000});
 const fmtXAF=n=>Number(n||0).toLocaleString('fr-FR')+' FCFA';
 function textOf(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 function isNewXaf(p){return p&&(p.currency==='XAF'||p.currency==='FCFA'||Number(p.amount)>=40000);}
-function bankData(){try{return settings.g10RibVerifiedAt?String(settings.bank||'').trim():''}catch(_){return ''}}
+// Données lues sur le RIB UBA officiel fourni par la Confédération (08/11/2026).
+// Le nom du titulaire est tronqué sur la photo : ne jamais inventer sa fin.
+const G10_UBA_RIB=Object.freeze({
+ bank:"UBA — United Bank for Africa",
+ agency:"Agence Boulevard — Libreville",
+ bankCode:"40025",
+ branchCode:"05811",
+ account:"81103100057",
+ key:"67",
+ full:"40025 05811 81103100057 67",
+ holderVisible:"CONFEDERATION DE LA DIASPORA GABONA"
+});
+function bankData(){return G10_UBA_RIB.full;}
+function g10SecondDueDate(firstDate){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(firstDate||'')))return '';const six=addMonthsIso(firstDate,6);const end=firstDate.slice(0,4)+'-12-30';return six&&six<end?six:end;}
 function bankPanel(group){
  const input=document.querySelector('input[name="'+group+'"][value="Virement bancaire"]');
  const parent=input?.closest('.payment-options');
@@ -608,24 +621,44 @@ function bankPanel(group){
   el.style.cssText='display:none;margin:12px 0;padding:16px;border:1px solid #c0d8ee;border-radius:12px;background:#f3f9ff;color:#143754';
   parent.insertAdjacentElement('afterend',el);
  }
- const selected=!!input?.checked;
- el.style.display=selected?'block':'none';
- if(!selected)return;
- el.textContent='';
- const title=document.createElement('strong');title.textContent='RIB officiel G10 — Virement bancaire';
- el.appendChild(title);
- const bank=bankData();
- if(!bank){
-  const msg=document.createElement('p');msg.textContent='Coordonnées bancaires officielles en attente. La Direction doit intégrer le RIB avant tout virement.';el.appendChild(msg);
-  return;
+ el.style.display=input.checked?'block':'none';
+ if(!input.checked)return;
+ el.replaceChildren();
+ const h=document.createElement('h4');h.textContent='Coordonnées UBA G10 — Virement bancaire';el.append(h);
+ const note=document.createElement('p');note.style.fontSize='13px';
+ note.textContent='Copiez les coordonnées directement. Le libellé du titulaire est coupé sur la photo originale : vérifiez son nom intégral auprès de la Direction avant le premier virement.';
+ el.append(note);
+ const entries=[
+  ['Banque',G10_UBA_RIB.bank,true],
+  ['Agence',G10_UBA_RIB.agency,true],
+  ['Code banque',G10_UBA_RIB.bankCode,true],
+  ['Code agence',G10_UBA_RIB.branchCode,true],
+  ['Numéro de compte',G10_UBA_RIB.account,true],
+  ['Clé RIB',G10_UBA_RIB.key,true],
+  ['RIB complet',G10_UBA_RIB.full,true],
+  ['Titulaire (libellé visible, incomplet)',G10_UBA_RIB.holderVisible,false]
+ ];
+ for(const [label,value,canCopy] of entries){
+  const row=document.createElement('div');row.style.cssText='display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #d9e8f5;padding:9px 0';
+  const left=document.createElement('div');
+  const n=document.createElement('small');n.style.cssText='display:block;color:#52708b;font-weight:bold';n.textContent=label;
+  const txt=document.createElement('strong');txt.style.cssText='overflow-wrap:anywhere';txt.textContent=value;
+  left.append(n,txt);row.append(left);
+  if(canCopy){
+   const copy=document.createElement('button');copy.type='button';copy.className='btn btn-light';copy.textContent='Copier';
+   copy.onclick=async()=>{
+    try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(value);
+     else{const t=document.createElement('textarea');t.value=value;document.body.append(t);t.select();const ok=document.execCommand('copy');t.remove();if(!ok)throw Error('Copie indisponible');}
+     copy.textContent='Copié ✓';setTimeout(()=>copy.textContent='Copier',1700);
+    }catch(e){alert('Copie indisponible : sélectionnez le texte du RIB.');}
+   };
+   row.append(copy);
+  }
+  el.append(row);
  }
- const p=document.createElement('p');p.textContent='Coordonnées actuellement renseignées dans les paramètres Direction (à vérifier sur le RIB officiel).';el.appendChild(p);
- bank.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach(line=>{
-  const row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #dae8f5;padding:8px 0';
-  const txt=document.createElement('span');txt.textContent=line;txt.style.overflowWrap='anywhere';
-  const btn=document.createElement('button');btn.type='button';btn.className='btn btn-light';btn.textContent='Copier';btn.addEventListener('click',()=>{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(line).then(()=>{btn.textContent='Copié ✓'}).catch(()=>alert('Sélectionnez la ligne pour la copier.'));else alert('Sélectionnez la ligne pour la copier.');});
-  row.append(txt,btn);el.appendChild(row);
- });
+ const fees=document.createElement('p');fees.style.cssText='font-size:13px;margin-top:12px';
+ fees.textContent='Droit d’adhésion : 6 560 FCFA, hors frais de retrait. La référence de transaction, la date et la preuve de virement restent obligatoires.';
+ el.append(fees);
 }
 function methods(){
  for(const group of ['payMethod','contributionMethod']){
@@ -652,7 +685,7 @@ function details(){
  textOf('annualContribution',fmtXAF(RATES.annual));
  textOf('semesterContribution','2 × '+fmtXAF(RATES.half));
  textOf('monthlyPlanText',fmtXAF(RATES.annual)+' en une seule fois.');
- textOf('twoPlanText',fmtXAF(RATES.half)+' maintenant puis '+fmtXAF(RATES.half)+' six mois plus tard.');
+ textOf('twoPlanText',fmtXAF(RATES.half)+' maintenant puis '+fmtXAF(RATES.half)+' au plus tard dans six mois, et avant le 30 décembre de l’année du premier paiement.');
  const grid=document.querySelector('#contributionUnlocked .grid3');
  const notice=grid?.nextElementSibling;
  if(notice&&/versements|cotisation annuelle/i.test(notice.textContent||''))notice.innerHTML='Choisissez la <b>cotisation annuelle de '+fmtXAF(RATES.annual)+'</b> en une seule fois ou <b>deux versements de '+fmtXAF(RATES.half)+'</b>. Chaque paiement est déclaré puis confirmé par la Direction.';
@@ -681,7 +714,7 @@ function details(){
    const next=same.length+1;
    if(next>2)box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Les deux versements ont été confirmés.';
    else{
-    const due=next===2&&same[0]?.dueDate?' — échéance : '+String(same[0].dueDate):'';
+    const due=next===2&&same[0]?.date?' — échéance : '+g10SecondDueDate(same[0].date):'';
     box.innerHTML='<strong>'+(next===1?'Premier':'Deuxième')+' versement : '+fmtXAF(RATES.half)+'</strong>'+due+'<br>Après déclaration, la Direction vérifiera la réception.';
    }
   }
@@ -751,11 +784,12 @@ window.declareContributionPayment=async function(){
  if(same.some(p=>p.status!=='Confirmé')){alert('Le paiement précédent doit d’abord être confirmé.');return;}
  const sequence=same.length+1,max=plan==='monthly'?1:2;
  if(sequence>max){alert('Toutes les échéances ont déjà été déclarées.');return;}
+ if(plan==='two'&&sequence===1&&date>date.slice(0,4)+'-12-30'){alert('La deuxième échéance doit intervenir avant le 30 décembre de la même année. Choisissez le paiement annuel en une fois ou contactez la Direction.');return;}
  const amount=plan==='monthly'?RATES.annual:RATES.half;
  const id='COT-'+Date.now(),file=document.getElementById('contributionProof')?.files?.[0]||null;
  let proof=null;
  if(file){try{proof=await uploadProofFile(file,'contributions',id)}catch(e){alert('Le justificatif n’a pas pu être enregistré : '+(e.message||e));return;}}
- const payment={id,plan,sequence,amount,currency:'XAF',date,method,reference,proof,status:'À vérifier',dueDate:plan==='two'&&sequence===1?addMonthsIso(date,6):''};
+ const payment={id,plan,sequence,amount,currency:'XAF',date,method,reference,proof,status:'À vérifier',dueDate:plan==='two'&&sequence===1?g10SecondDueDate(date):''};
  currentMember.contributionPlan=plan;currentMember.contributionPayments.push(payment);
  syncMemberEverywhere(currentMember);persist();
  try{await saveMemberToFirebase(currentMember);}catch(e){console.error(e);alert('Enregistrement Firebase non confirmé : vérifiez avec la Direction avant de réessayer.');return;}
@@ -765,7 +799,7 @@ window.declareContributionPayment=async function(){
  alert('Cotisation de '+fmtXAF(amount)+' déclarée. La Direction doit confirmer le paiement.'+(proof?' Justificatif archivé.':''));
 };
 window.openMembershipInfo=function(){openInfoCard('Droit d’adhésion','Droit d’adhésion : <b>'+fmtXAF(RATES.membership)+'</b>, une seule fois, <b>hors frais de retrait</b>.');};
-window.openContributionInfo=function(){openInfoCard('Cotisation annuelle','<b>Option 1 :</b> '+fmtXAF(RATES.annual)+' en une seule fois.<br><b>Option 2 :</b> '+fmtXAF(RATES.half)+' maintenant, puis '+fmtXAF(RATES.half)+' six mois plus tard.');};
+window.openContributionInfo=function(){openInfoCard('Cotisation annuelle','<b>Option 1 :</b> '+fmtXAF(RATES.annual)+' en une seule fois.<br><b>Option 2 :</b> '+fmtXAF(RATES.half)+' maintenant, puis '+fmtXAF(RATES.half)+' au plus tard six mois après le premier versement, et avant le 30 décembre de la même année.');};
 document.addEventListener('change',e=>{if(e.target?.matches('input[name="payMethod"],input[name="contributionMethod"],input[name="contributionPlan"]')){methods();details();}});
 function init(){methods();details();directionDisplay();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
