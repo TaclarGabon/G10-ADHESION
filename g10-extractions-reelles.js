@@ -295,6 +295,10 @@ function g10OpenMembershipReceipt(m){
  const embedded=proof&&proof.data&&String(proof.type||'').startsWith('image/')?
   '<div class="proof"><h3>Justificatif original transmis</h3><img src="'+proof.data+'" alt="Justificatif de transfert"></div>':
   '<p class="note">Le justificatif original est conservé dans le dossier G10 et consultable séparément depuis « Mes justificatifs et reçus ».</p>';
+ const logoElement=document.querySelector('#memberApp .sidebar img, #memberApp aside img, #memberApp .side-nav img, #memberApp img');
+ const logoSource=logoElement&&(logoElement.currentSrc||logoElement.getAttribute('src'))||'';
+ const logoUrl=logoSource?(logoSource.startsWith('data:image/')?logoSource:new URL(logoSource,location.href).href):'';
+ const logoHeader=logoUrl?'<img src="'+logoUrl.replace(/"/g,'&quot;')+'" alt="Logo officiel G10" style="display:block;width:285px;max-width:100%;height:auto;max-height:100px;object-fit:contain;object-position:left center;margin-bottom:18px">':'';
  const html='<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>G10 — Reçu d’adhésion</title>'+
  '<style>body{font-family:Arial,sans-serif;background:#eef3f8;color:#143754;margin:0}.sheet{max-width:760px;background:white;margin:25px auto;padding:40px;border-radius:14px}'+
  'h1{font-size:25px;margin:0;color:#104a72}.tag{display:inline-block;background:#def5e7;color:#116638;padding:9px 14px;border-radius:9px;margin-top:15px;font-weight:bold}'+
@@ -302,7 +306,7 @@ function g10OpenMembershipReceipt(m){
  '.amount{font-size:27px;color:#10633d;font-weight:bold}.note{color:#42566a;font-size:13px;line-height:1.5}.proof img{max-width:100%;max-height:750px;object-fit:contain}'+
  '.actions{margin:20px auto;text-align:center}.actions button{padding:12px 20px;border:0;border-radius:8px;background:#176ba0;color:white;cursor:pointer}'+
  '@media print{body{background:white}.sheet{margin:0;max-width:none;padding:12px}.actions{display:none}}</style></head><body>'+
- '<div class="sheet"><h1>G10 — Reçu de paiement du droit d’adhésion</h1><div class="tag">Paiement validé par la Direction</div>'+
+ '<div class="sheet">'+logoHeader+'<h1>G10 — Reçu de paiement du droit d’adhésion</h1><div class="tag">Paiement validé par la Direction</div>'+
  '<h2>Récapitulatif officiel</h2><table>'+
  '<tr><td>Adhérent</td><td>'+safe(name)+'</td></tr>'+
  '<tr><td>Identifiant du dossier</td><td>'+safe(m.id||'—')+'</td></tr>'+
