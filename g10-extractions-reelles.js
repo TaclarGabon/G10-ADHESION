@@ -520,3 +520,49 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 const obs=new MutationObserver(()=>{if(!document.querySelector('#memberApp .g10-mobile-nav-trigger')||!document.querySelector('#directionApp .g10-mobile-nav-trigger'))setup();});
 obs.observe(document.body,{childList:true,subtree:false});
 })();
+
+
+/* G10 portrait v2 : commande ancrée au BODY, hors des conteneurs masqués.
+   Corrige le cas où les boutons placés à l'intérieur des espaces étaient invisibles. */
+(function(){
+ 'use strict';
+ let viewport=document.querySelector('meta[name="viewport"]');
+ if(!viewport){viewport=document.createElement('meta');viewport.name='viewport';document.head.appendChild(viewport);}
+ viewport.setAttribute('content','width=device-width, initial-scale=1');
+ if(!document.getElementById('g10PortraitV2CSS')){const style=document.createElement('style');style.id='g10PortraitV2CSS';style.textContent="@media(max-width:800px){\n#memberApp .sidebar,#directionApp .sidebar{position:fixed!important;top:0!important;left:0!important;bottom:0!important;width:min(86vw,320px)!important;height:100dvh!important;transform:translateX(-110%)!important;transition:transform .2s ease!important;z-index:2147483001!important;overflow-y:auto!important;display:block!important;visibility:visible!important}\n#memberApp.g10-portrait-visible .sidebar,#directionApp.g10-portrait-visible .sidebar{transform:translateX(0)!important}\n#memberApp .main,#directionApp .main{margin-left:0!important;width:100%!important;min-width:0!important;padding:65px 12px 20px!important;box-sizing:border-box!important}\n#memberApp:not(.hidden),#directionApp:not(.hidden){width:100%!important;min-width:0!important;max-width:100%!important}\n#memberApp .main>* ,#directionApp .main>*{min-width:0!important;max-width:100%;box-sizing:border-box}\n.g10-mobile-nav-trigger{display:none!important}\n#directionApp .g10-menu{display:none!important}\n}\n@media(min-width:801px){#g10GlobalMobileMenu,#g10GlobalMobileShade{display:none!important}}";document.head.appendChild(style);}
+ const btn=document.createElement('button');btn.id='g10GlobalMobileMenu';btn.type='button';btn.textContent='☰ Menu';btn.setAttribute('aria-label','Ouvrir le menu de navigation');btn.setAttribute('aria-expanded','false');
+ btn.style.cssText='position:fixed;top:12px;left:12px;z-index:2147483003;background:#0b4a7a;color:white;border:0;border-radius:10px;padding:12px 16px;box-shadow:0 3px 10px #0004;font:700 15px Arial,sans-serif;display:none';
+ const shade=document.createElement('div');shade.id='g10GlobalMobileShade';shade.style.cssText='position:fixed;inset:0;background:#001b3590;z-index:2147483000;display:none';
+ let current=null;
+ function isVisible(el){return el&&!el.classList.contains('hidden')&&getComputedStyle(el).display!=='none'&&el.getClientRects().length>0;}
+ function active(){
+  return ['memberApp','directionApp'].map(id=>document.getElementById(id)).find(isVisible)||null;
+ }
+ function close(){
+  for(const id of ['memberApp','directionApp'])document.getElementById(id)?.classList.remove('g10-portrait-visible');
+  shade.style.display='none';btn.textContent='☰ Menu';btn.setAttribute('aria-expanded','false');current=null;
+ }
+ function refresh(){
+  const narrow=matchMedia('(max-width:800px)').matches;
+  const app=active();
+  const show=narrow&&!!(app&&app.querySelector('.sidebar'));
+  btn.style.display=show?'block':'none';
+  if(!show)close();
+ }
+ btn.onclick=function(){
+  const app=active();if(!app)return;
+  const isOpen=app.classList.contains('g10-portrait-visible');
+  close();
+  if(!isOpen){app.classList.add('g10-portrait-visible');shade.style.display='block';btn.textContent='✕ Fermer';btn.setAttribute('aria-expanded','true');current=app;}
+ };
+ shade.onclick=close;
+ document.addEventListener('click',e=>{if(current&&e.target.closest('.sidebar .navbtn,.sidebar a,.sidebar button')&&!e.target.closest('#g10GlobalMobileMenu'))close();},true);
+ document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+ function start(){if(!document.getElementById(btn.id))document.body.append(shade,btn);refresh();}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+ addEventListener('resize',refresh);addEventListener('orientationchange',refresh);
+ const observer=new MutationObserver(refresh);
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>observer.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:false}));
+ else observer.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:false});
+ setInterval(refresh,2000);
+})();
