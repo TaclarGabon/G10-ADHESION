@@ -596,7 +596,7 @@ const RATES=Object.freeze({membership:6560,annual:80000,half:40000});
 const fmtXAF=n=>Number(n||0).toLocaleString('fr-FR')+' FCFA';
 function textOf(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
 function isNewXaf(p){return p&&(p.currency==='XAF'||p.currency==='FCFA'||Number(p.amount)>=40000);}
-function bankData(){try{return String(settings.bank||'').trim()}catch(_){return ''}}
+function bankData(){try{return settings.g10RibVerifiedAt?String(settings.bank||'').trim():''}catch(_){return ''}}
 function bankPanel(group){
  const input=document.querySelector('input[name="'+group+'"][value="Virement bancaire"]');
  const parent=input?.closest('.payment-options');
