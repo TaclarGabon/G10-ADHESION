@@ -496,3 +496,70 @@ console.info('G10 Adhésion V6.5.16 chargé — états validés restaurés et li
   });
  };
 })();
+
+
+/* G10 V4 — menu distinct Mes documents dans l'espace adhérent.
+   Ne touche ni aux paiements ni aux données sauvegardées. */
+(function(){
+ 'use strict';
+ const navSelector='#memberApp .side-nav';
+ function installPersonalDocuments(){
+   const nav=document.querySelector(navSelector);
+   const original=document.getElementById('member-docs');
+   if(!nav||!original)return;
+   let button=document.getElementById('g10PersonalDocsNav');
+   if(!button){
+     const official=[...nav.querySelectorAll('button')].find(b=>(b.textContent||'').includes('Documents officiels'));
+     button=document.createElement('button');
+     button.type='button';
+     button.id='g10PersonalDocsNav';
+     button.className=official?official.className:'navbtn';
+     button.removeAttribute('onclick');
+     button.textContent='📁 Mes documents';
+     if(official)official.insertAdjacentElement('afterend',button);else nav.appendChild(button);
+   }
+   let section=document.getElementById('g10PersonalDocumentsView');
+   if(!section){
+     section=document.createElement('section');
+     section.id='g10PersonalDocumentsView';
+     section.className='hidden';
+     section.innerHTML='<div class="topbar"><h2>Mes documents</h2><p>Vos justificatifs personnels et les reçus officiels G10.</p></div><div id="g10PersonalDocsHost"></div>';
+     original.insertAdjacentElement('afterend',section);
+   }
+   button.onclick=function(){if(typeof window.showMemberView==='function')window.showMemberView('personaldocs',button);};
+ }
+ function showPersonal(){
+   const official=document.getElementById('member-docs'),personal=document.getElementById('g10PersonalDocumentsView');
+   if(!official||!personal)return;
+   if(typeof window.g10PersonalDocs==='function')window.g10PersonalDocs();
+   else if(typeof g10PersonalDocs==='function')g10PersonalDocs();
+   const box=document.getElementById('g10PersonalDocs'),host=document.getElementById('g10PersonalDocsHost');
+   if(box&&host&&box.parentNode!==host)host.appendChild(box);
+   official.classList.add('hidden');personal.classList.remove('hidden');
+   const nav=document.querySelector(navSelector);
+   if(nav){nav.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));document.getElementById('g10PersonalDocsNav')?.classList.add('active');}
+ }
+ function hidePersonal(){
+   document.getElementById('g10PersonalDocumentsView')?.classList.add('hidden');
+ }
+ const oldView=window.showMemberView;
+ if(typeof oldView==='function'){
+  window.showMemberView=function(v,b){
+    if(v==='personaldocs'){
+      installPersonalDocuments();
+      const official=[...document.querySelectorAll(navSelector+' .navbtn')].find(x=>(x.getAttribute('onclick')||'').includes("'docs'"));
+      const result=oldView.call(this,'docs',official||b);
+      showPersonal();
+      return result;
+    }
+    hidePersonal();
+    return oldView.apply(this,arguments);
+  };
+ }
+ const oldEnter=window.enterMember;
+ if(typeof oldEnter==='function')window.enterMember=function(){const result=oldEnter.apply(this,arguments);setTimeout(installPersonalDocuments,0);return result;};
+ const oldHydrate=window.hydrateMember;
+ if(typeof oldHydrate==='function')window.hydrateMember=function(){const result=oldHydrate.apply(this,arguments);setTimeout(installPersonalDocuments,0);return result;};
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(installPersonalDocuments,0));else setTimeout(installPersonalDocuments,0);
+ console.info('G10 — navigation Mes documents séparée activée');
+})();
