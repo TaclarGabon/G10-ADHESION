@@ -14,7 +14,8 @@ function g10Records(){
   const name=g10Name(m),slug=g10Slug(m),id=m.firebaseUid||m.id||name;
   rows.push({id,name,op:'Adhésion unique',ref:'ADH-'+slug,date:g10Date(m.membershipValidatedAt),eur:g10Num(m.membershipFeePaid??m.membershipFee??settings.membershipFee),state:'Payé',kind:'adh',confirmed:true});
   const paid=(m.contributionPayments||[]).filter(p=>p.status==='Confirmé').sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
-  const plan=m.contributionPlan||(paid[0]&&paid[0].plan)||'';
+  const rawPlan=String(m.contributionPlan||(paid[0]&&paid[0].plan)||'').trim().toLowerCase();
+  const plan=['monthly','one','once','single','1','option1','option 1','une fois'].includes(rawPlan)?'monthly':(['two','2','option2','option 2','twice','deux fois'].includes(rawPlan)?'two':'');
   if(plan==='monthly'){
     const p=paid[0];rows.push({id,name,op:'Cotisation option 1 — une fois',ref:'COT-1FOIS-'+slug,date:p?g10Date(p.date):'',eur:p?g10Num(p.amount):null,state:p?'Payé':'À venir',kind:'cot',confirmed:!!p});
   } else if(plan==='two'){
@@ -29,9 +30,13 @@ function g10Records(){
 function g10LiveOpen(){
  if(typeof isPrivilegedRole==='function'&&!isPrivilegedRole()){alert('Accès réservé à la Direction.');return;}
  document.querySelectorAll('[id^="dir-"]').forEach(el=>el.classList.add('hidden'));
- document.getElementById('g10-live-extractions').classList.remove('hidden');
+ const panel=document.getElementById('g10-live-extractions');if(!panel){alert('La section Extractions et rapports est introuvable.');return;}panel.classList.remove('hidden');panel.scrollIntoView({block:'start'});
  const t=document.getElementById('dirTitle');if(t)t.textContent='Extractions et rapports';g10LiveRender('members');
 }
+function g10LiveFinance(){g10LiveOpen();g10LiveRender('finance');}
+// Le raccourci Finances du tableau Adhérents actifs doit ouvrir l'onglet Finances.
+document.addEventListener('click',function(event){const button=event.target.closest('button,a');if(!button)return;const label=(button.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();if(label==='prévisualiser finances'||label==='previsualiser finances'){event.preventDefault();event.stopImmediatePropagation();g10LiveFinance();}},true);
+
 function g10LiveRender(tab){g10LiveTab=tab;const {members,rows}=g10Records();const total=rows.filter(r=>r.confirmed).reduce((s,r)=>s+r.eur,0),count=rows.filter(r=>r.confirmed).length;
  const kpis=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin:15px 0">${[['Adhérents actifs',members.length],['Paiements confirmés',count],['Total €',total.toLocaleString('fr-FR')+' €'],['Total FCFA',Math.round(total*665).toLocaleString('fr-FR')+' FCFA']].map(([a,b],i)=>`<div style="background:${['#dbeafe','#dcfce7','#ede9fe','#ffedd5'][i]};border-radius:14px;padding:14px 22px;color:#173b5b"><b>${a}</b><div style="font-size:22px;font-weight:800">${b}</div></div>`).join('')}</div>`;
  let header=[],data=[];
