@@ -6,7 +6,7 @@ const g10Slug=m=>g10Name(m).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUp
 const g10Num=v=>Number(v)||0;
 const g10Date=v=>{if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?String(v).slice(0,10):d.toLocaleDateString('fr-FR')};
 const g10Due=v=>{const d=new Date(v);if(Number.isNaN(d.getTime()))return '';d.setMonth(d.getMonth()+6);return g10Date(d)};
-const g10Active=()=>Array.isArray(activeMembers)?activeMembers.filter(m=>m.active&&m.paymentConfirmed):[];
+const g10Active=()=>Array.isArray(applications)?applications.filter(m=>m.active&&m.paymentConfirmed):(Array.isArray(activeMembers)?activeMembers.filter(m=>m.active&&m.paymentConfirmed):[]);
 function g10Records(){
  const members=g10Active().slice().sort((a,b)=>g10Name(a).localeCompare(g10Name(b),'fr'));
  const rows=[];
