@@ -753,3 +753,41 @@ document.addEventListener('change',e=>{if(e.target?.matches('input[name="payMeth
 function init(){methods();details();directionDisplay();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
+
+
+
+/* G10 — audit non destructif : références identiques dans plusieurs dossiers.
+   La Direction seule peut consulter cette alerte ; aucun dossier n'est fusionné ou modifié. */
+(function(){
+'use strict';
+function audit(){
+ if(typeof isPrivilegedRole!=='function'||!isPrivilegedRole())return;
+ if(typeof applications==='undefined'||!Array.isArray(applications))return;
+ const main=document.querySelector('#directionApp .main');
+ if(!main||applications.length===0)return;
+ let box=document.getElementById('g10ArchiveReferenceAudit');
+ if(!box){
+  box=document.createElement('section');box.id='g10ArchiveReferenceAudit';
+  box.style.cssText='border:1px solid #cbdff1;background:#f2f8ff;border-radius:11px;padding:10px 14px;margin:10px 0;font-size:13px;color:#173b5b';
+  main.prepend(box);
+ }
+ const refs=new Map();
+ applications.filter(m=>m?.paymentConfirmed).forEach(m=>{
+  const key=String(m.transactionRef||'').trim().toUpperCase();
+  if(!key)return;
+  const uid=String(m.firebaseUid||m.id||'').trim();
+  if(!uid)return;
+  if(!refs.has(key))refs.set(key,new Map());
+  refs.get(key).set(uid,[m.firstName,m.lastName].filter(Boolean).join(' ')||m.id||uid);
+ });
+ const duplicates=[...refs.entries()].filter(([ref,people])=>people.size>1);
+ box.textContent=duplicates.length
+  ?'⚠ Références à vérifier : '+duplicates.map(([ref,people])=>ref+' ('+[...people.values()].join(', ')+')').join(' ; ')+'. Vérifier les preuves avant toute correction.'
+  :'✓ Références d’adhésion : aucune répétition entre dossiers distincts dans les données actuellement chargées par la Direction.';
+}
+const old=window.refreshDirection;
+if(typeof old==='function')window.refreshDirection=function(){const r=old.apply(this,arguments);audit();return r;};
+const oldReport=window.g10LiveOpen;
+if(typeof oldReport==='function')window.g10LiveOpen=function(){const r=oldReport.apply(this,arguments);audit();return r;};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',audit,{once:true});else audit();
+})();
