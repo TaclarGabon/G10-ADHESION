@@ -687,7 +687,23 @@ function details(){
   }
  }
 }
+
+function directionCfaSettings(){
+ const fee=document.getElementById('setMembershipFee'),monthly=document.getElementById('setMonthly');
+ const a=fee?.closest('.field')||fee?.parentElement;
+ const b=monthly?.closest('.field')||monthly?.parentElement;
+ if(!a||!b)return;
+ a.style.display='none';b.style.display='none';
+ let note=document.getElementById('g10CommitteeCfaTariffs');
+ if(!note){
+  note=document.createElement('div');note.id='g10CommitteeCfaTariffs';note.className='notice';
+  note.style.cssText='margin:12px 0;padding:14px;border:1px solid #b9d8eb;background:#f0f7ff;border-radius:10px';
+  a.insertAdjacentElement('beforebegin',note);
+ }
+ note.textContent='Tarifs CFA pour les nouvelles adhésions : droit d’adhésion 6 560 FCFA (hors frais de retrait) ; cotisation annuelle 80 000 FCFA en une fois ou deux fois 40 000 FCFA. Les anciens paramètres en euros sont conservés uniquement pour les dossiers historiques et ne doivent pas être réutilisés comme nouveaux tarifs.';
+}
 function directionDisplay(){
+ directionCfaSettings();
  const el=document.getElementById('contributionPaymentRows');
  if(el&&typeof applications!=='undefined'){
   const payments=[];(applications||[]).forEach(m=>(m.contributionPayments||[]).forEach(p=>payments.push(p)));
@@ -708,6 +724,7 @@ function wrap(name,fn){
 }
 for(const name of ['hydrateMember','renderContributionMember','refreshContributionForm','fillSmartForm'])wrap(name,details);
 wrap('refreshLanding',()=>textOf('landingFee',fmtXAF(RATES.membership)));
+wrap('hydrateSettings',directionCfaSettings);
 for(const name of ['refreshDirection','renderContributionPayments'])wrap(name,directionDisplay);
 const oldMembership=window.declarePayment;
 if(typeof oldMembership==='function')window.declarePayment=async function(){
