@@ -37,14 +37,14 @@ function g10LiveFinance(){g10LiveOpen();g10LiveRender('finance');}
 // Le raccourci Finances du tableau Adhérents actifs doit ouvrir l'onglet Finances.
 document.addEventListener('click',function(event){const button=event.target.closest('button,a');if(!button)return;const label=(button.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();if(label==='prévisualiser finances'||label==='previsualiser finances'){event.preventDefault();event.stopImmediatePropagation();g10LiveFinance();}},true);
 
-function g10LiveRender(tab){g10LiveTab=tab;const {members,rows}=g10Records();const total=rows.filter(r=>r.confirmed).reduce((s,r)=>s+r.eur,0),count=rows.filter(r=>r.confirmed).length;
- const realTotal=rows.filter(r=>r.confirmed&&r.xaf!==null).reduce((sum,r)=>sum+r.xaf,0);const pendingCount=rows.filter(r=>r.confirmed&&r.xaf===null).length;const kpis=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin:15px 0">${[['Adhérents actifs',members.length],['Paiements confirmés',count],['Historique €',total.toLocaleString('fr-FR')+' €'],['FCFA vérifiés',realTotal.toLocaleString('fr-FR')+' FCFA']].map(([a,b],i)=>`<div style="background:${['#dbeafe','#dcfce7','#ede9fe','#ffedd5'][i]};border-radius:14px;padding:14px 22px;color:#173b5b"><b>${a}</b><div style="font-size:22px;font-weight:800">${b}</div></div>`).join('')}</div>`;
+function g10LiveRender(tab){g10LiveTab=tab;const {members,rows}=g10Records();const count=rows.filter(r=>r.confirmed).length;
+ const realTotal=rows.filter(r=>r.confirmed&&r.xaf!==null).reduce((sum,r)=>sum+r.xaf,0);const pendingCount=rows.filter(r=>r.confirmed&&r.xaf===null).length;const kpis=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin:15px 0">${[['Adhérents actifs',members.length],['Paiements confirmés',count],['FCFA vérifiés',realTotal.toLocaleString('fr-FR')+' FCFA']].map(([a,b],i)=>`<div style="background:${['#dbeafe','#dcfce7','#ffedd5'][i]};border-radius:14px;padding:14px 22px;color:#173b5b"><b>${a}</b><div style="font-size:22px;font-weight:800">${b}</div></div>`).join('')}</div>`;
  let header=[],data=[];
  if(tab==='members'){header=['Référence','Adhérent','Statut','Date validation','Contact'];data=members.map((m,i)=>['G10-'+String(i+1).padStart(3,'0'),g10Name(m),'Actif',g10Date(m.membershipValidatedAt),m.phone||m.email||'']);}
- if(tab==='finance'){header=['Adhérent','Opération','Référence','Date paiement / échéance','Historique €','Référence FCFA','FCFA réellement reçus','État'];data=rows.map(r=>[r.name,r.op,r.ref,r.date,r.eur===null?'':r.eur,r.refXaf==null?'':r.refXaf,r.xaf===null?'':r.xaf,r.state]);}
- if(tab==='history'){header=['Lot','Du','Au','Paiements','Total €','Total FCFA'];data=[];}
+ if(tab==='finance'){header=['Adhérent','Opération','Référence','Date paiement / échéance','FCFA réellement reçus','État'];data=rows.map(r=>[r.name,r.op,r.ref,r.date,r.xaf===null?'':r.xaf,r.state]);}
+ if(tab==='history'){header=['Lot','Du','Au','Paiements','Total FCFA'];data=[];}
  window.g10LiveCurrent={header,data,tab,rows,members};
- const table=`<div style="overflow:auto"><table class="table" style="min-width:900px;width:100%;border-collapse:collapse"><thead><tr>${header.map(h=>`<th style="background:#176a9b;color:white;padding:12px">${g10Esc(h)}</th>`).join('')}</tr></thead><tbody>${data.map((r,i)=>`<tr style="background:${tab==='finance'?['#e3f0ff','#e8f7ec','#fff2db'][Math.max(0,members.findIndex(m=>g10Name(m)===r[0]))%3]:i%2?'#f1f6fc':'#ffffff'}">${r.map(v=>`<td style="padding:10px;border-bottom:1px solid #d9e5ef">${g10Esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+ const table=`<div style="overflow:auto"><table class="table" style="min-width:${tab==='finance'?'670':'780'}px;width:100%;border-collapse:collapse"><thead><tr>${header.map(h=>`<th style="background:#176a9b;color:white;padding:12px">${g10Esc(h)}</th>`).join('')}</tr></thead><tbody>${data.map((r,i)=>`<tr style="background:${tab==='finance'?['#e3f0ff','#e8f7ec','#fff2db'][Math.max(0,members.findIndex(m=>g10Name(m)===r[0]))%3]:i%2?'#f1f6fc':'#ffffff'}">${r.map(v=>`<td style="padding:10px;border-bottom:1px solid #d9e5ef">${g10Esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
  document.getElementById('g10-live-content').innerHTML=kpis+(tab==='history'?'<p>Les lots historiques ne sont pas encore enregistrés dans Firebase. Aucun historique fictif ne sera affiché.</p>':table)+(tab==='finance'?`<p><b>Total FCFA vérifié : ${realTotal.toLocaleString('fr-FR')} FCFA</b> · ${pendingCount} paiement(s) sans montant FCFA validé.</p><small>Les montants FCFA non validés restent vides. Aucun taux indicatif n'est comptabilisé.</small>`:'');
 }
 async function g10LiveExcel(){
@@ -202,12 +202,12 @@ function renderPanel(){
  if(!panel){panel=document.createElement('section');panel.id=id;panel.style.cssText='margin:18px 0;padding:18px;border:1px solid #c5d8e9;border-radius:14px;background:#f7fbff;color:#123c5f';}
  const rows=allPayments();
  panel.innerHTML='<h3 style="margin:0 0 8px">Vérification des montants réellement reçus en FCFA</h3>'+
- '<p style="margin:0 0 12px">Cotisation de référence en euros · saisie du montant crédité en FCFA · double confirmation avant toute mise à jour. Aucun montant indicatif.</p>'+
+ '<p style="margin:0 0 12px">Montant réellement reçu en FCFA · double confirmation avant toute modification. Les paiements historiques restent inchangés.</p>'+
  (rows.length?rows.map((r,i)=>{
  const v=Number(r.received),ok=Number.isSafeInteger(v)&&v>0;
  return '<div style="padding:12px;border:1px solid #dce7f0;border-radius:9px;margin:8px 0;background:#fff">'+
  '<b>'+safe(r.m.firstName||'')+' '+safe(r.m.lastName||'')+'</b> · '+safe(r.label)+
- ' · Référence : '+safe(r.amount)+' €'+
+ ' · '+(r.m.g10MembershipCurrency==='XAF'||r.p?.currency==='XAF'?'Référence : '+fmt(r.p?.amount||r.m.g10MembershipReferenceXaf||6560)+' FCFA':'Paiement historique')+
  (ok?'<div data-g10-summary="'+i+'" style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:10px"><span style="color:#17603d">✓ Montant validé : <b>'+fmt(v)+' FCFA</b></span><button type="button" data-g10-edit="'+i+'" class="btn btn-light">Modifier</button></div>':'')+
  '<div data-g10-editform="'+i+'" style="'+(ok?'display:none;':'display:flex;')+'flex-wrap:wrap;gap:9px;align-items:end;margin-top:8px"><label style="flex:1;min-width:170px">Montant reçu en FCFA<input aria-label="Montant reçu en FCFA" data-g10-amount="'+i+'" type="number" min="1" step="1" placeholder="Montant à vérifier" value="'+(ok?v:'')+'" style="display:block;width:100%;padding:9px;border:1px solid #aac4dc;border-radius:8px"></label>'+
  '<button type="button" data-g10-confirm="'+i+'" class="btn btn-primary" style="padding:10px">'+(ok?'Enregistrer la correction':'Valider le montant')+'</button>'+
@@ -218,6 +218,27 @@ function renderPanel(){
  '</div>';
  }).join(''):'<p>Aucun paiement confirmé.</p>');
  box.prepend(panel);
+ // Conserver uniquement les montants à vérifier en vue directe.
+ // Les montants confirmés restent consultables et modifiables dans l’accordéon.
+ const cards=[...panel.children].filter(el=>el.tagName==='DIV');
+ const waiting=document.createElement('section');
+ waiting.id='g10-payments-to-verify';
+ const heading=document.createElement('h4');heading.textContent='À vérifier ('+rows.filter(r=>!(Number.isSafeInteger(Number(r.received))&&Number(r.received)>0)).length+')';
+ heading.style.cssText='margin:16px 0 8px;color:#173b5b';
+ waiting.append(heading);
+ const archive=document.createElement('details');
+ archive.id='g10-payments-verified';
+ archive.style.cssText='margin:14px 0;border:1px solid #c4d8eb;border-radius:10px;padding:12px;background:#fff';
+ const archiveHeading=document.createElement('summary');
+ archiveHeading.style.cssText='font-weight:800;cursor:pointer;padding:8px 5px;color:#123c5f';
+ archiveHeading.textContent='Montants déjà validés ('+rows.filter(r=>Number.isSafeInteger(Number(r.received))&&Number(r.received)>0).length+')';
+ archive.append(archiveHeading);
+ cards.forEach((card,i)=>{
+  const amt=Number(rows[i]?.received);
+  if(Number.isSafeInteger(amt)&&amt>0)archive.append(card);else waiting.append(card);
+ });
+ if(waiting.children.length===1){const empty=document.createElement('p');empty.textContent='Aucun nouveau montant à vérifier.';waiting.append(empty);}
+ panel.append(waiting,archive);
  panel.querySelectorAll('[data-g10-edit]').forEach(b=>b.addEventListener('click',()=>{
   const i=b.dataset.g10Edit,summary=panel.querySelector('[data-g10-summary="'+i+'"]'),form=panel.querySelector('[data-g10-editform="'+i+'"]');
   if(summary)summary.style.display='none';
@@ -630,49 +651,32 @@ function bankPanel(group){
  let el=document.getElementById(id);
  if(!el){
   el=document.createElement('section');el.id=id;el.className='card';
-  el.style.cssText='display:none;margin:12px 0;padding:16px;border:1px solid #c0d8ee;border-radius:12px;background:#f3f9ff;color:#143754';
+  el.style.cssText='margin:12px 0;padding:14px;border:1px solid #c0d8ee;border-radius:12px;background:#f3f9ff';
   parent.insertAdjacentElement('afterend',el);
  }
  el.style.display=input.checked?'block':'none';
  if(!input.checked)return;
- el.replaceChildren();
- const h=document.createElement('h4');h.textContent='Coordonnées UBA G10 — Virement bancaire';el.append(h);
- const note=document.createElement('p');note.style.fontSize='13px';
- note.textContent='Copiez les coordonnées directement. Le libellé du titulaire est coupé sur la photo originale : vérifiez son nom intégral auprès de la Direction avant le premier virement.';
- el.append(note);
- const entries=[
-  ['Banque',G10_UBA_RIB.bank,true],
-  ['Agence',G10_UBA_RIB.agency,true],
-  ['Code banque',G10_UBA_RIB.bankCode,true],
-  ['Code agence',G10_UBA_RIB.branchCode,true],
-  ['Numéro de compte',G10_UBA_RIB.account,true],
-  ['Clé RIB',G10_UBA_RIB.key,true],
-  ['RIB complet',G10_UBA_RIB.full,true],
-  ['Titulaire (libellé visible, incomplet)',G10_UBA_RIB.holderVisible,false]
- ];
- for(const [label,value,canCopy] of entries){
-  const row=document.createElement('div');row.style.cssText='display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #d9e8f5;padding:9px 0';
-  const left=document.createElement('div');
-  const n=document.createElement('small');n.style.cssText='display:block;color:#52708b;font-weight:bold';n.textContent=label;
-  const txt=document.createElement('strong');txt.style.cssText='overflow-wrap:anywhere';txt.textContent=value;
-  left.append(n,txt);row.append(left);
-  if(canCopy){
-   const copy=document.createElement('button');copy.type='button';copy.className='btn btn-light';copy.textContent='Copier';
-   copy.onclick=async()=>{
-    try{if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(value);
-     else{const t=document.createElement('textarea');t.value=value;document.body.append(t);t.select();const ok=document.execCommand('copy');t.remove();if(!ok)throw Error('Copie indisponible');}
-     copy.textContent='Copié ✓';setTimeout(()=>copy.textContent='Copier',1700);
-    }catch(e){alert('Copie indisponible : sélectionnez le texte du RIB.');}
-   };
-   row.append(copy);
-  }
-  el.append(row);
- }
- const fees=document.createElement('p');fees.style.cssText='font-size:13px;margin-top:12px';
- fees.textContent='Droit d’adhésion : 6 560 FCFA, hors frais de retrait. La référence de transaction, la date et la preuve de virement restent obligatoires.';
- el.append(fees);
-}
-function methods(){
+ // Reproduction HTML du RIB UBA — vrai texte, sélectionnable et copiable, aucune icône "Copier".
+ el.innerHTML=String.raw`
+ <div style="overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch">
+ <div style="min-width:720px;background:#fff;border:1px solid #d1dae2;padding:27px 30px 28px 44px;font:13px Arial,sans-serif;color:#122238;user-select:text;-webkit-user-select:text;position:relative">
+  <div style="position:absolute;top:26%;left:10px;writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;font-weight:800">RELEVÉ D’IDENTITÉ BANCAIRE</div>
+  <div style="display:flex;justify-content:space-between;gap:18px;align-items:start">
+   <div style="color:#d31325"><div style="font-size:42px;font-weight:900;font-style:italic;letter-spacing:-3px">UBA ◢</div><div>United Bank for Africa</div></div>
+   <div style="text-align:right;font-weight:800;font-size:16px">RELEVÉ D’IDENTITÉ BANCAIRE<br><i style="font-size:14px">STATEMENT OF BANKING IDENTITY</i></div>
+  </div>
+  <p style="font-size:11px;line-height:1.55;margin:24px 0 12px">Ce relevé est destiné à être remis à vos créanciers ou débiteurs appelés à faire inscrire des opérations sur votre compte (virement, paiement de quittance, etc.). Son utilisation vous garantit le bon enregistrement de ces opérations et vous évite des réclamations pour des erreurs ou retard d’imputation.</p>
+  <p style="font-size:11px;line-height:1.55;margin:0 0 20px">This statement is intended to be handed to your creditors or debtors called to make register operations on your account (transfer, payment of receipt, etc.). Its use guarantees to you the good registration of these operations and avoids complaints for errors or delays for imputation.</p>
+  <div style="text-align:right;margin:6px 0 33px;font-size:12px">À / At _____________________&nbsp;&nbsp;&nbsp;&nbsp; Le / The _____________________</div>
+  <div style="display:grid;grid-template-columns:1.03fr 1.18fr .83fr;gap:13px">
+    <fieldset style="border:1px solid #243344;min-height:140px;padding:10px 9px;margin:0"><legend style="font-size:14px;font-weight:800;text-align:center">Domiciliation</legend><div style="text-align:center;font-weight:800;font-size:13px;line-height:2;padding-top:15px">AGENCE BOULEVARD<br>LIBREVILLE</div></fieldset>
+    <fieldset style="border:1px solid #243344;min-height:140px;padding:10px 8px;margin:0;min-width:0"><legend style="text-align:center;font-size:14px;font-weight:800">Titulaire du compte <small style="font-size:10px;font-style:italic;display:block;font-weight:400">Holder of the account</small></legend>
+     <div style="font-weight:800;font-size:12px;line-height:1.8;margin-top:7px;overflow-wrap:anywhere"><span style="user-select:text;-webkit-user-select:text">40025 05811 81103100057 67</span><br>CONFEDERATION DE LA DIASPORA GABONA…<br>BP: LIBREVILLE</div>
+    </fieldset>
+    <fieldset style="border:1px solid #243344;min-height:140px;margin:0"><legend style="font-size:13px;font-weight:800;text-align:center">Nom du destinataire</legend></fieldset>
+  </div><div style="height:1px;background:#243344;margin-top:17px"></div>
+ </div></div>`;
+}function methods(){
  for(const group of ['payMethod','contributionMethod']){
   document.querySelectorAll('input[name="'+group+'"]').forEach(r=>{
    if(r.value==='MoneyGram'||r.value==='Autre'){
@@ -917,3 +921,5 @@ async function init(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
+
+(function(){const st=document.createElement('style');st.id='g10-amount-label-gap';st.textContent="\n/* Montant actuel séparé de son libellé. */\n#membershipSummary{display:flex!important;gap:15px!important;align-items:baseline!important;flex-wrap:wrap!important}\n";document.head.append(st);})();
