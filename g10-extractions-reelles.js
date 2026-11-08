@@ -610,7 +610,7 @@ const G10_UBA_RIB=Object.freeze({
 });
 function bankData(){return G10_UBA_RIB.full;}
 function g10SecondDueDate(firstDate){
- const match=String(firstDate||'').match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+ const match=String(firstDate||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
  if(!match)return '';
  const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
  const origin=new Date(Date.UTC(year,month-1,day));
