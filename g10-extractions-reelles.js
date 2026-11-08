@@ -274,6 +274,49 @@ function renderDocs(){
   catch(e){m.g10ExtraProofs=old;btn.disabled=false;alert('Pièce non enregistrée : '+(e.message||e));}
  };
 }
+
+/* Exposer les documents personnels au même endroit que les archives d'adhésion.
+   Le menu séparé est facultatif ; cette zone est accessible dans Paiements & cotisations. */
+function g10AttachDocsToPayments(){
+ if(typeof currentMember==='undefined'||!currentMember||!currentMember.paymentConfirmed)return;
+ const archive=document.getElementById('membershipPaidBox');
+ if(!archive)return;
+ let host=document.getElementById('g10PaymentsPersonalFiles');
+ if(!host){
+   host=document.createElement('div');
+   host.id='g10PaymentsPersonalFiles';
+   host.style.cssText='margin-top:16px;padding:14px;border:1px solid #d4e2ed;border-radius:12px;background:#fff';
+   archive.insertAdjacentElement('afterend',host);
+ }
+ host.innerHTML='<h3>Mes justificatifs et reçus</h3><p>Retrouvez votre reçu officiel G10 et ajoutez des pièces sans remplacer la preuve initiale.</p>'+
+ '<div id="g10PaymentsDocsHost"></div>';
+ const receipts=host.querySelector('#g10PaymentsDocsHost');
+ if(currentMember.paymentConfirmed&&typeof window.g10Receipt==='function'){
+  const btn=document.createElement('button');
+  btn.className='btn btn-light';btn.type='button';
+  btn.textContent='Voir mon reçu officiel d’adhésion';
+  btn.onclick=()=>window.g10Receipt(currentMember.id,'membership');
+  receipts.appendChild(btn);
+ }
+ const original=document.getElementById('g10PersonalDocs');
+ if(original){
+  // Le bloc commun est déplacé, pas dupliqué ; ses justificatifs restent les mêmes.
+  receipts.appendChild(original);
+ }else{
+  const container=document.createElement('div');container.id='g10PersonalDocs';
+  receipts.appendChild(container);
+ }
+ renderDocs();
+}
+const oldHydrateForPayments=window.hydrateMember;
+if(typeof oldHydrateForPayments==='function')window.hydrateMember=function(){const x=oldHydrateForPayments.apply(this,arguments);setTimeout(g10AttachDocsToPayments,0);return x;};
+const oldShowForPayments=window.showMemberView;
+if(typeof oldShowForPayments==='function')window.showMemberView=function(){const x=oldShowForPayments.apply(this,arguments);setTimeout(g10AttachDocsToPayments,0);return x;};
+const oldEnterForPayments=window.enterMember;
+if(typeof oldEnterForPayments==='function')window.enterMember=function(){const x=oldEnterForPayments.apply(this,arguments);setTimeout(g10AttachDocsToPayments,0);return x;};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(g10AttachDocsToPayments,0));
+else setTimeout(g10AttachDocsToPayments,0);
+
 const oldHydrate=window.hydrateMember;
 if(typeof oldHydrate==='function')window.hydrateMember=function(){const res=oldHydrate.apply(this,arguments);setTimeout(renderDocs,0);return res;};
 const oldShow=window.showMemberView;
