@@ -497,79 +497,87 @@ document.addEventListener('click',function(e){
 })();
 
 
-/* G10 — menus en portrait Adhérent et Direction ; aucun changement des données. */
-(function(){
-'use strict';
-const css="@media(max-width:760px){\nhtml,body{max-width:100%;overflow-x:hidden}\n#memberApp:not(.hidden),#directionApp:not(.hidden){display:block!important;width:100%!important;min-width:0!important}\n#memberApp .sidebar,#directionApp .sidebar{display:block!important;position:fixed!important;left:0!important;top:0!important;width:min(84vw,320px)!important;height:100dvh!important;z-index:11002!important;transform:translateX(-110%)!important;transition:transform .2s ease!important;overflow-y:auto!important;visibility:visible!important}\n#memberApp.g10-mobile-open .sidebar,#directionApp.g10-mobile-open .sidebar{transform:translateX(0)!important}\n#memberApp .main,#directionApp .main{margin-left:0!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;padding:66px 12px 18px!important}\n#memberApp .main>*,#directionApp .main>*{max-width:100%;min-width:0;box-sizing:border-box}\n#memberApp .card,#directionApp .card,#memberApp .panel,#directionApp .panel{max-width:100%;min-width:0}\n#memberApp .table-wrap,#directionApp .table-wrap,#memberApp .table-scroll,#directionApp .table-scroll{overflow-x:auto!important;-webkit-overflow-scrolling:touch}\n#memberApp button,#directionApp button,#memberApp input,#directionApp input{max-width:100%}\n.g10-mobile-nav-trigger{display:flex!important;position:fixed!important;top:max(10px,env(safe-area-inset-top))!important;left:12px!important;z-index:11004!important;background:#0b4a7a!important;color:#fff!important;border:0!important;border-radius:11px!important;padding:11px 14px!important;align-items:center!important;gap:8px!important;font:700 14px Arial,sans-serif!important}\n.g10-mobile-nav-backdrop{display:none;position:fixed;inset:0;z-index:11001;background:rgba(8,24,40,.45)}\n.g10-mobile-nav-backdrop.is-open{display:block!important}\n#directionApp .g10-menu.g10-show{display:none!important}\n}\n@media(min-width:761px){.g10-mobile-nav-trigger,.g10-mobile-nav-backdrop{display:none!important}}";
-function setup(){
- if(!document.getElementById('g10-mobile-portrait-css')){const st=document.createElement('style');st.id='g10-mobile-portrait-css';st.textContent=css;document.head.append(st);}
- for(const id of ['memberApp','directionApp']){
-  const app=document.getElementById(id);
-  if(!app||!app.querySelector('.sidebar')||app.querySelector('.g10-mobile-nav-trigger'))continue;
-  const btn=document.createElement('button');btn.type='button';btn.className='g10-mobile-nav-trigger';btn.textContent='☰ Menu';btn.setAttribute('aria-label','Afficher les rubriques');btn.setAttribute('aria-expanded','false');
-  const backdrop=document.createElement('div');backdrop.className='g10-mobile-nav-backdrop';
-  const toggle=on=>{app.classList.toggle('g10-mobile-open',on);app.classList.remove('g10-open');backdrop.classList.toggle('is-open',on);btn.setAttribute('aria-expanded',on?'true':'false');btn.textContent=on?'✕ Fermer':'☰ Menu';};
-  btn.addEventListener('click',()=>toggle(!app.classList.contains('g10-mobile-open')));
-  backdrop.addEventListener('click',()=>toggle(false));
-  app.querySelector('.sidebar').addEventListener('click',e=>{if(e.target.closest('button,a,[role="button"],[onclick]'))toggle(false);});
-  app.prepend(backdrop);app.prepend(btn);
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')toggle(false);});
- }
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup);else setup();
-const obs=new MutationObserver(()=>{if(!document.querySelector('#memberApp .g10-mobile-nav-trigger')||!document.querySelector('#directionApp .g10-mobile-nav-trigger'))setup();});
-obs.observe(document.body,{childList:true,subtree:false});
-})();
 
-
-/* G10 portrait v2 : commande ancrée au BODY, hors des conteneurs masqués.
-   Corrige le cas où les boutons placés à l'intérieur des espaces étaient invisibles. */
+/* G10 navigation mobile consolidée : un seul menu, contrôle Fermer placé APRÈS les onglets.
+   Barre de navigation adhérent déplacée sous BODY pour rester fixe sur Safari iOS.
+   Présentation uniquement, aucune écriture en base. */
 (function(){
  'use strict';
- let viewport=document.querySelector('meta[name="viewport"]');
- if(!viewport){viewport=document.createElement('meta');viewport.name='viewport';document.head.appendChild(viewport);}
- viewport.setAttribute('content','width=device-width, initial-scale=1');
- // Le voile d'arrière-plan avait un contexte d'empilement supérieur à la barre latérale sur iOS.
- // On le retire pour que les rubriques restent lisibles et surtout cliquables.
- if(!document.getElementById('g10PortraitOverlayFix')){
-  const fix=document.createElement('style');fix.id='g10PortraitOverlayFix';
-  fix.textContent='@media(max-width:800px){#g10GlobalMobileShade,.g10-mobile-nav-backdrop{display:none!important;pointer-events:none!important}#memberApp.g10-portrait-visible .sidebar,#directionApp.g10-portrait-visible .sidebar{pointer-events:auto!important;opacity:1!important;filter:none!important}#memberApp.g10-portrait-visible,#directionApp.g10-portrait-visible{position:relative;z-index:2147483002!important}}';
-  document.head.appendChild(fix);
+ const css="@media(max-width:800px){\nhtml,body{max-width:100%!important;overflow-x:hidden!important}\n#memberApp:not(.hidden),#directionApp:not(.hidden){display:block!important;width:100%!important;min-width:0!important;max-width:100%!important}\n#memberApp .main,#directionApp .main{margin-left:0!important;width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;padding:66px 12px calc(132px + env(safe-area-inset-bottom))!important}\n#memberApp .main>*,#directionApp .main>*{min-width:0!important;max-width:100%;box-sizing:border-box}\n#memberApp .sidebar,#directionApp .sidebar{position:fixed!important;left:0!important;top:0!important;bottom:auto!important;width:min(86vw,320px)!important;max-width:320px!important;height:100dvh!important;height:100svh!important;padding:18px 14px 120px!important;display:block!important;transform:translate3d(-110%,0,0)!important;transition:transform .2s ease!important;visibility:visible!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;z-index:10020!important;box-shadow:8px 0 28px #091b3040!important}\n#memberApp.g10-mobile-drawer-open .sidebar,#directionApp.g10-mobile-drawer-open .sidebar{transform:translate3d(0,0,0)!important;pointer-events:auto!important;filter:none!important;opacity:1!important}\n#memberApp .g10-mobile-close-bottom,#directionApp .g10-mobile-close-bottom{display:inline-flex!important;align-items:center;justify-content:center;width:auto!important;min-width:130px;min-height:44px;padding:11px 17px;margin:22px 0 20px 4px!important;border:0;border-radius:11px;background:#155886;color:#fff;font-weight:800;font-size:15px;box-shadow:0 4px 10px #05284550}\n#g10MobileMenuOpen{display:inline-flex!important;align-items:center;justify-content:center;position:fixed!important;top:max(10px,env(safe-area-inset-top))!important;left:12px!important;z-index:10030!important;border:0;border-radius:11px;background:#0b4a7a;color:white;padding:11px 15px;min-height:44px;font:700 15px Arial,sans-serif;box-shadow:0 3px 12px #0b355a33}\n#g10MobileMenuOpen[hidden]{display:none!important}\n#g10Menu,.g10-mobile-nav-trigger,.g10-mobile-nav-backdrop,#g10GlobalMobileMenu,#g10GlobalMobileShade{display:none!important;pointer-events:none!important}\n.mobile-member-nav.g10-mobile-bottom-visible{position:fixed!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;left:10px!important;right:10px!important;width:auto!important;bottom:max(10px,env(safe-area-inset-bottom))!important;z-index:9000!important;max-width:100%!important;transform:none!important;background:white!important;box-shadow:0 12px 35px #102e4e30!important}\n.mobile-member-nav:not(.g10-mobile-bottom-visible){display:none!important}\n}\n@media(min-width:801px){#g10MobileMenuOpen,#memberApp .g10-mobile-close-bottom,#directionApp .g10-mobile-close-bottom{display:none!important}.mobile-member-nav{display:none!important}}";
+ const style=document.createElement('style');style.id='g10MobileConsolidated';style.textContent=css;
+ (document.head||document.documentElement).appendChild(style);
+ let button, bottomNav, openApp=null, scrollY=0, lockStyles=null;
+ const narrow=()=>window.matchMedia('(max-width:800px)').matches;
+ const visible=el=>!!el&&!el.classList.contains('hidden')&&getComputedStyle(el).display!=='none'&&el.getClientRects().length>0;
+ const active=()=>['memberApp','directionApp'].map(id=>document.getElementById(id)).find(visible)||null;
+ function lockScroll(){
+  if(lockStyles)return;
+  const b=document.body, h=document.documentElement;scrollY=window.scrollY||0;
+  lockStyles={position:b.style.position,top:b.style.top,left:b.style.left,width:b.style.width,overflow:b.style.overflow,htmlOverflow:h.style.overflow};
+  b.style.position='fixed';b.style.top=(-scrollY)+'px';b.style.left='0';b.style.width='100%';b.style.overflow='hidden';h.style.overflow='hidden';
  }
- if(!document.getElementById('g10PortraitV2CSS')){const style=document.createElement('style');style.id='g10PortraitV2CSS';style.textContent="@media(max-width:800px){\n#memberApp .sidebar,#directionApp .sidebar{position:fixed!important;top:0!important;left:0!important;bottom:0!important;width:min(86vw,320px)!important;height:100dvh!important;transform:translateX(-110%)!important;transition:transform .2s ease!important;z-index:2147483001!important;overflow-y:auto!important;display:block!important;visibility:visible!important}\n#memberApp.g10-portrait-visible .sidebar,#directionApp.g10-portrait-visible .sidebar{transform:translateX(0)!important}\n#memberApp .main,#directionApp .main{margin-left:0!important;width:100%!important;min-width:0!important;padding:65px 12px 20px!important;box-sizing:border-box!important}\n#memberApp:not(.hidden),#directionApp:not(.hidden){width:100%!important;min-width:0!important;max-width:100%!important}\n#memberApp .main>* ,#directionApp .main>*{min-width:0!important;max-width:100%;box-sizing:border-box}\n.g10-mobile-nav-trigger{display:none!important}\n#directionApp .g10-menu{display:none!important}\n}\n@media(min-width:801px){#g10GlobalMobileMenu,#g10GlobalMobileShade{display:none!important}}";document.head.appendChild(style);}
- const btn=document.createElement('button');btn.id='g10GlobalMobileMenu';btn.type='button';btn.textContent='☰ Menu';btn.setAttribute('aria-label','Ouvrir le menu de navigation');btn.setAttribute('aria-expanded','false');
- btn.style.cssText='position:fixed;top:12px;left:12px;z-index:2147483003;background:#0b4a7a;color:white;border:0;border-radius:10px;padding:12px 16px;box-shadow:0 3px 10px #0004;font:700 15px Arial,sans-serif;display:none';
- const shade=document.createElement('div');shade.id='g10GlobalMobileShade';shade.style.cssText='position:fixed;inset:0;background:#001b3590;z-index:2147483000;display:none';
- let current=null;
- function isVisible(el){return el&&!el.classList.contains('hidden')&&getComputedStyle(el).display!=='none'&&el.getClientRects().length>0;}
- function active(){
-  return ['memberApp','directionApp'].map(id=>document.getElementById(id)).find(isVisible)||null;
+ function unlockScroll(){
+  if(!lockStyles)return;
+  const b=document.body,h=document.documentElement,x=lockStyles;lockStyles=null;
+  b.style.position=x.position;b.style.top=x.top;b.style.left=x.left;b.style.width=x.width;b.style.overflow=x.overflow;h.style.overflow=x.htmlOverflow;
+  window.scrollTo(0,scrollY);
  }
  function close(){
-  for(const id of ['memberApp','directionApp'])document.getElementById(id)?.classList.remove('g10-portrait-visible');
-  shade.style.display='none';btn.textContent='☰ Menu';btn.setAttribute('aria-expanded','false');current=null;
+  for(const id of ['memberApp','directionApp'])document.getElementById(id)?.classList.remove('g10-mobile-drawer-open');
+  openApp=null;unlockScroll();if(button)button.hidden=false;
  }
- function refresh(){
-  const narrow=matchMedia('(max-width:800px)').matches;
-  const app=active();
-  const show=narrow&&!!(app&&app.querySelector('.sidebar'));
-  btn.style.display=show?'block':'none';
-  if(!show)close();
+ function install(){
+  const member=document.getElementById('memberApp');
+  bottomNav=document.querySelector('.mobile-member-nav');
+  if(bottomNav&&bottomNav.parentElement!==document.body)document.body.appendChild(bottomNav);
+  if(!button){
+    button=document.createElement('button');
+    button.id='g10MobileMenuOpen';button.type='button';button.textContent='☰ Menu';button.hidden=true;
+    button.setAttribute('aria-label','Ouvrir les rubriques');
+    document.body.appendChild(button);
+    button.addEventListener('click',()=>{
+      const app=active();if(!app||!narrow())return;
+      const sidebar=app.querySelector('.sidebar');if(!sidebar)return;
+      app.classList.add('g10-mobile-drawer-open');openApp=app;button.hidden=true;lockScroll();
+    });
+  }
+  for(const id of ['memberApp','directionApp']){
+    const app=document.getElementById(id),nav=app?.querySelector('.sidebar .side-nav');
+    if(!app||!nav||app.querySelector('.g10-mobile-close-bottom'))continue;
+    const closeButton=document.createElement('button');closeButton.type='button';closeButton.className='g10-mobile-close-bottom';closeButton.textContent='✕ Fermer';
+    closeButton.addEventListener('click',close);
+    nav.insertAdjacentElement('afterend',closeButton);
+    nav.addEventListener('click',e=>{if(openApp===app&&e.target.closest('button,a'))close();});
+  }
+  if(member&&bottomNav&&bottomNav.dataset.g10NavPrepared!=='yes'){
+    bottomNav.dataset.g10NavPrepared='yes';
+    bottomNav.addEventListener('click',()=>{if(openApp)close();});
+  }
+  sync();
  }
- btn.onclick=function(){
-  const app=active();if(!app)return;
-  const isOpen=app.classList.contains('g10-portrait-visible');
-  close();
-  if(!isOpen){app.classList.add('g10-portrait-visible');shade.style.display='none';btn.textContent='✕ Fermer';btn.setAttribute('aria-expanded','true');current=app;}
- };
- shade.onclick=close;
- document.addEventListener('click',e=>{if(current&&e.target.closest('.sidebar .navbtn,.sidebar a,.sidebar button')&&!e.target.closest('#g10GlobalMobileMenu'))close();},true);
- document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
- function start(){if(!document.getElementById(btn.id))document.body.append(shade,btn);refresh();}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
- addEventListener('resize',refresh);addEventListener('orientationchange',refresh);
- const observer=new MutationObserver(refresh);
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>observer.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:false}));
- else observer.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:false});
- setInterval(refresh,2000);
+ function sync(){
+   if(!button)return;
+   const app=active(),mobile=narrow();
+   if(openApp&&(!mobile||openApp!==app))close();
+   const show=!!(mobile&&app);
+   button.hidden=!show||!!openApp;
+   bottomNav?.classList.toggle('g10-mobile-bottom-visible',!!(mobile&&app&&app.id==='memberApp'&&!openApp));
+ }
+ function schedule(){window.requestAnimationFrame(sync);}
+ function start(){
+   install();
+   for(const id of ['memberApp','directionApp']){
+    const app=document.getElementById(id);
+    if(app)new MutationObserver(schedule).observe(app,{attributes:true,attributeFilter:['class']});
+   }
+   window.addEventListener('resize',schedule);window.addEventListener('orientationchange',schedule);
+   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openApp)close();});
+   document.addEventListener('click',e=>{
+     if(!openApp)return;
+     if(!openApp.querySelector('.sidebar')?.contains(e.target)&&e.target!==button){
+      e.preventDefault();e.stopPropagation();close();
+     }
+   },true);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
