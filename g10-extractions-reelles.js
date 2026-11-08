@@ -178,14 +178,28 @@ function renderPanel(){
  return '<div style="padding:12px;border:1px solid #dce7f0;border-radius:9px;margin:8px 0;background:#fff">'+
  '<b>'+safe(r.m.firstName||'')+' '+safe(r.m.lastName||'')+'</b> · '+safe(r.label)+
  ' · Référence : '+safe(r.amount)+' €'+
- '<div style="display:flex;flex-wrap:wrap;gap:9px;align-items:end;margin-top:8px"><label style="flex:1;min-width:170px">Montant reçu en FCFA<input aria-label="Montant reçu en FCFA" data-g10-amount="'+i+'" type="number" min="1" step="1" placeholder="Montant à vérifier" value="'+(ok?v:'')+'" style="display:block;width:100%;padding:9px;border:1px solid #aac4dc;border-radius:8px"></label>'+
- '<button type="button" data-g10-confirm="'+i+'" class="btn btn-primary" style="padding:10px">'+(ok?'Corriger le montant':'Valider le montant')+'</button></div>'+
- (ok?'<small>Montant validé : <b>'+fmt(v)+' FCFA</b></small>':'<small>À vérifier — aucun FCFA comptabilisé</small>')+
+ (ok?'<div data-g10-summary="'+i+'" style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:10px"><span style="color:#17603d">✓ Montant validé : <b>'+fmt(v)+' FCFA</b></span><button type="button" data-g10-edit="'+i+'" class="btn btn-light">Modifier</button></div>':'')+
+ '<div data-g10-editform="'+i+'" style="'+(ok?'display:none;':'display:flex;')+'flex-wrap:wrap;gap:9px;align-items:end;margin-top:8px"><label style="flex:1;min-width:170px">Montant reçu en FCFA<input aria-label="Montant reçu en FCFA" data-g10-amount="'+i+'" type="number" min="1" step="1" placeholder="Montant à vérifier" value="'+(ok?v:'')+'" style="display:block;width:100%;padding:9px;border:1px solid #aac4dc;border-radius:8px"></label>'+
+ '<button type="button" data-g10-confirm="'+i+'" class="btn btn-primary" style="padding:10px">'+(ok?'Enregistrer la correction':'Valider le montant')+'</button>'+
+ (ok?'<button type="button" data-g10-cancel="'+i+'" class="btn btn-light" style="padding:10px">Annuler</button>':'')+'</div>'+
+ (!ok?'<small>À vérifier — aucun FCFA comptabilisé</small>':'')+
  (Array.isArray(r.p?r.p.g10XafHistory:r.m.g10XafHistory)&& (r.p?r.p.g10XafHistory:r.m.g10XafHistory).length?'<details><summary>Historique des validations</summary>'+
  (r.p?r.p.g10XafHistory:r.m.g10XafHistory).map(h=>'<div>'+safe(h.at)+' · '+safe(h.by)+' : '+safe(h.old??'—')+' → '+safe(h.value)+' FCFA</div>').join('')+'</details>':'')+
  '</div>';
  }).join(''):'<p>Aucun paiement confirmé.</p>');
  box.prepend(panel);
+ panel.querySelectorAll('[data-g10-edit]').forEach(b=>b.addEventListener('click',()=>{
+  const i=b.dataset.g10Edit,summary=panel.querySelector('[data-g10-summary="'+i+'"]'),form=panel.querySelector('[data-g10-editform="'+i+'"]');
+  if(summary)summary.style.display='none';
+  if(form)form.style.display='flex';
+  const input=panel.querySelector('[data-g10-amount="'+i+'"]');if(input)input.focus();
+ }));
+ panel.querySelectorAll('[data-g10-cancel]').forEach(b=>b.addEventListener('click',()=>{
+  const i=b.dataset.g10Cancel,r=allPayments()[Number(i)],summary=panel.querySelector('[data-g10-summary="'+i+'"]'),form=panel.querySelector('[data-g10-editform="'+i+'"]'),input=panel.querySelector('[data-g10-amount="'+i+'"]');
+  if(input&&r)input.value=String(r.received||'');
+  if(form)form.style.display='none';
+  if(summary)summary.style.display='flex';
+ }));
  panel.querySelectorAll('[data-g10-confirm]').forEach(b=>b.addEventListener('click',async()=>{
   if(!privileged())return alert('Action réservée à la Direction.');
   const idx=Number(b.dataset.g10Confirm),r=allPayments()[idx];
@@ -208,7 +222,7 @@ function renderPanel(){
    if(typeof currentMember!=='undefined'&&currentMember&&currentMember.id===r.m.id)Object.assign(currentMember,r.m);
    refresh();
    alert('Montant confirmé : '+fmt(value)+' FCFA. Les extractions ont été actualisées.');
-  }catch(e){target.g10ReceivedXaf=previous;alert('Enregistrement non confirmé. '+(e.message||e));b.disabled=false;}
+  }catch(e){target.g10ReceivedXaf=previous;target.g10XafHistory=history.slice(0,-1);alert('Enregistrement non confirmé. '+(e.message||e));b.disabled=false;}
  }));
 }
 const oldRender=window.g10LiveRender;
