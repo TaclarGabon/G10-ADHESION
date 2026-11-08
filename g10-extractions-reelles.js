@@ -231,7 +231,7 @@ if(typeof oldRender==='function'){
 }
 function extras(m){
  const out=[];
- if(m.paymentProofData&&m.paymentProofData.data)out.push({name:'Justificatif initial',data:m.paymentProofData.data,type:m.paymentProofData.type});
+ if(m.paymentProofData&&m.paymentProofData.data)out.push({name:'Justificatif de transaction'+(m.paymentMethod?' — '+String(m.paymentMethod):''),data:m.paymentProofData.data,type:m.paymentProofData.type});
  (m.g10ExtraProofs||[]).forEach(x=>out.push(x));
  return out;
 }
@@ -243,9 +243,9 @@ function renderDocs(){
  let section=document.getElementById('g10-extra-docs');
  if(!section){section=document.createElement('section');section.id='g10-extra-docs';section.style.cssText='margin-top:14px;padding:14px;border:1px solid #d4e2ed;border-radius:12px';host.appendChild(section);}
  const x=extras(m);
- section.innerHTML='<h3>Pièces complémentaires du paiement d’adhésion</h3><p>Les fichiers ajoutés ne remplacent pas le justificatif initial.</p>'+
+ section.innerHTML='<h3>Justificatifs de transaction</h3><p>Documents transmis par l’adhérent. Le moyen de paiement dépend de chaque transaction ; les fichiers ajoutés ne remplacent pas les pièces existantes.</p>'+
  x.map((f,i)=>'<div style="padding:7px"><button class="btn btn-light" type="button" data-open-proof="'+i+'">Ouvrir · '+safe(f.name||('Pièce '+(i+1)))+'</button></div>').join('')+
- '<label>Ajouter un justificatif supplémentaire (PDF ou image, 250 Ko maximum par fichier)<input type="file" accept="application/pdf,image/*" id="g10-extra-proof-input"></label>'+
+ '<label>Ajouter un justificatif de transaction (PDF ou image, 250 Ko maximum par fichier)<input type="file" accept="application/pdf,image/*" id="g10-extra-proof-input"></label>'+
  '<button class="btn btn-primary" type="button" id="g10-extra-proof-save">Ajouter sans remplacer</button><small style="display:block">Pour protéger les dossiers Firebase, les fichiers restent limités en taille. Aucun document n’est supprimé automatiquement.</small>';
  section.querySelectorAll('[data-open-proof]').forEach(button=>button.onclick=()=>{
   const f=extras(currentMember)[Number(button.dataset.openProof)];
@@ -351,7 +351,7 @@ function g10AttachDocsToPayments(){
  const exists=host.querySelector('#g10PaymentsDocsHost');
  if(!exists){
    host.innerHTML='<h3>Mes justificatifs et reçus</h3>'+
-    '<p>Justificatif initial conservé · reçu officiel G10 · ajout de pièces complémentaires.</p>'+
+    '<p>Justificatif de transaction conservé · reçu officiel G10 · ajout de pièces complémentaires.</p>'+
     '<div id="g10PaymentsDocsHost"></div>';
  }
  const target=host.querySelector('#g10PaymentsDocsHost');
