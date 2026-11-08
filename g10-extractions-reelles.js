@@ -581,3 +581,173 @@ document.addEventListener('click',function(e){
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
+
+
+/* G10_CFA_COMMITTEE_V1 — Tarifs de référence CFA approuvés pour la nouvelle campagne.
+   Les trois anciens paiements restent dans leur devise historique.
+   Les frais de retrait sont distincts de la cotisation de référence.
+   Le RIB n'est pas inventé : il sera affiché dès réception de l'information officielle.
+*/
+(function(){
+'use strict';
+const RATES=Object.freeze({membership:6560,annual:80000,half:40000});
+const fmtXAF=n=>Number(n||0).toLocaleString('fr-FR')+' FCFA';
+function textOf(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+function isNewXaf(p){return p&&(p.currency==='XAF'||p.currency==='FCFA'||Number(p.amount)>=40000);}
+function bankData(){try{return String(settings.bank||'').trim()}catch(_){return ''}}
+function bankPanel(group){
+ const input=document.querySelector('input[name="'+group+'"][value="Virement bancaire"]');
+ const parent=input?.closest('.payment-options');
+ if(!parent)return;
+ const id='g10BankPanel-'+group;
+ let el=document.getElementById(id);
+ if(!el){
+  el=document.createElement('section');el.id=id;el.className='card';
+  el.style.cssText='display:none;margin:12px 0;padding:16px;border:1px solid #c0d8ee;border-radius:12px;background:#f3f9ff;color:#143754';
+  parent.insertAdjacentElement('afterend',el);
+ }
+ const selected=!!input?.checked;
+ el.style.display=selected?'block':'none';
+ if(!selected)return;
+ el.textContent='';
+ const title=document.createElement('strong');title.textContent='RIB officiel G10 — Virement bancaire';
+ el.appendChild(title);
+ const bank=bankData();
+ if(!bank){
+  const msg=document.createElement('p');msg.textContent='Coordonnées bancaires officielles en attente. La Direction doit intégrer le RIB avant tout virement.';el.appendChild(msg);
+  return;
+ }
+ const p=document.createElement('p');p.textContent='Coordonnées actuellement renseignées dans les paramètres Direction (à vérifier sur le RIB officiel).';el.appendChild(p);
+ bank.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).forEach(line=>{
+  const row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #dae8f5;padding:8px 0';
+  const txt=document.createElement('span');txt.textContent=line;txt.style.overflowWrap='anywhere';
+  const btn=document.createElement('button');btn.type='button';btn.className='btn btn-light';btn.textContent='Copier';btn.addEventListener('click',()=>{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(line).then(()=>{btn.textContent='Copié ✓'}).catch(()=>alert('Sélectionnez la ligne pour la copier.'));else alert('Sélectionnez la ligne pour la copier.');});
+  row.append(txt,btn);el.appendChild(row);
+ });
+}
+function methods(){
+ for(const group of ['payMethod','contributionMethod']){
+  document.querySelectorAll('input[name="'+group+'"]').forEach(r=>{
+   if(r.value==='MoneyGram'||r.value==='Autre'){
+    if(r.checked){const airtel=document.querySelector('input[name="'+group+'"][value="Airtel Money"]');if(airtel)airtel.checked=true;}
+    r.closest('label')?.remove();
+   }
+  });
+  bankPanel(group);
+ }
+ for(const id of ['payMethodOtherBox','contributionMethodOtherBox']){const e=document.getElementById(id);if(e)e.style.display='none';}
+}
+function details(){
+ methods();
+ const fm=document.getElementById('membershipFeeDisplay');if(fm)fm.value=fmtXAF(RATES.membership)+' — une seule fois (hors frais de retrait)';
+ textOf('membershipFeeBig',fmtXAF(RATES.membership));
+ textOf('paymentAmount',fmtXAF(RATES.membership));
+ textOf('landingFee',fmtXAF(RATES.membership));
+ for(const h of document.querySelectorAll('#memberApp h3,#memberApp .panel-head h3,#memberApp label,#memberApp h4')){
+  if(/^Droit d[’']adhésion$/.test((h.textContent||'').trim()))h.textContent='Droit d’adhésion (hors frais de retrait)';
+ }
+ textOf('monthlyContribution',fmtXAF(RATES.annual)+' en 1 fois');
+ textOf('annualContribution',fmtXAF(RATES.annual));
+ textOf('semesterContribution','2 × '+fmtXAF(RATES.half));
+ textOf('monthlyPlanText',fmtXAF(RATES.annual)+' en une seule fois.');
+ textOf('twoPlanText',fmtXAF(RATES.half)+' maintenant puis '+fmtXAF(RATES.half)+' six mois plus tard.');
+ const grid=document.querySelector('#contributionUnlocked .grid3');
+ const notice=grid?.nextElementSibling;
+ if(notice&&/versements|cotisation annuelle/i.test(notice.textContent||''))notice.innerHTML='Choisissez la <b>cotisation annuelle de '+fmtXAF(RATES.annual)+'</b> en une seule fois ou <b>deux versements de '+fmtXAF(RATES.half)+'</b>. Chaque paiement est déclaré puis confirmé par la Direction.';
+ const archive=document.getElementById('membershipArchiveDetails');
+ if(archive&&typeof currentMember!=='undefined'&&currentMember?.paymentConfirmed&&currentMember.g10MembershipCurrency==='XAF'){
+  archive.textContent=fmtXAF(Number(currentMember.g10MembershipReferenceXaf)||RATES.membership)+' — '+(currentMember.paymentMethod||'Mode non renseigné')+' — Réf. '+(currentMember.transactionRef||'—')+(currentMember.paymentDate?' — '+currentMember.paymentDate:'');
+ }
+ const sf=document.getElementById('sfFee');if(sf)sf.textContent=fmtXAF(RATES.membership)+' — une seule fois, hors frais de retrait';
+ const sc=document.getElementById('sfContribution');if(sc)sc.textContent=fmtXAF(RATES.annual)+' en 1 fois ou 2 × '+fmtXAF(RATES.half);
+ const memberRows=document.getElementById('memberContributionRows');
+ if(memberRows&&typeof currentMember!=='undefined'&&currentMember){
+  [...memberRows.rows].forEach((tr,i)=>{
+   const p=(currentMember.contributionPayments||[])[i];if(p&&isNewXaf(p)&&tr.cells[1])tr.cells[1].textContent=fmtXAF(p.amount);
+  });
+ }
+ const box=document.getElementById('contributionNextBox');
+ if(box&&typeof currentMember!=='undefined'&&currentMember?.active){
+  const plan=document.querySelector('input[name="contributionPlan"]:checked')?.value||currentMember.contributionPlan||'monthly';
+  const same=(currentMember.contributionPayments||[]).filter(p=>p.plan===plan);
+  const pending=same.find(p=>p.status!=='Confirmé');
+  if(pending){
+   box.innerHTML='<strong>'+((plan==='monthly')?'Cotisation annuelle':'Versement '+(pending.sequence||1))+' déjà déclaré — '+(isNewXaf(pending)?fmtXAF(pending.amount):pending.amount+' €')+'</strong><br>Statut : en attente de confirmation par la Direction.';
+  }else if(plan==='monthly'){
+   box.innerHTML=same.length?'<strong>Cotisation annuelle complète.</strong><br>Le paiement annuel a été confirmé.':'<strong>Cotisation annuelle : '+fmtXAF(RATES.annual)+' en une seule fois</strong><br>Après déclaration, la Direction vérifiera la réception.';
+  }else{
+   const next=same.length+1;
+   if(next>2)box.innerHTML='<strong>Cotisation annuelle complète.</strong><br>Les deux versements ont été confirmés.';
+   else{
+    const due=next===2&&same[0]?.dueDate?' — échéance : '+String(same[0].dueDate):'';
+    box.innerHTML='<strong>'+(next===1?'Premier':'Deuxième')+' versement : '+fmtXAF(RATES.half)+'</strong>'+due+'<br>Après déclaration, la Direction vérifiera la réception.';
+   }
+  }
+ }
+}
+function directionDisplay(){
+ const el=document.getElementById('contributionPaymentRows');
+ if(el&&typeof applications!=='undefined'){
+  const payments=[];(applications||[]).forEach(m=>(m.contributionPayments||[]).forEach(p=>payments.push(p)));
+  [...el.rows].forEach((tr,i)=>{if(payments[i]&&isNewXaf(payments[i])&&tr.cells[3])tr.cells[3].textContent=fmtXAF(payments[i].amount);});
+ }
+ textOf('dirAnnual',fmtXAF(RATES.annual));
+ textOf('dirSemesters',fmtXAF(RATES.half)+' + '+fmtXAF(RATES.half));
+ textOf('dirMonthly','Cotisation annuelle : '+fmtXAF(RATES.annual));
+ const revenue=document.getElementById('kRevenue');
+ if(revenue&&typeof applications!=='undefined'){
+  const total=(applications||[]).filter(m=>m.paymentConfirmed).reduce((sum,m)=>sum+Number(m.g10ReceivedXaf||0),0);
+  revenue.textContent=fmtXAF(total)+' vérifiés';
+ }
+}
+function wrap(name,fn){
+ const old=window[name];if(typeof old!=='function')return;
+ window[name]=function(){const v=old.apply(this,arguments);fn();return v;};
+}
+for(const name of ['hydrateMember','renderContributionMember','refreshContributionForm','fillSmartForm'])wrap(name,details);
+wrap('refreshLanding',()=>textOf('landingFee',fmtXAF(RATES.membership)));
+for(const name of ['refreshDirection','renderContributionPayments'])wrap(name,directionDisplay);
+const oldMembership=window.declarePayment;
+if(typeof oldMembership==='function')window.declarePayment=async function(){
+ const method=document.querySelector('input[name="payMethod"]:checked')?.value||'Airtel Money';
+ if(!['Airtel Money','Virement bancaire'].includes(method))return alert('Choisissez Airtel Money ou Virement bancaire.');
+ if(method==='Virement bancaire'&&!bankData())return alert('Le RIB officiel n’est pas encore disponible. Merci de patienter avant de choisir le virement.');
+ const member=typeof currentMember!=='undefined'?currentMember:null;
+ const previous=member?{currency:member.g10MembershipCurrency,ref:member.g10MembershipReferenceXaf}:null;
+ if(member&&!member.paymentConfirmed){member.g10MembershipCurrency='XAF';member.g10MembershipReferenceXaf=RATES.membership;}
+ const result=await oldMembership.apply(this,arguments);
+ if(member&&!member.paymentDeclared&&previous){if(previous.currency===undefined)delete member.g10MembershipCurrency;else member.g10MembershipCurrency=previous.currency;if(previous.ref===undefined)delete member.g10MembershipReferenceXaf;else member.g10MembershipReferenceXaf=previous.ref;}
+ details();return result;
+};
+window.declareContributionPayment=async function(){
+ if(typeof currentMember==='undefined'||!currentMember?.active||!currentMember?.paymentConfirmed){alert('Votre adhésion doit d’abord être validée par la Direction.');return;}
+ normalizeContributionState();
+ const plan=document.querySelector('input[name="contributionPlan"]:checked')?.value||'monthly';
+ const method=document.querySelector('input[name="contributionMethod"]:checked')?.value||'Airtel Money';
+ if(!['Airtel Money','Virement bancaire'].includes(method)){alert('Choisissez Airtel Money ou Virement bancaire.');return;}
+ if(method==='Virement bancaire'&&!bankData()){alert('Le RIB officiel n’est pas encore disponible.');return;}
+ const reference=val('contributionRef'),date=val('contributionDate');
+ if(!reference||!date){alert('Merci de renseigner la référence et la date du paiement.');return;}
+ const same=(currentMember.contributionPayments||[]).filter(p=>p.plan===plan);
+ if(same.some(p=>p.status!=='Confirmé')){alert('Le paiement précédent doit d’abord être confirmé.');return;}
+ const sequence=same.length+1,max=plan==='monthly'?1:2;
+ if(sequence>max){alert('Toutes les échéances ont déjà été déclarées.');return;}
+ const amount=plan==='monthly'?RATES.annual:RATES.half;
+ const id='COT-'+Date.now(),file=document.getElementById('contributionProof')?.files?.[0]||null;
+ let proof=null;
+ if(file){try{proof=await uploadProofFile(file,'contributions',id)}catch(e){alert('Le justificatif n’a pas pu être enregistré : '+(e.message||e));return;}}
+ const payment={id,plan,sequence,amount,currency:'XAF',date,method,reference,proof,status:'À vérifier',dueDate:plan==='two'&&sequence===1?addMonthsIso(date,6):''};
+ currentMember.contributionPlan=plan;currentMember.contributionPayments.push(payment);
+ syncMemberEverywhere(currentMember);persist();
+ try{await saveMemberToFirebase(currentMember);}catch(e){console.error(e);alert('Enregistrement Firebase non confirmé : vérifiez avec la Direction avant de réessayer.');return;}
+ setVal('contributionRef','');setVal('contributionDate','');
+ const f=document.getElementById('contributionProof');if(f)f.value='';
+ renderContributionMember();renderMemberSituation();refreshDirection();
+ alert('Cotisation de '+fmtXAF(amount)+' déclarée. La Direction doit confirmer le paiement.'+(proof?' Justificatif archivé.':''));
+};
+window.openMembershipInfo=function(){openInfoCard('Droit d’adhésion','Droit d’adhésion : <b>'+fmtXAF(RATES.membership)+'</b>, une seule fois, <b>hors frais de retrait</b>.');};
+window.openContributionInfo=function(){openInfoCard('Cotisation annuelle','<b>Option 1 :</b> '+fmtXAF(RATES.annual)+' en une seule fois.<br><b>Option 2 :</b> '+fmtXAF(RATES.half)+' maintenant, puis '+fmtXAF(RATES.half)+' six mois plus tard.');};
+document.addEventListener('change',e=>{if(e.target?.matches('input[name="payMethod"],input[name="contributionMethod"],input[name="contributionPlan"]')){methods();details();}});
+function init(){methods();details();directionDisplay();}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
