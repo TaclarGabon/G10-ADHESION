@@ -1,0 +1,10 @@
+G10.4 — FICHIERS À GLISSER À LA RACINE DU DÉPÔT GITHUB
+
+1. validation-g10-4.html (remplace le fichier existant)
+2. g10-extractions-reelles.js (nouveau fichier)
+
+Ne pas publier le fichier HTML fictif de prévisualisation ni les Excel/PDF fictifs.
+Les tableaux réels sont accessibles depuis Direction > Extractions et rapports.
+ATTENTION : historique des lots non raccordé ; il reste vide, sans données fictives.
+ATTENTION : vérifier le montant d’adhésion individuel et la conversion des devises avant usage comptable.
+Les exports sont en lecture seule et ne modifient pas Firebase.
