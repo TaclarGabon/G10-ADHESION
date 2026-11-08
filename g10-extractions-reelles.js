@@ -58,3 +58,78 @@ async function g10LiveExcel(){
  const bytes=await wb.xlsx.writeBuffer();const a=document.createElement('a');const u=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.href=u;a.download='G10_'+tab+'_reel.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);
 }
 function g10LivePDF(){const c=document.getElementById('g10-live-content');if(!c)return;const w=window.open('','_blank');if(!w){alert('Autorisez les fenêtres contextuelles pour imprimer.');return;}w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>G10 rapport</title><style>body{font:12px Arial;padding:22px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccd;padding:7px}@page{size:landscape}</style></head><body><h2>G10 — Extractions et rapports</h2>'+c.innerHTML+'</body></html>');w.document.close();w.focus();setTimeout(()=>w.print(),350)}
+
+
+/* G10.4 — confirmation du choix de cotisation, distincte du paiement.
+   Ajout non destructif : aucune ligne de paiement n'est créée par ce bouton. */
+(function(){
+  function installChoiceButton(){
+    const grid=document.querySelector('#contributionUnlocked .contribution-plan-grid');
+    if(!grid||document.getElementById('g10-confirm-contribution-plan'))return;
+    const wrap=document.createElement('div');
+    wrap.style.cssText='margin:12px 0 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap';
+    const button=document.createElement('button');
+    button.type='button';button.id='g10-confirm-contribution-plan';
+    button.className='btn btn-primary';button.textContent='Confirmer mon choix de cotisation';
+    const feedback=document.createElement('span');
+    feedback.id='g10-contribution-choice-status';feedback.setAttribute('role','status');
+    feedback.style.cssText='font-size:13px;color:#31516a';
+    wrap.append(button,feedback);grid.insertAdjacentElement('afterend',wrap);
+    button.addEventListener('click',async function(){
+      if(!currentMember?.active||!currentMember?.paymentConfirmed){alert('Votre adhésion doit d’abord être validée par la Direction.');return}
+      const selected=document.querySelector('input[name="contributionPlan"]:checked')?.value;
+      if(selected!=='monthly'&&selected!=='two'){alert('Sélectionnez une formule.');return}
+      const paid=currentMember.contributionPayments||[];
+      if(paid.length&&paid.some(p=>p.plan!==selected)){alert('Une cotisation a déjà été déclarée pour une autre formule. Contactez la Direction pour modifier ce choix.');return}
+      if(!db||!currentAuthUser||!currentMember.firebaseUid||currentMember.firebaseUid!==currentAuthUser.uid){
+        feedback.textContent='Connexion Firebase requise pour enregistrer le choix.';return;
+      }
+      button.disabled=true;feedback.textContent='Enregistrement en cours…';
+      try{
+        // Ecriture ciblée pour ne pas écraser des paiements et validations parallèles.
+        await db.collection('members').doc(currentAuthUser.uid).update({
+          contributionPlan:selected,contributionPlanChosenAt:new Date().toISOString()
+        });
+        currentMember.contributionPlan=selected;
+        currentMember.contributionPlanChosenAt=new Date().toISOString();
+        if(typeof syncMemberEverywhere==='function')syncMemberEverywhere(currentMember);
+        feedback.textContent='Choix enregistré dans Firebase. Aucun paiement déclaré.';
+        if(typeof renderContributionMember==='function')renderContributionMember();
+        if(typeof renderMemberSituation==='function')renderMemberSituation();
+        if(typeof refreshDirection==='function')refreshDirection();
+      }catch(error){
+        console.error('Enregistrement de la formule G10',error);
+        feedback.textContent='Échec de sauvegarde : votre choix n’a pas été confirmé. Vérifiez votre connexion ou les droits Firebase.';
+      }finally{button.disabled=false}
+    });
+  }
+  function adaptDirectionRows(){
+    if(typeof window.g10Records!=='function')return;
+    const prior=window.g10Records;
+    window.g10Records=function(){
+      const result=prior();
+      if(!result||!Array.isArray(result.rows)||!Array.isArray(result.members))return result;
+      const planById=new Map(result.members.map(m=>[
+        m.firebaseUid||m.id||g10Name(m),
+        ['monthly','two'].includes(m.contributionPlan)?m.contributionPlan:''
+      ]));
+      const confirmedIds=new Set(result.rows.filter(r=>r.kind==='cot'&&r.confirmed).map(r=>r.id));
+      return {...result,rows:result.rows.filter(r=>{
+        if(r.kind!=='cot'||confirmedIds.has(r.id))return true;
+        const plan=planById.get(r.id);
+        if(!plan)return true;
+        return plan==='monthly'
+          ? r.op==='Cotisation option 1 — une fois'
+          : r.op.startsWith('Cotisation option 2 —');
+      }).map(r=>{
+        if(r.kind!=='cot'||r.confirmed||confirmedIds.has(r.id))return r;
+        const plan=planById.get(r.id);
+        if(!plan)return r;
+        return {...r,state:'Choix confirmé — paiement à venir'};
+      })};
+    };
+  }
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',()=>{installChoiceButton();adaptDirectionRows()},{once:true});
+  }else{installChoiceButton();adaptDirectionRows()}
+})();
