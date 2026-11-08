@@ -609,7 +609,19 @@ const G10_UBA_RIB=Object.freeze({
  holderVisible:"CONFEDERATION DE LA DIASPORA GABONA"
 });
 function bankData(){return G10_UBA_RIB.full;}
-function g10SecondDueDate(firstDate){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(firstDate||'')))return '';const six=addMonthsIso(firstDate,6);const end=firstDate.slice(0,4)+'-12-30';return six&&six<end?six:end;}
+function g10SecondDueDate(firstDate){
+ const match=String(firstDate||'').match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+ if(!match)return '';
+ const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
+ const origin=new Date(Date.UTC(year,month-1,day));
+ if(origin.getUTCFullYear()!==year||origin.getUTCMonth()!==month-1||origin.getUTCDate()!==day)return '';
+ const lastDay=new Date(Date.UTC(year,month+6,0)).getUTCDate();
+ const sixMonths=new Date(Date.UTC(year,month-1+6,Math.min(day,lastDay)));
+ sixMonths.setUTCDate(sixMonths.getUTCDate()-1);
+ const dayBefore=sixMonths.toISOString().slice(0,10);
+ const end=match[1]+'-12-30';
+ return dayBefore<end?dayBefore:end;
+}
 function bankPanel(group){
  const input=document.querySelector('input[name="'+group+'"][value="Virement bancaire"]');
  const parent=input?.closest('.payment-options');
@@ -799,7 +811,7 @@ window.declareContributionPayment=async function(){
  alert('Cotisation de '+fmtXAF(amount)+' déclarée. La Direction doit confirmer le paiement.'+(proof?' Justificatif archivé.':''));
 };
 window.openMembershipInfo=function(){openInfoCard('Droit d’adhésion','Droit d’adhésion : <b>'+fmtXAF(RATES.membership)+'</b>, une seule fois, <b>hors frais de retrait</b>.');};
-window.openContributionInfo=function(){openInfoCard('Cotisation annuelle','<b>Option 1 :</b> '+fmtXAF(RATES.annual)+' en une seule fois.<br><b>Option 2 :</b> '+fmtXAF(RATES.half)+' maintenant, puis '+fmtXAF(RATES.half)+' au plus tard six mois après le premier versement, et avant le 30 décembre de la même année.');};
+window.openContributionInfo=function(){openInfoCard('Cotisation annuelle','<b>Option 1 :</b> '+fmtXAF(RATES.annual)+' en une seule fois.<br><b>Option 2 :</b> '+fmtXAF(RATES.half)+' maintenant, puis '+fmtXAF(RATES.half)+' au plus tard la veille du sixième mois après le premier versement, et au plus tard le 30 décembre de la même année.');};
 document.addEventListener('change',e=>{if(e.target?.matches('input[name="payMethod"],input[name="contributionMethod"],input[name="contributionPlan"]')){methods();details();}});
 function init(){methods();details();directionDisplay();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
