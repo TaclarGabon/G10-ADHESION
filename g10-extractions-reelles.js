@@ -319,6 +319,7 @@ function g10OpenMembershipReceipt(m){
  const ref=String(m.transactionRef||'Non renseignée');
  const fmtDate=v=>{if(!v)return 'Non renseignée';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('fr-FR');};
  const euro=Number(m.membershipFeePaid??m.membershipFee??10)||10;
+ const membershipReference=m.g10MembershipCurrency==='XAF'?(Number(m.g10MembershipReferenceXaf||6560).toLocaleString('fr-FR')+' FCFA'):(euro+' €');
  const history=Array.isArray(m.g10XafHistory)?m.g10XafHistory:[];
  const last=history.length?history[history.length-1]:null;
  const proof=m.paymentProofData;
@@ -341,7 +342,7 @@ function g10OpenMembershipReceipt(m){
  '<tr><td>Adhérent</td><td>'+safe(name)+'</td></tr>'+
  '<tr><td>Identifiant du dossier</td><td>'+safe(m.id||'—')+'</td></tr>'+
  '<tr><td>Nature du paiement</td><td>Droit d’adhésion</td></tr>'+
- '<tr><td>Montant de référence</td><td>'+safe(euro)+' €</td></tr>'+
+ '<tr><td>Montant de référence</td><td>'+safe(membershipReference)+'</td></tr>'+
  '<tr><td>Montant reçu et confirmé</td><td class="amount">'+fmt(received)+' FCFA</td></tr>'+
  '<tr><td>Mode de paiement déclaré</td><td>'+safe(m.paymentMethod||'Non renseigné')+'</td></tr>'+
  '<tr><td>Référence de transaction</td><td>'+safe(ref)+'</td></tr>'+
