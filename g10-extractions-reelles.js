@@ -5,7 +5,7 @@ const g10Name=m=>[m.lastName,m.lastName2,m.firstName,m.firstName2].filter(Boolea
 const g10Slug=m=>g10Name(m).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'');
 const g10Num=v=>Number(v)||0;
 const g10Date=v=>{if(!v)return '';const d=new Date(v);return Number.isNaN(d.getTime())?String(v).slice(0,10):d.toLocaleDateString('fr-FR')};
-const g10Due=v=>{const d=new Date(v);if(Number.isNaN(d.getTime()))return '';d.setMonth(d.getMonth()+6);return g10Date(d)};
+const g10Due=v=>{const iso=String(v||'').slice(0,10);const result=typeof window.g10ComputeSecondDue==='function'?window.g10ComputeSecondDue(iso):'';return /^\d{4}-\d{2}-\d{2}$/.test(result)?result.slice(8,10)+'/'+result.slice(5,7)+'/'+result.slice(0,4):''};
 const g10Active=()=>Array.isArray(applications)?applications.filter(m=>m.active&&m.paymentConfirmed):(Array.isArray(activeMembers)?activeMembers.filter(m=>m.active&&m.paymentConfirmed):[]);
 function g10Records(){
  const members=g10Active().slice().sort((a,b)=>g10Name(a).localeCompare(g10Name(b),'fr'));
@@ -643,6 +643,7 @@ function g10SecondDueDate(firstDate){
  const end=match[1]+'-12-30';
  return dayBefore<end?dayBefore:end;
 }
+window.g10ComputeSecondDue=g10SecondDueDate;
 function bankPanel(group){
  const input=document.querySelector('input[name="'+group+'"][value="Virement bancaire"]');
  const parent=input?.closest('.payment-options');
@@ -1102,4 +1103,102 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   });
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+
+/* G10 — Alerte d'échéance de cotisation option 2, consultation uniquement.
+   Date = min(veille du 6e mois, 30 décembre de l'année du 1er versement).
+   Se recalcule au chargement, au retour sur l'onglet et après actualisation des données.
+   Aucun paiement n'est modifié ni créé. */
+(function(){
+ 'use strict';
+ const dueDate=first=>typeof window.g10ComputeSecondDue==='function'?window.g10ComputeSecondDue(first):'';
+ function todayInGabon(){
+  const now=new Date();
+  try{
+   const parts=new Intl.DateTimeFormat('fr-FR',{timeZone:'Africa/Libreville',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
+   const p={};for(const x of parts)p[x.type]=x.value;
+   return p.year+'-'+p.month+'-'+p.day;
+  }catch(e){
+   return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  }
+ }
+ const dayNumber=iso=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(iso))return NaN;const [y,m,d]=iso.split('-').map(Number);return Math.floor(Date.UTC(y,m-1,d)/86400000)};
+ const frDate=iso=>/^\d{4}-\d{2}-\d{2}$/.test(iso)?iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4):'';
+ const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const isVerified=p=>String(p?.status||'').toLowerCase()==='confirmé';
+ function dueForMember(m){
+  const payments=Array.isArray(m?.contributionPayments)?m.contributionPayments:[];
+  const confirmedFirst=payments.filter(p=>p.plan==='two'&&Number(p.sequence)===1&&isVerified(p)&&/^\d{4}-\d{2}-\d{2}$/.test(String(p.date||''))).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  for(const first of confirmedFirst){
+   const year=String(first.date).slice(0,4);
+   const sameYearSeconds=payments.filter(p=>p.plan==='two'&&Number(p.sequence)===2&&String(p.date||'').slice(0,4)===year);
+   if(sameYearSeconds.some(isVerified))continue;
+   const due=dueDate(first.date);
+   if(!due)continue;
+   const diff=dayNumber(due)-dayNumber(todayInGabon());
+   if(!Number.isFinite(diff))continue;
+   return {m,first,due,days:diff,pendingConfirmation:sameYearSeconds.some(p=>!isVerified(p))};
+  }
+  return null;
+ }
+ const fmtName=m=>[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ')||m.email||m.id||'Adhérent';
+ function summary(r){
+  const date=frDate(r.due);
+  if(r.pendingConfirmation)return 'Deuxième versement déclaré, en attente de validation par la Direction · Échéance : '+date;
+  if(r.days<0)return 'Deuxième versement en retard de '+(-r.days)+' jour(s) · Échéance : '+date;
+  if(r.days===0)return 'Deuxième versement à régler aujourd’hui ('+date+')';
+  if(r.days<=7)return 'Échéance proche : '+r.days+' jour(s) avant le deuxième versement ('+date+')';
+  if(r.days<=30)return 'Deuxième versement à régler dans '+r.days+' jour(s), au plus tard le '+date;
+  return 'Prochaine échéance du deuxième versement : '+date;
+ }
+ function getPanel(host,id){
+  if(!host)return null;
+  let el=document.getElementById(id);
+  if(!el){
+   el=document.createElement('section');el.id=id;el.setAttribute('role','status');el.setAttribute('aria-live','polite');
+   el.style.cssText='padding:14px 17px;margin:12px 0;border-radius:12px;border:1px solid #c4dae9;background:#f0f8ff;color:#133b5c;font-size:14px;line-height:1.5';
+   host.insertAdjacentElement('afterbegin',el);
+  }
+  return el;
+ }
+ function render(){
+  const memberPanel=document.getElementById('member-payments');
+  const current=typeof currentMember!=='undefined'&&currentMember?dueForMember(currentMember):null;
+  if(memberPanel){
+   const box=getPanel(memberPanel,'g10SecondDueMemberAlert');
+   if(box){
+    box.hidden=!current;
+    if(current){box.style.background=current.days<0?'#fff0ee':current.days<=7?'#fff7dc':'#f0f8ff';box.innerHTML='<b>Suivi de votre cotisation — option 2</b><div>'+safe(summary(current))+'</div>';}
+   }
+  }
+  const privileged=typeof isPrivilegedRole==='function'&&isPrivilegedRole();
+  const members=typeof applications!=='undefined'&&Array.isArray(applications)?applications:[];
+  const alerts=privileged?members.map(dueForMember).filter(r=>r&&(r.days<=30||r.pendingConfirmation)).sort((a,b)=>a.days-b.days):[];
+  for(const id of ['dir-overview','dir-contributions']){
+   const host=document.getElementById(id);
+   if(!host)continue;
+   const box=getPanel(host,'g10SecondDueDirAlert-'+id);
+   if(!box)continue;
+   box.hidden=!privileged||alerts.length===0;
+   if(!box.hidden){
+    box.innerHTML='<b>Échéances de cotisation à surveiller ('+alerts.length+')</b>'+
+      '<div style="margin-top:7px">'+alerts.slice(0,25).map(r=>'<div style="padding:5px 0;border-top:1px solid #dbe6ef"><strong>'+safe(fmtName(r.m))+'</strong> · '+safe(summary(r))+'</div>').join('')+
+      (alerts.length>25?'<div>Et '+(alerts.length-25)+' autre(s) échéance(s).</div>':'')+'</div>';
+   }
+  }
+ }
+ function refresh(){if(document.readyState!=='loading')render();}
+ const originalDirection=window.refreshDirection;
+ if(typeof originalDirection==='function')window.refreshDirection=function(){const value=originalDirection.apply(this,arguments);refresh();return value;};
+ const originalMember=window.renderContributionMember;
+ if(typeof originalMember==='function')window.renderContributionMember=function(){const value=originalMember.apply(this,arguments);refresh();return value;};
+ const originalDirTab=window.showDirTab;
+ if(typeof originalDirTab==='function')window.showDirTab=function(){const value=originalDirTab.apply(this,arguments);refresh();return value;};
+ const originalMemberView=window.showMemberView;
+ if(typeof originalMemberView==='function')window.showMemberView=function(){const value=originalMemberView.apply(this,arguments);refresh();return value;};
+ window.addEventListener('pageshow',refresh);
+ window.addEventListener('focus',refresh);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 })();
