@@ -861,7 +861,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 
 /* G10_OFFICIAL_DOCS_081126
-   Active automatiquement les quatre documents officiels du 08/11/2026
+   Active les quatre documents officiels et la fiche vierge mise à jour du 08/11/2026
    lorsque les PDF originaux sont publiés à la racine de GitHub Pages.
    Ne remplace pas les liens actifs par des fichiers 404.
 */
@@ -871,7 +871,8 @@ const manifest=[
  {key:'charte',file:'G10_Charte_2026-11-08.pdf',title:'Charte G10 — édition du 08/11/2026'},
  {key:'statuts',file:'G10_Statuts_2026-11-08.pdf',title:'Statuts G10 — édition du 08/11/2026'},
  {key:'reglement',file:'G10_Reglement_Interieur_2026-11-08.pdf',title:'Règlement intérieur G10 — édition du 08/11/2026'},
- {key:'g10241',file:'G10_241_2026-11-08.pdf',title:'G10-241 — Délégation opérationnelle du G10'}
+ {key:'g10241',file:'G10_241_2026-11-08.pdf',title:'G10-241 — Délégation opérationnelle du G10'},
+ {key:'fiche',file:'Fiche_Adhesion_G10_2026-11-08.pdf',title:'Fiche officielle d’adhésion — 6 560 FCFA'}
 ];
 async function documentReady(filename){
  try{
@@ -916,7 +917,7 @@ async function init(){
    root.prepend(notice);
   }
   if(missing.length){notice.style.background='#fff8e9';notice.textContent='Documents G10 du 08/11/2026 : publication en attente pour '+missing.length+' fichier(s). Ne pas considérer les anciennes versions comme les nouvelles.';}
-  else{notice.style.background='#e6f7eb';notice.textContent='Documents officiels G10 du 08/11/2026 disponibles : Charte, Statuts, Règlement intérieur et G10-241.';}
+  else{notice.style.background='#e6f7eb';notice.textContent='Documents officiels G10 du 08/11/2026 disponibles : Charte, Statuts, Règlement intérieur, G10-241 et fiche d’adhésion.';}
  }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
