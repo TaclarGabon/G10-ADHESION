@@ -1202,3 +1202,24 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
 })();
+
+
+/* G10 — harmoniser l'échéance dans "Ma situation" avec les paiements et le tableau Direction. */
+(function(){
+ 'use strict';
+ const old=window.renderMemberSituation;
+ if(typeof old!=='function')return;
+ window.renderMemberSituation=function(){
+  const result=old.apply(this,arguments);
+  if(typeof currentMember==='undefined'||!currentMember)return result;
+  const m=currentMember,ps=Array.isArray(m.contributionPayments)?m.contributionPayments:[];
+  const first=ps.filter(p=>p.plan==='two'&&Number(p.sequence)===1&&p.status==='Confirmé'&&/^\d{4}-\d{2}-\d{2}$/.test(String(p.date||''))).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+  if(!first||typeof window.g10ComputeSecondDue!=='function')return result;
+  const inYear=ps.filter(p=>p.plan==='two'&&Number(p.sequence)===2&&String(p.date||'').slice(0,4)===first.date.slice(0,4));
+  if(inYear.some(p=>p.status==='Confirmé')||inYear.some(p=>p.status!=='Confirmé'))return result;
+  const d=window.g10ComputeSecondDue(first.date);
+  const label=document.getElementById('situationNextDue');
+  if(label&&/^\d{4}-\d{2}-\d{2}$/.test(d))label.textContent='Au plus tard le '+d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4);
+  return result;
+ };
+})();
