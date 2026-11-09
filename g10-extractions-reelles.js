@@ -1019,8 +1019,14 @@ function activeButtons(){
   const id=tr.cells[0]?.textContent?.trim(),m=findMember(id);
   if(!m)continue;
   const td=document.createElement('td'),button=document.createElement('button');
-  button.type='button';button.className='btn btn-light';button.textContent='Voir le dossier';
-  button.dataset.g10ReadOnly='yes';button.addEventListener('click',()=>window.g10ReadOnlyMember(m.id));
+  button.type='button';button.className='btn btn-light';button.textContent='Ouvrir le profil complet';
+  button.dataset.g10ReadOnly='yes';button.addEventListener('click',()=>{
+    // Réutiliser exactement la vue complète déjà accessible depuis les dossiers en attente.
+    // Elle clone l'espace adhérent dans une fenêtre isolée, sans droit d'écriture.
+    if(typeof window.g10ViewFullApplication!=='function')return alert('La vue complète est indisponible. Actualisez la page.');
+    if(!m.firebaseUid)return alert('Ce dossier ne dispose pas d’identifiant Firebase. Actualisez la Direction.');
+    window.g10ViewFullApplication(m.firebaseUid);
+  });
   td.append(button);
   const last=tr.cells[tr.cells.length-1];if(last)tr.insertBefore(td,last);
  }
