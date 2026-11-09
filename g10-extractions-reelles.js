@@ -1055,3 +1055,50 @@ if(typeof previousRefresh==='function')window.refreshDirection=function(){const 
 function init(){activeButtons();pendingButtons();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
+
+
+/* G10_DIRECTION_SHARED_OFFICIAL_DOCS — onglet officiel Direction,
+   alimenté par la même bibliothèque HTML que l'espace adhérent. */
+(function(){
+ 'use strict';
+ const id='dir-g10-official-docs';
+ function privileged(){return typeof isPrivilegedRole==='function'&&isPrivilegedRole();}
+ function install(){
+  const app=document.getElementById('directionApp');
+  const nav=app?.querySelector('.side-nav');
+  const main=app?.querySelector('main.main');
+  if(!nav||!main)return;
+  let section=document.getElementById(id);
+  if(!section){
+   section=document.createElement('section');section.id=id;section.className='hidden';
+   section.innerHTML='<div class="card panel"><div class="panel-head"><div><h3>Documents officiels</h3><p>Bibliothèque commune à la Direction et aux adhérents G10.</p></div></div><div class="doc-grid" id="g10-dir-shared-document-grid"></div></div>';
+   main.appendChild(section);
+  }
+  if(nav.querySelector('[data-g10-official-dir]'))return;
+  const button=document.createElement('button');button.type='button';button.className='navbtn';button.dataset.g10OfficialDir='1';button.textContent='📄 Documents officiels';
+  const settings=[...nav.querySelectorAll('button')].find(x=>/Paramètres/i.test(x.textContent||''));
+  if(settings)nav.insertBefore(button,settings);else nav.appendChild(button);
+  const prior=window.showDirTab;
+  if(typeof prior==='function'){
+   window.showDirTab=function(name,btn){
+    section.classList.add('hidden');
+    return prior.apply(this,arguments);
+   };
+  }
+  button.addEventListener('click',()=>{
+   if(!privileged())return alert('Accès réservé à la Direction.');
+   const source=document.querySelector('#member-docs .doc-grid');
+   const target=section.querySelector('#g10-dir-shared-document-grid');
+   if(!source||!target)return alert('Bibliothèque officielle temporairement indisponible.');
+   target.replaceChildren(...[...source.children].map(x=>x.cloneNode(true)));
+   if(typeof window.showDirTab==='function')window.showDirTab('settings',button);
+   document.getElementById('dir-settings')?.classList.add('hidden');
+   section.classList.remove('hidden');
+   nav.querySelectorAll('.navbtn').forEach(el=>el.classList.toggle('active',el===button));
+   const title=document.getElementById('dirTitle');if(title)title.textContent='Documents officiels';
+   const subtitle=document.getElementById('dirSubtitle');if(subtitle)subtitle.textContent='La même bibliothèque officielle que dans les profils adhérents.';
+   section.scrollIntoView({block:'start'});
+  });
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
