@@ -1,5 +1,5 @@
-const CACHE='g10-adhesion-pwa-2026-11-11-rappel-incomplets';
-const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65121'];
+const CACHE='g10-adhesion-pwa-2026-11-11-email-test-ui';
+const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65122'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
