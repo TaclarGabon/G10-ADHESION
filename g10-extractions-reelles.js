@@ -825,9 +825,13 @@ window.declareContributionPayment=async function(){
    throw new Error('Aucun justificatif archivé n’a été confirmé');
  }catch(e){alert('Le justificatif n’a pas pu être enregistré : '+(e.message||e)+'. La cotisation n’a pas été déclarée.');return;}
  const payment={id,plan,sequence,amount,currency:'XAF',date,method,reference,proof,status:'À vérifier',dueDate:plan==='two'&&sequence===1?g10SecondDueDate(date):''};
- currentMember.contributionPlan=plan;currentMember.contributionPayments.push(payment);
+ if(typeof db==='undefined'||!db||typeof currentAuthUser==='undefined'||!currentAuthUser){
+  alert('Connexion Firebase nécessaire pour déclarer une cotisation. Aucune déclaration enregistrée.');return;
+ }
+ const revised={...currentMember,contributionPlan:plan,contributionPayments:[...(currentMember.contributionPayments||[]),payment]};
+ try{await saveMemberToFirebase(revised);}catch(e){console.error(e);alert('Enregistrement Firebase non confirmé. La cotisation n’a pas été ajoutée au dossier : '+(e.message||e));return;}
+ Object.assign(currentMember,revised);
  syncMemberEverywhere(currentMember);persist();
- try{await saveMemberToFirebase(currentMember);}catch(e){console.error(e);alert('Enregistrement Firebase non confirmé : vérifiez avec la Direction avant de réessayer.');return;}
  setVal('contributionRef','');setVal('contributionDate','');
  const f=document.getElementById('contributionProof');if(f)f.value='';
  renderContributionMember();renderMemberSituation();refreshDirection();
