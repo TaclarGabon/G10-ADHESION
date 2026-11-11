@@ -1376,7 +1376,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  const oldSend=window.sendWhatsAppPayment;
  if(typeof oldSend==='function')window.sendWhatsAppPayment=async function(){
   const m=typeof currentMember!=='undefined'?currentMember:null;
-  if(!m||!m.firebaseUid||!m.profileComplete||!m.eligibilityConfirmed||!signed(m)||!m.paymentDeclared||!hasPaymentProof(m)){
+  if(!m)return oldSend.apply(this,arguments);
+  if(!m.firebaseUid)return alert('Ce dossier n’est pas encore rattaché à un compte Firebase. Aucun message WhatsApp n’a été envoyé.');
+  if(!m.profileComplete||!m.eligibilityConfirmed||!signed(m)||!m.paymentDeclared||!hasPaymentProof(m)){
    return oldSend.apply(this,arguments);
   }
   if(typeof db==='undefined'||!db)return alert('Impossible de vérifier votre dossier en ligne. Reconnectez-vous puis réessayez.');
