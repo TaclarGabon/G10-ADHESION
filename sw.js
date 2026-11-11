@@ -1,4 +1,4 @@
-const CACHE='g10-adhesion-pwa-2026-11-11-email-test-ui';
+const CACHE='g10-adhesion-pwa-2026-11-11-tri-actifs-email';
 const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65122'];
 
 self.addEventListener('install',event=>{
