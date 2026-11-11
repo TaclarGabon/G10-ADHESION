@@ -1255,17 +1255,16 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  function cleared(section){byId('memberAccordionBody-'+section)?.querySelector('.g10-inscription-error')?.remove();}
  const fields={
   civility:'civilité',firstName:'premier prénom',lastName:'premier nom',birthDate:'date de naissance',birthPlace:'lieu de naissance',
-  nationality:'nationalité',address:'adresse',city:'ville',country:'pays',idType:'type de document',
+  nationality:'nationalité',address:'adresse',postal:'code postal',city:'ville',country:'pays',idType:'type de document',
   idNumber:'numéro du document',idIssue:'date de délivrance',idExpiry:'date d’expiration',
-  email:'adresse courriel',phone:'numéro de téléphone / WhatsApp'
+  email:'adresse courriel',phone:'numéro de téléphone / WhatsApp',profession:'métier / profession',degree:'diplôme',expertise:'expertise / compétences'
  };
  function checkProfileForm(){
   for(const [id,label] of Object.entries(fields)){if(!v(id))return showError('Veuillez renseigner le champ obligatoire : '+label+'.','profile',id);}
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email')))return showError('Veuillez saisir une adresse courriel valide.','profile','email');
   if(v('phone').replace(/\D/g,'').length<8)return showError('Veuillez saisir un numéro de téléphone / WhatsApp complet.','profile','phone');
-  // Champs de second prénom et second nom facultatifs. Les qualifications gardent leur règle :
-  // profession OU diplôme OU expertise, car tous les adhérents n'ont pas les trois.
-  if(!v('profession')&&!v('degree')&&!v('expertise'))return showError('Veuillez indiquer au moins votre métier, votre diplôme ou une expertise.','profile','profession');
+  // Seuls le deuxième prénom et le deuxième nom sont facultatifs.
+  // Pour un champ non applicable, l'adhérent peut écrire « Sans objet ».
   if(!byId('diasporaEligibility')?.checked)return showError('Vous devez cocher « Condition d’adhésion » avant d’enregistrer votre profil.','profile','diasporaEligibility');
   cleared('profile');return true;
  }
@@ -1355,7 +1354,19 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   if(input){input.required=true;input.setAttribute('aria-required','true');const label=input.closest('.field')?.querySelector('label');if(label)label.textContent='Justificatif de paiement * (PDF ou image)';}
   const whatsapp=document.querySelector('#memberAccordion-payment button[onclick*="sendWhatsAppPayment"]');
   if(whatsapp)whatsapp.title='Disponible après une déclaration complète et l’archivage du justificatif.';
-  document.querySelectorAll('#memberAccordion-profile input,#memberAccordion-profile select').forEach(el=>{if(fields[el.id]){el.required=true;el.setAttribute('aria-required','true');}});
+  document.querySelectorAll('#memberAccordion-profile input,#memberAccordion-profile select,#memberAccordion-profile textarea').forEach(el=>{
+    if(fields[el.id]){
+     el.required=true;el.setAttribute('aria-required','true');
+     const lab=el.closest('.field')?.querySelector('label');
+     if(lab&&!lab.textContent.includes('*'))lab.append(' *');
+    }
+   });
+   const profileBody=byId('memberAccordionBody-profile');
+   if(profileBody&&!byId('g10RequiredFieldsExplanation')){
+    const p=document.createElement('div');p.id='g10RequiredFieldsExplanation';p.style.cssText='background:#f0f8ff;border:1px solid #caddea;border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:13px;color:#153e5a';
+    p.textContent='Complétez tous les champs marqués *. Seuls Prénom 2 et Nom 2 sont facultatifs. Si un renseignement ne s’applique pas (code postal, diplôme, etc.), indiquez « Sans objet ». Les conditions d’adhésion doivent aussi être acceptées.';
+    profileBody.prepend(p);
+   }
  }
  function init(){
   decorate();
