@@ -1683,3 +1683,111 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',decorateDirection,{once:true});else decorateDirection();
 })();
+
+
+/* G10_SORT_ACTIFS_ET_TEST_EMAIL_20261111
+   Ordre chronologique de présentation uniquement, sans écrire dans Firebase.
+   Essai de courriel préparé dans la messagerie : l'envoi G10 automatisé reste à configurer côté serveur.
+*/
+(function(){
+ 'use strict';
+ const TEST_EMAIL='judicael.edanngomo@gmail.com';
+ const OFFICIAL_SENDER='contact@g10.ga';
+ function privilegedG10(){
+   try{return typeof isPrivilegedRole==='function' && !!isPrivilegedRole();}
+   catch(e){return false;}
+ }
+ function timeOf(m){
+   if(!m)return -Infinity;
+   const raw=m.membershipValidatedAt||m.paymentValidatedAt||m.validatedAt||m.paymentDate||'';
+   if(raw&&typeof raw.toDate==='function')return +raw.toDate();
+   if(typeof raw==='number')return raw;
+   const value=String(raw).trim();
+   const french=value.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s|$)/);
+   if(french){const d=new Date(+french[3],+french[2]-1,+french[1]);return +d;}
+   const n=Date.parse(value);return Number.isFinite(n)?n:-Infinity;
+ }
+ function ordered(){
+   if(!privilegedG10()||typeof activeMembers==='undefined'||!Array.isArray(activeMembers))return;
+   activeMembers.sort((a,b)=>timeOf(b)-timeOf(a)||
+     String(a.id||'').localeCompare(String(b.id||''),'fr'));
+ }
+ function sortRows(){
+   const tb=document.getElementById('activeRows');
+   if(!tb||!privilegedG10())return;
+   const rows=[...tb.querySelectorAll(':scope > tr')];
+   if(rows.length<2)return;
+   const byId=new Map();
+   try{
+     (typeof activeMembers!=='undefined'?activeMembers:[]).forEach((m,i)=>{
+       if(m&&m.id)byId.set(String(m.id).replace(/\s/g,''),{t:timeOf(m),i});
+     });
+   }catch(e){}
+   const scored=rows.map((tr,index)=>{
+     const id=(tr.cells[0]?.textContent||'').replace(/\s/g,'');
+     const found=byId.get(id);
+     const fallback=(tr.cells[6]?.textContent||'').trim();
+     const match=fallback.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+     const parsed=match?+new Date(+match[3],+match[2]-1,+match[1]):-Infinity;
+     return {tr,index,t:found?.t??parsed};
+   });
+   scored.sort((a,b)=>b.t-a.t||a.index-b.index);
+   scored.forEach(x=>tb.appendChild(x.tr));
+ }
+ const oldRender=window.renderActive;
+ if(typeof oldRender==='function'){
+   window.renderActive=function(){
+     ordered();
+     const output=oldRender.apply(this,arguments);
+     sortRows();
+     return output;
+   };
+ }
+ const oldRefresh=window.refreshDirection;
+ if(typeof oldRefresh==='function'){
+   window.refreshDirection=function(){
+     ordered();
+     const output=oldRefresh.apply(this,arguments);
+     sortRows();
+     return output;
+   };
+ }
+ function setupTest(){
+   if(!privilegedG10())return;
+   const host=document.getElementById('dir-settings');
+   if(!host||document.getElementById('g10EmailTestPanel'))return;
+   const panel=document.createElement('section');
+   panel.id='g10EmailTestPanel';panel.className='card panel';
+   panel.style.cssText='margin:12px 0 16px;padding:20px;border:1px solid #d5e2ef;border-radius:17px;background:#fff';
+   const heading=document.createElement('h3');heading.textContent='Test des notifications e-mail G10';
+   const p=document.createElement('p');p.style.cssText='font-size:14px;line-height:1.6;margin:12px 0';
+   p.textContent='Expéditeur à sélectionner dans Outlook : '+OFFICIAL_SENDER+'. Destinataire unique : '+TEST_EMAIL+'. Aucun paiement ni statut ne sera modifié.';
+   const btn=document.createElement('button');
+   btn.type='button';btn.className='btn btn-green';
+   btn.textContent='Préparer le test dans Outlook';
+   const note=document.createElement('p');note.style.cssText='font-size:12px;color:#61778f;margin:12px 0 0;line-height:1.55';
+   note.textContent='L’envoi automatique depuis G10 nécessite encore un service serveur sécurisé relié à Hostinger. Ce bouton ouvre seulement un brouillon dans votre messagerie.';
+   btn.onclick=function(){
+     if(!privilegedG10())return;
+     const subject='[TEST G10] Notification officielle d’adhésion';
+     const body='Bonjour,\n\nCeci est un test de présentation des notifications G10.\n\nCe message ne constitue pas une nouvelle validation de paiement ni un reçu officiel.\n\nVous pouvez consulter votre espace personnel : https://adhesion.g10.ga/\n\nLa Direction du G10\n'+OFFICIAL_SENDER;
+     const url='mailto:'+TEST_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+     note.textContent='Vérifiez dans Outlook que le champ « De » indique contact@g10.ga, puis cliquez sur Envoyer. Aucun e-mail n’est parti automatiquement depuis G10.';
+     window.location.href=url;
+   };
+   panel.append(heading,p,btn,note);
+   host.insertBefore(panel,host.firstChild);
+ }
+ const oldDirection=window.enterDirection;
+ if(typeof oldDirection==='function'){
+   window.enterDirection=function(){
+     const result=oldDirection.apply(this,arguments);
+     setTimeout(setupTest,0);
+     return result;
+   };
+ }
+ if(document.readyState==='loading'){
+   document.addEventListener('DOMContentLoaded',()=>{ordered();sortRows();setupTest();},{once:true});
+ }else{ordered();sortRows();setupTest();}
+ console.info('G10 : actifs classés par validation décroissante ; test e-mail manuel dans Direction');
+})();
