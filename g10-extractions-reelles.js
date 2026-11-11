@@ -1576,3 +1576,106 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
+
+
+/* G10_COTISATION_PREUVE_TELEVERSEMENT_V1
+   Secours de stockage limité pour fichiers de preuve lorsque Firebase Storage n'est pas configuré.
+   Présente la pièce archivée à la Direction sans valider le paiement. */
+(function(){
+ 'use strict';
+ const hasProof=p=>!!(p&&typeof p==='object'&&(p.data||p.dataUrl||p.url||p.path));
+ if(typeof window.uploadProofFile!=='function'){
+  window.uploadProofFile=async function(file,folder,id){
+   if(!file||file.size<=0)throw new Error('Fichier justificatif manquant ou vide.');
+   const type=String(file.type||'');
+   const read=f=>new Promise((ok,fail)=>{
+    const reader=new FileReader();
+    reader.onload=()=>ok(reader.result);
+    reader.onerror=()=>fail(new Error('Lecture du fichier impossible.'));
+    reader.readAsDataURL(f);
+   });
+   if(type==='application/pdf'||/\.pdf$/i.test(file.name||'')){
+    if(file.size>180000)throw new Error('PDF trop volumineux pour le dossier Firebase (180 Ko maximum). Utilisez une capture ou compressez le PDF.');
+    return {data:await read(file),name:file.name,type:'application/pdf'};
+   }
+   if(!(type.startsWith('image/')||/\.(png|jpe?g|webp|heic|heif)$/i.test(file.name||'')))
+     throw new Error('Sélectionnez une image ou un PDF.');
+   const src=await read(file);
+   const img=await new Promise((ok,fail)=>{
+    const element=new Image();
+    element.onload=()=>ok(element);
+    element.onerror=()=>fail(new Error('Cette image ne peut pas être lue. Essayez une photo JPG ou PNG.'));
+    element.src=src;
+   });
+   let scale=Math.min(1,900/Math.max(img.width,img.height));
+   let width=Math.max(1,Math.round(img.width*scale)),height=Math.max(1,Math.round(img.height*scale));
+   const render=(w,h,q)=>{
+    const canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('Compression de l’image indisponible.');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+    ctx.drawImage(img,0,0,w,h);
+    return canvas.toDataURL('image/jpeg',q);
+   };
+   let data=render(width,height,.62);
+   if(data.length>215000){
+    scale=Math.min(1,680/Math.max(img.width,img.height));
+    width=Math.max(1,Math.round(img.width*scale));height=Math.max(1,Math.round(img.height*scale));
+    data=render(width,height,.43);
+   }
+   if(data.length>215000)throw new Error('Image trop volumineuse. Recadrez la capture puis réessayez.');
+   return {data,name:file.name,type:'image/jpeg'};
+  };
+ }
+ function showProof(p){
+  if(!hasProof(p))return alert('Aucun justificatif enregistré.');
+  const data=String(p.data||p.dataUrl||'');
+  const url=String(p.url||'');
+  if(!data&&/^https:\/\//i.test(url)){window.open(url,'_blank','noopener');return;}
+  if(!data&&p.path&&typeof firebase!=='undefined'&&firebase.storage){
+   const win=window.open('','_blank');
+   firebase.storage().ref(p.path).getDownloadURL().then(u=>{if(win)win.location.href=u;else window.open(u,'_blank','noopener');}).catch(err=>{if(win)win.close();alert('Impossible d’ouvrir le justificatif : '+err.message);});
+   return;
+  }
+  if(!/^data:(application\/pdf|image\/)/i.test(data))return alert('Format de justificatif non reconnu.');
+  const w=window.open('','_blank');
+  if(!w)return alert('Autorisez l’ouverture du justificatif.');
+  w.document.title='Justificatif de cotisation G10';
+  w.document.body.style.cssText='margin:0;background:#f5f7fa;min-height:100vh;display:grid;place-items:center';
+  const isPdf=/^data:application\/pdf/i.test(data)||(p.type==='application/pdf');
+  const element=w.document.createElement(isPdf?'iframe':'img');
+  element.src=data;
+  element.style.cssText=isPdf?'width:100vw;height:100vh;border:0':'max-width:98vw;max-height:96vh;object-fit:contain';
+  w.document.body.appendChild(element);
+ }
+ function decorateDirection(){
+  const body=document.getElementById('contributionPaymentRows');
+  if(!body||typeof applications==='undefined'||!Array.isArray(applications))return;
+  const rows=[];
+  applications.forEach(m=>(m.contributionPayments||[]).forEach(p=>rows.push({m,p})));
+  [...body.rows].forEach((tr,i)=>{
+   if(tr.querySelector('[data-g10-proof-verified]'))return;
+   const p=rows[i]?.p;
+   if(!p)return;
+   const cell=tr.cells[tr.cells.length-1];
+   if(!cell)return;
+   if(hasProof(p.proof)){
+    const b=document.createElement('button');b.type='button';b.className='btn btn-light';
+    b.dataset.g10ProofVerified='yes';
+    b.textContent='Voir justificatif';b.style.cssText='display:block;margin-top:6px;font-size:12px';
+    b.addEventListener('click',()=>showProof(p.proof));cell.appendChild(b);
+   }else{
+    const note=document.createElement('small');note.dataset.g10ProofVerified='yes';
+    note.textContent='⚠ Justificatif absent';note.style.cssText='display:block;color:#a42f1e;margin-top:5px;font-weight:700';cell.appendChild(note);
+   }
+  });
+ }
+ const old=window.renderContributionPayments;
+ if(typeof old==='function')window.renderContributionPayments=function(){
+  const result=old.apply(this,arguments);
+  decorateDirection();
+  return result;
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',decorateDirection,{once:true});else decorateDirection();
+})();
