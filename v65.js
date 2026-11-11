@@ -581,3 +581,128 @@ console.info('G10 Adhésion V6.5.16 chargé — états validés restaurés et li
  menuObserver.observe(document.body,{childList:true,subtree:true});
  console.info('G10 — navigation Mes documents séparée activée');
 })();
+
+
+/* G10 — rappel non bloquant des dossiers d'adhesion incomplets (2026-11-11).
+   Lecture seule : aucun changement de paiement, statut ou donnee Firebase. */
+(function(){
+  'use strict';
+  var dismissed=false, displayedFor='', lastSeen='', pending=false;
+  function member(){
+    try { return (typeof currentMember!=='undefined' && currentMember)||null; }
+    catch(e){ return null; }
+  }
+  function privileged(){
+    try { return typeof isPrivilegedRole==='function' && isPrivilegedRole(); }
+    catch(e){ return true; }
+  }
+  function proof(m){
+    var p=m&&m.paymentProofData;
+    return !!(p&&(typeof p==='string'?p.trim():(p.data||p.url||p.downloadURL)));
+  }
+  function completed(m){
+    return !!(m&&(m.paymentConfirmed===true || m.membershipValidatedAt ||
+      m.paymentValidatedAt || m.receiptSequence || m.active===true));
+  }
+  function state(m){
+    if(!m||completed(m))return null;
+    if(!m.profileComplete)return {title:'Complétez votre profil',desc:'Votre compte est créé, mais votre profil personnel n’est pas encore terminé.',step:'profil'};
+    if(!m.formSigned)return {title:'Validez votre fiche d’adhésion',desc:'Veuillez vérifier votre fiche et accepter les conditions pour poursuivre.',step:'fiche'};
+    if(m.paymentDeclared){
+      if(!proof(m))return {title:'Ajoutez votre justificatif',desc:'Vous avez déjà déclaré un paiement. Ajoutez son justificatif sans effectuer de nouveau versement.',step:'justificatif'};
+      return {title:'Paiement en cours de vérification',desc:'Votre déclaration et votre justificatif sont enregistrés. La Direction doit encore valider votre adhésion. Aucun nouveau paiement n’est demandé.',step:'attente'};
+    }
+    return {title:'Finalisez votre adhésion',desc:'Votre fiche est validée. Il reste à effectuer votre règlement de 6 560 FCFA et à transmettre son justificatif.',step:'paiement'};
+  }
+  function ensureStyle(){
+    if(document.getElementById('g10ReminderStyle'))return;
+    var css=document.createElement('style');
+    css.id='g10ReminderStyle';
+    css.textContent='#g10ReminderOverlay{position:fixed;inset:0;z-index:2147482000;background:rgba(5,20,40,.72);display:flex;align-items:center;justify-content:center;padding:16px}'+
+      '#g10ReminderDialog{width:min(520px,100%);max-height:90dvh;overflow-y:auto;background:#fff;border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.22);color:#16324e;font:inherit}'+
+      '#g10ReminderDialog h2{font-size:22px;margin:12px 0}#g10ReminderDialog p{line-height:1.6;margin:10px 0}'+
+      '#g10ReminderDialog .g10-reminder-tag{display:inline-block;background:#fff1d9;color:#895800;border-radius:30px;padding:6px 12px;font-size:13px;font-weight:700}'+
+      '#g10ReminderDialog .g10-reminder-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}'+
+      '#g10ReminderDialog button{cursor:pointer;border-radius:10px;padding:11px 15px;font:inherit;font-weight:700}'+
+      '#g10ReminderNext{background:#123d72;color:#fff;border:1px solid #123d72}'+
+      '#g10ReminderLater{background:white;color:#123d72;border:1px solid #bbcbdc}';
+    document.head.appendChild(css);
+  }
+  function close(){
+    dismissed=true;
+    var root=document.getElementById('g10ReminderOverlay');
+    if(root)root.remove();
+  }
+  function navigate(){
+    close();
+    try{
+      if(typeof window.showMemberView==='function'){
+        var nav=[].slice.call(document.querySelectorAll('#memberApp .navbtn'))
+          .find(function(n){return /mon compte|adhésion|inscription/i.test(n.textContent||'');});
+        window.showMemberView('account',nav||undefined);
+      }
+      var dest=document.getElementById('member-account');
+      if(dest){dest.classList.remove('hidden');dest.scrollIntoView({behavior:'smooth',block:'start'});}
+      if(typeof window.stepUi==='function')window.stepUi(false);
+    }catch(e){console.warn('G10 rappel navigation',e);}
+  }
+  function show(m,s){
+    ensureStyle();
+    var old=document.getElementById('g10ReminderOverlay');if(old)old.remove();
+    var overlay=document.createElement('div');overlay.id='g10ReminderOverlay';
+    var dialog=document.createElement('div');dialog.id='g10ReminderDialog';
+    dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');
+    dialog.setAttribute('aria-labelledby','g10ReminderHeading');
+    var tag=document.createElement('span');tag.className='g10-reminder-tag';
+    tag.textContent=s.step==='attente'?'En cours de vérification':'Dossier incomplet';
+    var head=document.createElement('h2');head.id='g10ReminderHeading';head.textContent='Bienvenue dans votre espace G10';
+    var info=document.createElement('p');info.textContent=s.desc;
+    var subtitle=document.createElement('p');var strong=document.createElement('strong');
+    strong.textContent=s.title;subtitle.appendChild(strong);
+    var tip=document.createElement('p');tip.textContent=s.step==='attente'
+      ?'Vous pouvez consulter votre espace personnel pendant ce traitement.'
+      :'Reprenez simplement à l’étape manquante : vos informations déjà enregistrées sont conservées.';
+    var actions=document.createElement('div');actions.className='g10-reminder-actions';
+    var next=document.createElement('button');next.type='button';next.id='g10ReminderNext';
+    next.textContent=s.step==='attente'?'Consulter mon dossier':'Reprendre mon adhésion';
+    next.addEventListener('click',navigate);
+    var later=document.createElement('button');later.type='button';later.id='g10ReminderLater';
+    later.textContent='Plus tard';later.addEventListener('click',close);
+    actions.appendChild(next);actions.appendChild(later);
+    dialog.appendChild(tag);dialog.appendChild(head);dialog.appendChild(subtitle);
+    dialog.appendChild(info);dialog.appendChild(tip);dialog.appendChild(actions);
+    overlay.appendChild(dialog);document.body.appendChild(overlay);
+  }
+  function refresh(){
+    if(pending)return;
+    pending=true;
+    setTimeout(function(){
+      pending=false;
+      if(privileged()||!document.getElementById('memberApp'))return;
+      var m=member();if(!m)return;
+      var key=String(m.firebaseUid||m.id||m.email||'');
+      if(key!==lastSeen){dismissed=false;displayedFor='';lastSeen=key;}
+      var s=state(m);
+      if(!s){var old=document.getElementById('g10ReminderOverlay');if(old)old.remove();return;}
+      if(dismissed||displayedFor===key)return;
+      displayedFor=key;show(m,s);
+    },180);
+  }
+  if(typeof window.enterMember==='function'){
+    var oldEnter=window.enterMember;
+    window.enterMember=function(){
+      dismissed=false;displayedFor='';lastSeen='';
+      var result=oldEnter.apply(this,arguments);
+      refresh();return result;
+    };
+  }
+  if(typeof window.hydrateMember==='function'){
+    var oldHydrate=window.hydrateMember;
+    window.hydrateMember=function(){var result=oldHydrate.apply(this,arguments);refresh();return result;};
+  }
+  if(typeof window.goHome==='function'){
+    var oldHome=window.goHome;
+    window.goHome=function(){close();lastSeen='';displayedFor='';return oldHome.apply(this,arguments);};
+  }
+  console.info('G10 — rappel contextuel des dossiers incomplets initialise');
+})();
