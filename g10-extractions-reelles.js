@@ -1223,3 +1223,143 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   return result;
  };
 })();
+
+
+/* G10_INSCRIPTION_COMPLETE_V1 — contrôle guidé des nouveaux dossiers.
+ * L'inscription reste enregistrable en brouillon ; seule la validation / déclaration d'un paiement
+ * et sa notification WhatsApp sont bloquées tant que les pièces obligatoires ne sont pas là.
+ * Ne modifie pas rétroactivement les adhérents payés ou les justificatifs existants. */
+(function(){
+ 'use strict';
+ const byId=id=>document.getElementById(id);
+ const member=()=>typeof currentMember!=='undefined'?currentMember:null;
+ const v=id=>String(byId(id)?.value||'').trim();
+ const hasStoredFile=p=>!!(p&&typeof p==='object'&&(p.dataUrl||p.url||p.path||p.data));
+ const storedPaymentProof=m=>!!m&&(hasStoredFile(m.membershipProof)||hasStoredFile(m.paymentProofData));
+ const validMember=m=>!!m?.profileComplete&&!!m?.eligibilityConfirmed;
+ function showError(message,section,field){
+  const body=byId('memberAccordionBody-'+section);
+  const card=byId('memberAccordion-'+section);
+  if(typeof window.showMemberView==='function')window.showMemberView('account');
+  if(typeof window.toggleMemberAccordion==='function')window.toggleMemberAccordion(section,true);
+  if(body){
+    let note=body.querySelector('.g10-inscription-error');
+    if(!note){note=document.createElement('div');note.className='g10-inscription-error';note.setAttribute('role','alert');note.style.cssText='background:#fff0ed;color:#842b20;padding:11px 13px;border:1px solid #df9d8f;border-radius:10px;font-size:14px;font-weight:650;margin:10px 0';body.prepend(note);}
+    note.textContent=message;
+  }
+  if(field&&byId(field)){const el=byId(field);el.setAttribute('aria-invalid','true');el.style.outline='2px solid #d44839';if(typeof el.focus==='function')el.focus({preventScroll:true});}
+  (card||body)?.scrollIntoView?.({behavior:'smooth',block:'center'});
+  return false;
+ }
+ function cleared(section){byId('memberAccordionBody-'+section)?.querySelector('.g10-inscription-error')?.remove();}
+ const fields={
+  civility:'civilité',firstName:'premier prénom',lastName:'premier nom',birthDate:'date de naissance',birthPlace:'lieu de naissance',
+  nationality:'nationalité',address:'adresse',city:'ville',country:'pays',idType:'type de document',
+  idNumber:'numéro du document',idIssue:'date de délivrance',idExpiry:'date d’expiration',
+  email:'adresse courriel',phone:'numéro de téléphone / WhatsApp'
+ };
+ function checkProfileForm(){
+  for(const [id,label] of Object.entries(fields)){if(!v(id))return showError('Veuillez renseigner le champ obligatoire : '+label+'.','profile',id);}
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v('email')))return showError('Veuillez saisir une adresse courriel valide.','profile','email');
+  if(v('phone').replace(/\D/g,'').length<8)return showError('Veuillez saisir un numéro de téléphone / WhatsApp complet.','profile','phone');
+  // Champs de second prénom et second nom facultatifs. Les qualifications gardent leur règle :
+  // profession OU diplôme OU expertise, car tous les adhérents n'ont pas les trois.
+  if(!v('profession')&&!v('degree')&&!v('expertise'))return showError('Veuillez indiquer au moins votre métier, votre diplôme ou une expertise.','profile','profession');
+  if(!byId('diasporaEligibility')?.checked)return showError('Vous devez cocher « Condition d’adhésion » avant d’enregistrer votre profil.','profile','diasporaEligibility');
+  cleared('profile');return true;
+ }
+ function checkSigned(){
+  const m=member();
+  if(!validMember(m))return showError('Complétez et enregistrez d’abord votre profil et confirmez les conditions d’adhésion.','profile','diasporaEligibility');
+  if(!m.formSigned)return showError('Vous devez finaliser la fiche et sa signature avant de déclarer un paiement. Choisissez « Document intelligent » ou « PDF + signature manuscrite ».','form','modeElectronicBtn');
+  if(m.signatureMode==='manual'&&!hasStoredFile(m.manualSignedProof)){
+   return showError('La fiche manuscrite doit être réellement jointe et archivée, pas seulement nommée. Veuillez la téléverser.','form','manualSignedFile');
+  }
+  return true;
+ }
+ function checkPaymentInputs(){
+  if(!checkSigned())return false;
+  if(!v('transactionRef'))return showError('La référence du paiement est obligatoire.','payment','transactionRef');
+  if(!v('paymentDate'))return showError('Indiquez la date du paiement.','payment','paymentDate');
+  const input=byId('paymentProof'),file=input?.files?.[0];
+  if(!file&&!storedPaymentProof(member()))return showError('Vous devez joindre une photo, une capture ou un PDF du justificatif avant de déclarer le paiement.','payment','paymentProof');
+  if(file&&file.size===0)return showError('Le justificatif sélectionné est vide. Choisissez un autre document.','payment','paymentProof');
+  cleared('payment');return true;
+ }
+ function wrap(key,guard){
+  const previous=window[key];
+  if(typeof previous!=='function')return;
+  window[key]=function(){if(!guard())return;return previous.apply(this,arguments);};
+ }
+ wrap('saveProfile',checkProfileForm);
+ wrap('validateSmartForm',function(){
+  if(!validMember(member()))return showError('Enregistrez votre profil et acceptez les conditions avant la signature.','profile','diasporaEligibility');
+  if(!v('signPlace'))return showError('Indiquez le lieu où vous signez la fiche.','form','signPlace');
+  if(!v('signDate'))return showError('Indiquez la date de votre signature.','form','signDate');
+  if(!byId('acceptRules')?.checked)return showError('Cochez « Engagement » pour confirmer que vous acceptez les statuts et le règlement intérieur.','form','acceptRules');
+  if(!byId('acceptInitials')?.checked)return showError('Cochez « Signature électronique par initiales » pour valider votre signature.','form','acceptInitials');
+  cleared('form');return true;
+ });
+ // Le mode PDF doit archiver une vraie pièce dans Firebase, pas uniquement le nom du fichier.
+ window.saveManualSignedForm=async function(){
+  const m=member();
+  if(!validMember(m))return showError('Enregistrez votre profil et acceptez les conditions avant de transmettre la fiche signée.','profile','diasporaEligibility');
+  const file=byId('manualSignedFile')?.files?.[0];
+  if(!file)return showError('Sélectionnez la fiche remplie et signée en PDF ou en image.','form','manualSignedFile');
+  if(file.size<=0)return showError('Le document signé sélectionné est vide.','form','manualSignedFile');
+  if(!/\.pdf$/i.test(file.name)&&!String(file.type||'').startsWith('image/'))return showError('La fiche signée doit être un PDF ou une image.','form','manualSignedFile');
+  if(typeof uploadProofFile!=='function'||typeof saveMemberToFirebase!=='function'||typeof currentAuthUser==='undefined'||!currentAuthUser||typeof db==='undefined'||!db)
+    return showError('Le stockage sécurisé n’est pas disponible. Reconnectez-vous avant de transmettre la fiche.','form','manualSignedFile');
+  const button=document.querySelector('#manualFormBlock button[onclick*="saveManualSignedForm"]');
+  if(button?.disabled)return;
+  if(button)button.disabled=true;
+  try{
+    const proof=await uploadProofFile(file,'membership-signed',m.id||'adhesion');
+    if(!hasStoredFile(proof))throw new Error('Le document n’a pas été archivé.');
+    const copy={...m,signatureMode:'manual',manualSignedProof:proof,manualSignedFileName:file.name,manualSignedAt:new Date().toISOString(),formSigned:true,status:'Fiche manuscrite transmise'};
+    await saveMemberToFirebase(copy);
+    Object.assign(m,copy);
+    if(typeof upsertApplication==='function')upsertApplication();
+    if(typeof syncMemberEverywhere==='function')syncMemberEverywhere(m);
+    if(typeof persist==='function')persist();
+    if(typeof hydrateMember==='function')hydrateMember();
+    const label=byId('manualFileStatus');if(label)label.textContent='Fiche signée archivée : '+file.name;
+    cleared('form');
+    alert('Votre fiche manuscrite signée a bien été enregistrée et archivée.');
+  }catch(err){console.error('Fiche signée',err);showError('La fiche signée n’a pas pu être archivée : '+(err.message||err)+'. Réessayez.','form','manualSignedFile');}
+  finally{if(button)button.disabled=false;}
+ };
+ // Prévalidation avant les écritures Firebase et avant toute notification.
+ wrap('declarePayment',checkPaymentInputs);
+ window.sendWhatsAppPayment=function(){
+  const m=member();
+  if(!m)return showError('Ouvrez votre dossier pour continuer.','profile');
+  if(!checkSigned())return;
+  if(!m.paymentDeclared)return showError('Déclarez d’abord votre paiement avec son justificatif, puis attendez l’enregistrement avant d’envoyer le message WhatsApp.','payment','paymentProof');
+  if(!storedPaymentProof(m))return showError('Le justificatif du paiement n’a pas été archivé. Joignez-le et déclarez le paiement à nouveau.','payment','paymentProof');
+  if(!m.transactionRef||!m.paymentDate)return showError('La référence et la date du paiement doivent être enregistrées.','payment','transactionRef');
+  const phone=String(typeof settings!=='undefined'?settings.airtel||'':'').replace(/\D/g,'');
+  if(phone.length<8)return alert('Le numéro WhatsApp officiel n’est pas disponible. Contactez la Direction.');
+  const name=[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ')||m.email||'Adhérent';
+  const msg='Bonjour Direction G10, je confirme ma déclaration du droit d’adhésion.\nNom : '+name+
+    '\nDossier : '+m.id+'\nMontant de référence : 6 560 FCFA'+
+    '\nMoyen de paiement : '+(m.paymentMethod||'Non précisé')+
+    '\nRéférence de transaction : '+m.transactionRef+
+    '\nDate du paiement : '+m.paymentDate+
+    '\nLe justificatif est enregistré dans mon dossier G10. Merci de vérifier le paiement.';
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener');
+ };
+ function decorate(){
+  const input=byId('paymentProof');
+  if(input){input.required=true;input.setAttribute('aria-required','true');const label=input.closest('.field')?.querySelector('label');if(label)label.textContent='Justificatif de paiement * (PDF ou image)';}
+  const whatsapp=document.querySelector('#memberAccordion-payment button[onclick*="sendWhatsAppPayment"]');
+  if(whatsapp)whatsapp.title='Disponible après une déclaration complète et l’archivage du justificatif.';
+  document.querySelectorAll('#memberAccordion-profile input,#memberAccordion-profile select').forEach(el=>{if(fields[el.id]){el.required=true;el.setAttribute('aria-required','true');}});
+ }
+ function init(){
+  decorate();
+  document.getElementById('memberApp')?.addEventListener('input',e=>{if(e.target?.getAttribute('aria-invalid')==='true'){e.target.removeAttribute('aria-invalid');e.target.style.outline='';}});
+  document.getElementById('memberApp')?.addEventListener('change',e=>{if(e.target?.getAttribute('aria-invalid')==='true'){e.target.removeAttribute('aria-invalid');e.target.style.outline='';}});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
