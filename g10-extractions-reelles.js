@@ -1418,3 +1418,33 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  };
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',missingLegacy,{once:true});else missingLegacy();
 })();
+
+
+/* G10 — empêcher la Direction de valider un dossier incomplet.
+   Ne concerne pas les adhésions actives déjà confirmées. */
+(function(){
+ 'use strict';
+ const hasProof=p=>!!(p&&typeof p==='object'&&(p.dataUrl||p.url||p.path||p.data));
+ function complete(m){
+  return !!m&&!!m.profileComplete&&!!m.eligibilityConfirmed&&!!m.formSigned&&
+    !!m.paymentDeclared&&(hasProof(m.membershipProof)||hasProof(m.paymentProofData))&&
+    (m.signatureMode!=='manual'||hasProof(m.manualSignedProof))&&
+    !!String(m.transactionRef||'').trim()&&!!String(m.paymentDate||'').trim();
+ }
+ const original=window.validateApplicationByUid;
+ if(typeof original==='function')window.validateApplicationByUid=async function(uid){
+  if(typeof isPrivilegedRole!=='function'||!isPrivilegedRole())return alert('Accès réservé à la Direction.');
+  const m=typeof applications!=='undefined'&&Array.isArray(applications)?applications.find(x=>String(x.firebaseUid||'')===String(uid)):null;
+  if(!m)return alert('Dossier introuvable. Actualisez la liste.');
+  if(m.active||m.paymentConfirmed)return alert('Cette adhésion est déjà confirmée.');
+  if(!complete(m))return alert('Validation impossible : le profil, l’engagement, la signature, la référence/date et le justificatif archivé doivent être complets. Demandez à l’adhérent de finaliser son dossier.');
+  if(typeof db==='undefined'||!db)return alert('Firebase indisponible. Validation annulée.');
+  try{
+   const snap=await db.collection('members').doc(uid).get({source:'server'});
+   if(!snap.exists||String(snap.data()?.id||'')!==String(m.id||'')||!complete(snap.data())){
+    return alert('Le dossier sur Firebase est incomplet ou différent : impossible de valider cette adhésion.');
+   }
+  }catch(e){console.error('Validation Direction',e);return alert('Impossible de vérifier les pièces sur Firebase. Aucune validation effectuée.');}
+  return original.apply(this,arguments);
+ };
+})();
