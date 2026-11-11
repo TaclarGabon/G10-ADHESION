@@ -803,9 +803,27 @@ window.declareContributionPayment=async function(){
  if(sequence>max){alert('Toutes les échéances ont déjà été déclarées.');return;}
  if(plan==='two'&&sequence===1&&date>date.slice(0,4)+'-12-30'){alert('La deuxième échéance doit intervenir avant le 30 décembre de la même année. Choisissez le paiement annuel en une fois ou contactez la Direction.');return;}
  const amount=plan==='monthly'?RATES.annual:RATES.half;
- const id='COT-'+Date.now(),file=document.getElementById('contributionProof')?.files?.[0]||null;
+ const proofInput=document.getElementById('contributionProof');
+ const file=proofInput?.files?.[0]||null;
+ if(!file){
+  if(proofInput){proofInput.required=true;proofInput.setAttribute('aria-invalid','true');proofInput.scrollIntoView({block:'center',behavior:'smooth'});proofInput.focus({preventScroll:true});}
+  alert('Justificatif obligatoire : joignez une photo, une capture ou un PDF de la transaction avant de déclarer votre cotisation. Aucun paiement n’a été enregistré.');
+  return;
+ }
+ if(file.size<=0){alert('Le fichier justificatif est vide. Sélectionnez une autre pièce.');return;}
+ if(!(String(file.type||'').startsWith('image/')||file.type==='application/pdf'||/\.(pdf|png|jpg|jpeg|webp|heic|heif)$/i.test(file.name||''))){
+  alert('Le justificatif doit être une image ou un PDF.');return;
+ }
+ if(typeof uploadProofFile!=='function'){
+  alert('L’enregistrement des justificatifs est indisponible. Aucune déclaration effectuée.');return;
+ }
+ const id='COT-'+Date.now();
  let proof=null;
- if(file){try{proof=await uploadProofFile(file,'contributions',id)}catch(e){alert('Le justificatif n’a pas pu être enregistré : '+(e.message||e));return;}}
+ try{
+  proof=await uploadProofFile(file,'contributions',id);
+  if(!proof||typeof proof!=='object'||!(proof.url||proof.path||proof.dataUrl||proof.data))
+   throw new Error('Aucun justificatif archivé n’a été confirmé');
+ }catch(e){alert('Le justificatif n’a pas pu être enregistré : '+(e.message||e)+'. La cotisation n’a pas été déclarée.');return;}
  const payment={id,plan,sequence,amount,currency:'XAF',date,method,reference,proof,status:'À vérifier',dueDate:plan==='two'&&sequence===1?g10SecondDueDate(date):''};
  currentMember.contributionPlan=plan;currentMember.contributionPayments.push(payment);
  syncMemberEverywhere(currentMember);persist();
@@ -813,7 +831,7 @@ window.declareContributionPayment=async function(){
  setVal('contributionRef','');setVal('contributionDate','');
  const f=document.getElementById('contributionProof');if(f)f.value='';
  renderContributionMember();renderMemberSituation();refreshDirection();
- alert('Cotisation de '+fmtXAF(amount)+' déclarée. La Direction doit confirmer le paiement.'+(proof?' Justificatif archivé.':''));
+ alert('Cotisation de '+fmtXAF(amount)+' déclarée avec justificatif archivé. La Direction doit confirmer le paiement.');
 };
 window.openMembershipInfo=function(){openInfoCard('Droit d’adhésion','Droit d’adhésion : <b>'+fmtXAF(RATES.membership)+'</b>, une seule fois, <b>hors frais de retrait</b>.');};
 window.openContributionInfo=function(){openInfoCard('Cotisation annuelle','<b>Option 1 :</b> '+fmtXAF(RATES.annual)+' en une seule fois.<br><b>Option 2 :</b> '+fmtXAF(RATES.half)+' maintenant, puis '+fmtXAF(RATES.half)+' au plus tard la veille du sixième mois après le premier versement, et au plus tard le 30 décembre de la même année.');};
@@ -1458,4 +1476,103 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }catch(e){console.error('Validation Direction',e);return alert('Impossible de vérifier les pièces sur Firebase. Aucune validation effectuée.');}
   return original.apply(this,arguments);
  };
+})();
+
+
+/* G10_COTISATION_JUSTIFICATIF_OBLIGATOIRE_V1
+   La déclaration est impossible sans preuve et une déclaration ancienne incomplète
+   peut être régularisée sans nouveau paiement ni suppression de l'historique. */
+(function(){
+ 'use strict';
+ const hasProof=p=>!!(p&&typeof p==='object'&&(p.url||p.path||p.dataUrl||p.data));
+ function renderRepair(){
+  const host=document.getElementById('contributionNextBox')?.parentElement||document.getElementById('contributionUnlocked');
+  if(!host)return;
+  let pane=document.getElementById('g10MissingContributionProof');
+  const m=typeof currentMember!=='undefined'?currentMember:null;
+  const missing=(Array.isArray(m?.contributionPayments)?m.contributionPayments:[])
+     .filter(p=>p&&p.status!=='Confirmé'&&!hasProof(p.proof));
+  if(!missing.length){if(pane)pane.remove();return;}
+  if(!pane){
+   pane=document.createElement('section');pane.id='g10MissingContributionProof';
+   pane.setAttribute('role','region');pane.setAttribute('aria-label','Justificatifs manquants');
+   pane.style.cssText='margin:12px 0;padding:14px;background:#fff5e9;color:#603b15;border:1px solid #edbf85;border-radius:11px';
+   host.appendChild(pane);
+  }
+  pane.replaceChildren();
+  const heading=document.createElement('strong');
+  heading.textContent='Justificatif manquant — cotisation déjà déclarée';
+  pane.appendChild(heading);
+  const desc=document.createElement('p');
+  desc.textContent='Joignez le reçu de transaction à la déclaration existante. Aucun second paiement ne sera créé.';
+  pane.appendChild(desc);
+  for(const item of missing){
+   const wrap=document.createElement('div');wrap.style.cssText='margin:10px 0;padding:9px;background:white;border-radius:9px';
+   const title=document.createElement('p');title.style.cssText='margin:0 0 7px;font-weight:700';
+   title.textContent=(item.plan==='two'?'Versement '+String(item.sequence||1)+'/2':'Cotisation annuelle')+' — '+Number(item.amount||0).toLocaleString('fr-FR')+' FCFA · '+String(item.date||'Date manquante')+' · réf. '+String(item.reference||'—');
+   wrap.appendChild(title);
+   const label=document.createElement('label');label.textContent='Justificatif de transaction (obligatoire) ';
+   label.style.cssText='display:block;font-size:13px;margin-bottom:8px';
+   const input=document.createElement('input');input.type='file';input.accept='application/pdf,image/*';
+   input.style.cssText='display:block;width:100%;margin-top:6px';input.setAttribute('aria-label','Choisir le justificatif manquant');
+   label.appendChild(input);wrap.appendChild(label);
+   const button=document.createElement('button');button.type='button';button.className='btn btn-primary';button.textContent='Joindre au paiement existant';
+   button.addEventListener('click',async()=>{
+    const selected=input.files?.[0];
+    if(!selected)return alert('Sélectionnez un justificatif avant de continuer.');
+    if(selected.size<=0)return alert('Le fichier justificatif est vide.');
+    if(!(String(selected.type||'').startsWith('image/')||selected.type==='application/pdf'||/\.(pdf|png|jpg|jpeg|webp|heic|heif)$/i.test(selected.name||'')))
+     return alert('Joignez une image ou un PDF.');
+    if(typeof db==='undefined'||!db||typeof currentAuthUser==='undefined'||!currentAuthUser||typeof saveMemberToFirebase!=='function'||typeof uploadProofFile!=='function')
+     return alert('Connexion Firebase nécessaire pour enregistrer cette pièce.');
+    if(button.disabled)return;
+    button.disabled=true;button.textContent='Enregistrement du justificatif…';
+    try{
+     const proof=await uploadProofFile(selected,'contributions',item.id);
+     if(!hasProof(proof))throw new Error('Le stockage n’a pas confirmé le justificatif.');
+     const original=typeof currentMember!=='undefined'?currentMember:null;
+     if(!original||!original.contributionPayments?.some(p=>p.id===item.id&&p.status!=='Confirmé'&&!hasProof(p.proof)))
+      throw new Error('La déclaration a changé. Actualisez la page.');
+     const revised={...original,contributionPayments:original.contributionPayments.map(p=>p.id===item.id?{...p,proof}:p)};
+     await saveMemberToFirebase(revised);
+     Object.assign(original,revised);
+     if(typeof syncMemberEverywhere==='function')syncMemberEverywhere(original);
+     if(typeof persist==='function')persist();
+     if(typeof renderContributionMember==='function')renderContributionMember();
+     if(typeof refreshDirection==='function')refreshDirection();
+     alert('Justificatif ajouté à la déclaration existante. La Direction peut maintenant l’examiner.');
+    }catch(err){
+     console.error('Justificatif de cotisation',err);
+     alert('Pièce non enregistrée : '+(err.message||err));
+    }finally{
+     button.disabled=false;button.textContent='Joindre au paiement existant';
+    }
+   });
+   wrap.appendChild(button);pane.appendChild(wrap);
+  }
+ }
+ const oldMemberRender=window.renderContributionMember;
+ if(typeof oldMemberRender==='function')window.renderContributionMember=function(){
+  const result=oldMemberRender.apply(this,arguments);
+  renderRepair();
+  return result;
+ };
+ const oldConfirm=window.confirmContributionPayment;
+ if(typeof oldConfirm==='function')window.confirmContributionPayment=function(memberId,paymentId){
+  const m=(typeof applications!=='undefined'&&Array.isArray(applications))?applications.find(m=>String(m.id)===String(memberId)):null;
+  const p=m?.contributionPayments?.find(p=>String(p.id)===String(paymentId));
+  if(!m||!p)return alert('Cotisation introuvable. Actualisez la Direction.');
+  if(!hasProof(p.proof))return alert('Confirmation impossible : le justificatif de transaction est absent. Demandez à l’adhérent de joindre la pièce à sa cotisation.');
+  return oldConfirm.apply(this,arguments);
+ };
+ function init(){
+  const input=document.getElementById('contributionProof');
+  if(input){
+   input.required=true;input.setAttribute('aria-required','true');
+   const label=input.closest('label');
+   if(label&&!label.textContent.includes('*'))label.prepend('Justificatif obligatoire * — ');
+  }
+  renderRepair();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
