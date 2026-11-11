@@ -1238,6 +1238,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  const storedPaymentProof=m=>!!m&&(hasStoredFile(m.membershipProof)||hasStoredFile(m.paymentProofData));
  const validMember=m=>!!m?.profileComplete&&!!m?.eligibilityConfirmed;
  function showError(message,section,field){
+  if(byId('smartFormModal')?.classList.contains('open')&&typeof closeModal==='function')closeModal('smartFormModal');
   const body=byId('memberAccordionBody-'+section);
   const card=byId('memberAccordion-'+section);
   if(typeof window.showMemberView==='function')window.showMemberView('account');
@@ -1362,4 +1363,56 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   document.getElementById('memberApp')?.addEventListener('change',e=>{if(e.target?.getAttribute('aria-invalid')==='true'){e.target.removeAttribute('aria-invalid');e.target.style.outline='';}});
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+
+
+/* G10 — contrôle des justificatifs réellement enregistrés avant la notification Direction.
+   Signale également les dossiers historiques incomplets, sans les effacer ni les régulariser. */
+(function(){
+ 'use strict';
+ const hasFile=p=>!!(p&&typeof p==='object'&&(p.dataUrl||p.url||p.path||p.data));
+ const signed=m=>!!m?.formSigned&&(m.signatureMode!=='manual'||hasFile(m.manualSignedProof));
+ const hasPaymentProof=m=>hasFile(m?.membershipProof)||hasFile(m?.paymentProofData);
+ const oldSend=window.sendWhatsAppPayment;
+ if(typeof oldSend==='function')window.sendWhatsAppPayment=async function(){
+  const m=typeof currentMember!=='undefined'?currentMember:null;
+  if(!m||!m.firebaseUid||!m.profileComplete||!m.eligibilityConfirmed||!signed(m)||!m.paymentDeclared||!hasPaymentProof(m)){
+   return oldSend.apply(this,arguments);
+  }
+  if(typeof db==='undefined'||!db)return alert('Impossible de vérifier votre dossier en ligne. Reconnectez-vous puis réessayez.');
+  try{
+   const doc=await db.collection('members').doc(m.firebaseUid).get({source:'server'});
+   const saved=doc.exists?doc.data():null;
+   if(!saved||String(saved.id||'')!==String(m.id||'')||!saved.paymentDeclared||!hasPaymentProof(saved)||!signed(saved)){
+    return alert('Votre paiement ou votre justificatif n’est pas encore enregistré dans Firebase. Vérifiez votre dossier puis réessayez. Aucun message WhatsApp n’a été envoyé.');
+   }
+   return oldSend.apply(this,arguments);
+  }catch(err){
+   console.error('Vérification Firebase avant WhatsApp',err);
+   return alert('Impossible de confirmer le justificatif enregistré sur le serveur. Aucun message WhatsApp n’a été envoyé. Réessayez avec une connexion stable.');
+  }
+ };
+ function missingLegacy(){
+  if(typeof isPrivilegedRole!=='function'||!isPrivilegedRole())return;
+  if(typeof applications==='undefined'||!Array.isArray(applications))return;
+  const body=document.getElementById('applicationRows');if(!body)return;
+  for(const row of body.querySelectorAll('tr')){
+   if(row.querySelector('[data-g10-missing-proof]'))continue;
+   const id=row.cells[0]?.textContent?.trim();
+   const m=applications.find(a=>String(a.id)===id);
+   if(!m||!m.paymentDeclared||m.paymentConfirmed||hasPaymentProof(m))continue;
+   const cell=row.cells[4]||row.lastElementChild;
+   const marker=document.createElement('div');marker.dataset.g10MissingProof='yes';
+   marker.style.cssText='margin-top:6px;color:#a63320;background:#fff1ee;border:1px solid #eeae9e;border-radius:7px;padding:6px 8px;font-weight:750;font-size:12px';
+   marker.textContent='⚠ Justificatif absent — demander la pièce à l’adhérent';
+   cell?.append(marker);
+  }
+ }
+ const oldRender=window.renderApplications;
+ if(typeof oldRender==='function')window.renderApplications=function(){
+  const result=oldRender.apply(this,arguments);
+  missingLegacy();
+  return result;
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',missingLegacy,{once:true});else missingLegacy();
 })();
