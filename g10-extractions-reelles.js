@@ -1786,8 +1786,26 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
      return result;
    };
  }
+ // Les connexions Firebase et la navigation Direction sont asynchrones.
+ // Le seul DOMContentLoaded est trop tôt : installer lorsque Paramètres devient visible.
+ function armEmailPanel(){
+   const settings=document.getElementById('dir-settings');
+   const direction=document.getElementById('directionApp');
+   if(!settings||!direction)return;
+   const check=function(){
+     if(!settings.classList.contains('hidden')&&!direction.classList.contains('hidden'))setupTest();
+   };
+   check();
+   const observer=new MutationObserver(check);
+   observer.observe(settings,{attributes:true,attributeFilter:['class']});
+   observer.observe(direction,{attributes:true,attributeFilter:['class']});
+   document.addEventListener('click',function(event){
+     const nav=event.target.closest&&event.target.closest('button,a');
+     if(nav&&/paramètres/i.test(nav.textContent||''))setTimeout(check,0);
+   },true);
+ }
  if(document.readyState==='loading'){
-   document.addEventListener('DOMContentLoaded',()=>{ordered();sortRows();setupTest();},{once:true});
- }else{ordered();sortRows();setupTest();}
+   document.addEventListener('DOMContentLoaded',()=>{ordered();sortRows();armEmailPanel();},{once:true});
+ }else{ordered();sortRows();armEmailPanel();}
  console.info('G10 : actifs classés par validation décroissante ; test e-mail manuel dans Direction');
 })();
