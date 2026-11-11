@@ -706,3 +706,51 @@ console.info('G10 Adhésion V6.5.16 chargé — états validés restaurés et li
   }
   console.info('G10 — rappel contextuel des dossiers incomplets initialise');
 })();
+
+
+/* G10 — préparation contrôlée du test e-mail Direction.
+   Aucun identifiant SMTP dans le navigateur ; aucune validation ni envoi automatique simulés. */
+(function(){
+ 'use strict';
+ var ID='g10EmailTestPanel';
+ var TO='judicael.edanngomo@gmail.com';
+ var FROM='contact@g10.ga';
+ function entitled(){
+   try{return !!(typeof isPrivilegedRole==='function'&&isPrivilegedRole());}
+   catch(e){return false;}
+ }
+ function install(){
+   if(!entitled())return;
+   var app=document.getElementById('directionApp');
+   if(!app||app.classList.contains('hidden'))return;
+   var section=document.getElementById('dir-settings');
+   if(!section||document.getElementById(ID))return;
+   var card=document.createElement('section');
+   card.id=ID;card.className='card panel';
+   card.style.cssText='margin:16px 0;padding:20px;border:1px solid #d6e1ed;border-radius:14px;';
+   var title=document.createElement('h3');title.textContent='Test des notifications e-mail G10';
+   var info=document.createElement('p');
+   info.textContent='Expéditeur prévu : '+FROM+' · Destinataire unique : '+TO+'. L’envoi automatique depuis G10 nécessite encore un service serveur sécurisé. Ce test prépare un message dans votre logiciel de messagerie : vous devrez vérifier le compte expéditeur et cliquer sur Envoyer.';
+   info.style.cssText='font-size:14px;line-height:1.55;margin:12px 0;';
+   var button=document.createElement('button');button.type='button';button.className='btn btn-light';
+   button.textContent='Préparer un e-mail de test (Outlook)';
+   var status=document.createElement('p');status.style.cssText='font-size:13px;color:#486178;margin-top:12px;';
+   button.addEventListener('click',function(){
+     if(!entitled())return;
+     var subject='[TEST G10] Confirmation de votre adhésion';
+     var body='Bonjour,\n\nCeci est un essai de notification de la plateforme G10.\n\nCe courriel a été préparé depuis l’espace Direction et envoyé manuellement depuis la messagerie officielle, après vérification de l’expéditeur.\n\nUne notification automatique sera envoyée après validation effective de l’adhésion lorsque le service d’envoi sécurisé sera activé.\n\nAccéder à votre espace : https://adhesion.g10.ga/\n\nDirection G10\n\nMESSAGE DE TEST : aucune validation de paiement ou modification de statut.';
+     var url='mailto:'+encodeURIComponent(TO)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+     status.textContent='Votre messagerie va s’ouvrir. Vérifiez que le champ « De » indique bien '+FROM+', puis envoyez manuellement. Aucun e-mail n’a été envoyé automatiquement par G10.';
+     window.location.href=url;
+   });
+   card.appendChild(title);card.appendChild(info);card.appendChild(button);card.appendChild(status);
+   section.insertBefore(card,section.firstChild);
+ }
+ if(typeof window.enterDirection==='function'){
+   var originalEnter=window.enterDirection;
+   window.enterDirection=function(){var ret=originalEnter.apply(this,arguments);setTimeout(install,0);return ret;};
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(install,400);});
+ else setTimeout(install,400);
+ console.info('G10 — préparation de test e-mail Direction installée (envoi manuel)');
+})();
