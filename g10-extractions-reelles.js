@@ -1992,3 +1992,118 @@ function setup(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
 })();
+
+
+/* G10_RECHERCHE_MULTI_SOURCES_EXPORT_20261111 : Recherche lecture seule base initiale + inscriptions Firebase. */
+(function(){
+'use strict';
+const targets=['dir-platform','dir-applications','dir-active'],names=['Base plateforme','Dossiers d’adhésion','Adhérents actifs'];
+const text=v=>String(v??'').trim();
+const normalized=v=>text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
+const numeric=v=>text(v).replace(/\D/g,'');
+const shortPhone=v=>numeric(v).slice(-8);
+function allowed(){try{return typeof isPrivilegedRole==='function'&&isPrivilegedRole();}catch(e){return false;}}
+function arr(key){try{if(key==='platform')return typeof platform!=='undefined'&&Array.isArray(platform)?platform:[];if(key==='applications')return typeof applications!=='undefined'&&Array.isArray(applications)?applications:[];return typeof activeMembers!=='undefined'&&Array.isArray(activeMembers)?activeMembers:[];}catch(e){return [];}}
+function records(){
+ const base=arr('platform'),existing=arr('applications'),accounts=existing.length?existing:arr('activeMembers');
+ const mails=new Set(base.map(x=>normalized(x.email)).filter(Boolean));
+ const phones=new Set(base.map(x=>shortPhone(x.phone||x.telephone||x.whatsapp)).filter(x=>x.length===8));
+ const rows=[];
+ for(const [i,p] of base.entries()){
+  rows.push({source:'Base initiale',type:'base',id:text(p.id||p.firebaseDocId||i+1),name:[p.lastName||p.name,p.lastName2,p.firstName,p.firstName2].filter(Boolean).join(' '),email:text(p.email),phone:text(p.phone||p.telephone||p.whatsapp||p.mobile),status:text(p.status||'Non renseigné'),link:'Base',country:text(p.country)});
+ }
+ const seen=new Set();
+ for(const [i,m] of accounts.entries()){
+  const id=text(m.firebaseUid||m.id||m.email||i);if(seen.has(id))continue;seen.add(id);
+  const email=text(m.email),phone=text(m.phone||m.telephone||m.whatsapp||m.mobile);
+  const match=Number.isInteger(m.platformIndex)||(email&&mails.has(normalized(email)))||(shortPhone(phone).length===8&&phones.has(shortPhone(phone)));
+  const active=m.active===true&&m.paymentConfirmed===true;
+  rows.push({source:'Compte d’adhésion',type:active?'active':'pending',id:text(m.id||m.firebaseUid),name:[m.lastName,m.lastName2,m.firstName,m.firstName2].filter(Boolean).join(' '),email,phone,
+   status:active?'Adhésion active':m.paymentDeclared===true?'Paiement déclaré — à vérifier':'Dossier non validé',link:match?'Rapprochement possible':'Non rapproché (à vérifier)',country:text(m.country)});
+ }
+ return {rows,base:base.length,accounts:accounts.length};
+}
+function matches(row,query){
+ const q=normalized(query);if(!q)return true;
+ const num=numeric(query);
+ if(num.length>=7){const ph=numeric(row.phone);return !!(ph&&(ph.includes(num)||ph.endsWith(num.slice(-8))))||numeric(row.id).includes(num);}
+ const hay=normalized([row.id,row.name,row.email,row.phone,row.status,row.source,row.country].join(' '));
+ return q.split(/\s+/).every(w=>hay.includes(w));
+}
+function el(tag,label){const node=document.createElement(tag);if(label!==undefined)node.textContent=label;return node;}
+function csv(rows){
+ const heads=['Origine','Référence','Nom et prénoms','Téléphone/WhatsApp','E-mail','Statut','Rapprochement base','Pays'];
+ const safe=x=>{let v=text(x);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"';};
+ const lines=[heads,...rows.map(m=>[m.source,m.id,m.name,m.phone,m.email,m.status,m.link,m.country])];
+ const url=URL.createObjectURL(new Blob(['\ufeff'+lines.map(a=>a.map(safe).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}));
+ const a=el('a');a.href=url;a.download='G10_recherche_'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function excel(rows){
+ if(!window.ExcelJS){csv(rows);return 'CSV';}
+ const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet('G10 — Recherche');
+ const head=['Origine','Référence','Nom et prénoms','Téléphone/WhatsApp','E-mail','Statut','Rapprochement base','Pays'];
+ ws.columns=head.map((h,i)=>({header:h,key:'c'+i,width:[20,25,35,24,38,32,30,20][i]}));
+ const hr=ws.getRow(1);hr.height=29;hr.eachCell(c=>{c.font={bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF174778'}};});
+ for(const m of rows){const line=ws.addRow([m.source,m.id,m.name,m.phone,m.email,m.status,m.link,m.country]);line.eachCell(c=>{c.numFmt='@';c.alignment={vertical:'middle'};});}
+ ws.views=[{state:'frozen',ySplit:1}];
+ if(rows.length)ws.autoFilter={from:{row:1,column:1},to:{row:Math.max(2,rows.length+1),column:8}};
+ const b=await wb.xlsx.writeBuffer(),url=URL.createObjectURL(new Blob([b],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+ const a=el('a');a.href=url;a.download='G10_recherche_'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),1200);
+ return 'Excel';
+}
+function install(id){
+ if(!allowed())return;
+ const section=document.getElementById(id);
+ if(!section||section.querySelector('.g10-multi-search'))return;
+ const panel=el('section');panel.className='g10-multi-search';panel.style.cssText='padding:16px;margin:14px 0;background:#fff;border:1px solid #c7dbea;border-radius:15px;color:#123b64;';
+ const title=el('h3','Recherche G10 — base initiale et nouveaux inscrits');title.style.margin='0 0 8px';
+ const help=el('p','Recherche par nom, prénom, e-mail, téléphone (+241 ou 0) ou référence. Inclut les comptes créés sans présence dans la base WhatsApp.');help.style.cssText='font-size:13px;line-height:1.5';
+ const group=el('div');group.style.cssText='display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0';
+ const search=el('input');search.type='search';search.placeholder='Ex. Irigo Oroumba, 076416475, +241 76416475';search.setAttribute('aria-label','Recherche adhérent G10');search.style.cssText='flex:2;min-width:230px;padding:10px;border:1px solid #ccdbe9;border-radius:9px';
+ const select=el('select');select.style.cssText='padding:10px;border:1px solid #ccdbe9;border-radius:9px';
+ for(const [val,label] of [['all','Tout'],['base','Base initiale'],['pending','Dossiers non validés'],['active','Adhérents actifs']]){const opt=el('option',label);opt.value=val;select.appendChild(opt);}
+ const refresh=el('button','Rechercher');refresh.type='button';refresh.className='btn btn-light';
+ const exportButton=el('button','Exporter Excel');exportButton.type='button';exportButton.className='btn btn-light';
+ group.append(search,select,refresh,exportButton);
+ const summary=el('p');summary.setAttribute('role','status');summary.style.cssText='font-size:13px;margin:8px 0;color:#315776';
+ const tableWrap=el('div');tableWrap.style.cssText='overflow:auto;max-width:100%';
+ const table=el('table');table.className='table';table.style.cssText='width:100%;border-collapse:collapse;min-width:670px;font-size:12px';
+ const thead=el('thead'),trh=el('tr');for(const h of ['Source','Nom','Téléphone','E-mail','Statut','Référence']){const th=el('th',h);th.style.cssText='background:#eef5fb;text-align:left;padding:9px';trh.appendChild(th);}thead.appendChild(trh);
+ const body=el('tbody');table.append(thead,body);tableWrap.append(table);
+ const foot=el('p','Lecture seule — l’absence de dossier dans G10 ne signifie pas qu’aucun paiement externe n’a été effectué. Ne pas créer ni valider de paiement sans justificatif.');foot.style.cssText='font-size:12px;color:#667e93;margin-top:12px';
+ let filtered=[];
+ function draw(){
+  if(!allowed())return;
+  const data=records();filtered=data.rows.filter(x=>(select.value==='all'||x.type===select.value)&&matches(x,search.value));
+  summary.textContent=filtered.length+' résultat(s) · Base : '+data.base+' · Comptes d’adhésion : '+data.accounts+' actuellement chargés.'+(filtered.length>80?' 80 premiers affichés ; l’export inclura tous les résultats.':'');
+  body.replaceChildren();
+  for(const x of filtered.slice(0,80)){
+   const row=el('tr');
+   for(const value of [x.source,x.name||'—',x.phone||'—',x.email||'—',x.status,x.id+(x.link==='Non rapproché (à vérifier)'?' · non rapproché':'')]){
+    const cell=el('td',value);cell.style.cssText='padding:8px;border-bottom:1px solid #e8eef6;vertical-align:top';row.appendChild(cell);
+   }body.appendChild(row);
+  }
+  if(!filtered.length){const row=el('tr'),cell=el('td','Aucun résultat dans les données actuellement chargées.');cell.colSpan=6;cell.style.padding='12px';row.appendChild(cell);body.appendChild(row);}
+ }
+ search.oninput=draw;select.onchange=draw;refresh.onclick=draw;
+ exportButton.onclick=async()=>{
+  if(!allowed())return;
+  exportButton.disabled=true;
+  try{const kind=await excel(filtered);summary.textContent+=' Export '+kind+' des résultats filtrés lancé.';}
+  catch(e){console.error('Export G10',e);summary.textContent='Export impossible. Vérifiez la connexion Internet.';}
+  finally{exportButton.disabled=false;}
+ };
+ panel.append(title,help,group,summary,tableWrap,foot);
+ section.insertBefore(panel,section.firstChild);
+ draw();
+}
+function init(){
+ const dir=document.getElementById('directionApp');if(!dir)return;
+ const check=()=>{if(!dir.classList.contains('hidden')&&allowed())targets.forEach(install);};
+ check();
+ const observer=new MutationObserver(check);observer.observe(dir,{attributes:true,attributeFilter:['class']});
+ for(const id of targets){const section=document.getElementById(id);if(section)observer.observe(section,{attributes:true,attributeFilter:['class']});}
+ document.addEventListener('click',event=>{const b=event.target.closest&&event.target.closest('button,a');if(b&&/base plateforme|dossiers d.adh.sion|adh.rents actifs/i.test(b.textContent||''))setTimeout(check,0);},true);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
