@@ -1817,3 +1817,75 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  }else{ordered();sortRows();armEmailPanel();}
  console.info('G10 : actifs classés par validation décroissante ; test e-mail manuel dans Direction');
 })();
+
+
+/* G10_NOTIFICATION_SEGMENTS_PREVIEW_20261111
+   Préparation en lecture seule des campagnes ; aucun destinataire n'est transmis
+   au service d'envoi de TEST, et aucun email n'est expédié. */
+(function(){
+ 'use strict';
+ const key='g10NotificationPreview';
+ const safeEmail=x=>typeof x==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x.trim());
+ function authorized(){
+   try{return typeof isPrivilegedRole==='function'&&isPrivilegedRole();}
+   catch(e){return false;}
+ }
+ function candidates(){
+   const all=typeof applications!=='undefined'&&Array.isArray(applications)?applications:[];
+   const unique=new Map();
+   for(const m of all){
+     const email=String(m?.email||'').trim().toLowerCase();
+     if(!safeEmail(email)||m?.notificationOptOut===true||m?.emailOptOut===true)continue;
+     const active=m?.paymentConfirmed===true&&m?.active===true;
+     const pending=!m?.paymentConfirmed&&!m?.active;
+     if(!active&&!pending)continue;
+     // On ne regroupe pas les situations conflictuelles sous un envoi automatique.
+     if(unique.has(email)){
+       unique.set(email,{conflict:true});continue;
+     }
+     unique.set(email,{m,email,type:active?'active':'pending'});
+   }
+   return [...unique.values()].filter(x=>!x.conflict);
+ }
+ const textActive='Bonjour,\n\nNous vous remercions de votre confiance et de votre engagement au sein du G10.\n\nVotre droit d’adhésion a été vérifié et validé par la Direction. Vous pouvez consulter votre dossier et vos documents depuis votre espace personnel : https://adhesion.g10.ga/\n\nLes cotisations sont suivies séparément selon leur état réel dans la plateforme.\n\nLa Direction du G10\ncontact@g10.ga';
+ const textPending='Bonjour,\n\nVous avez créé un compte sur la plateforme d’adhésion G10, mais votre dossier n’est pas encore finalisé.\n\nNous vous invitons à vous reconnecter sur https://adhesion.g10.ga/ pour compléter votre profil, valider votre fiche d’adhésion et, si vous ne l’avez pas encore fait, effectuer le règlement prévu et transmettre son justificatif.\n\nSi votre paiement a déjà été déclaré, n’effectuez pas un second versement : consultez votre dossier et attendez sa vérification par la Direction.\n\nPour toute question, contactez contact@g10.ga.\n\nLa Direction du G10';
+ function install(){
+   if(!authorized())return;
+   const host=document.getElementById('dir-settings');
+   if(!host||document.getElementById(key))return;
+   const panel=document.createElement('section');panel.id=key;panel.className='card panel';
+   panel.style.cssText='margin:14px 0;padding:20px;border:1px solid #d7e4ef;border-radius:16px;background:#fff';
+   const h=document.createElement('h3');h.textContent='Notifications aux adhérents — préparation';
+   const p=document.createElement('p');p.style.cssText='line-height:1.5;font-size:14px';
+   p.textContent='Deux communications distinctes selon le statut réel. Aucun envoi collectif n’est activé ; la passerelle SMTP actuelle reste limitée au test individuel.';
+   const status=document.createElement('p');status.style.cssText='font-weight:700;margin:12px 0';
+   const select=document.createElement('select');select.setAttribute('aria-label','Type de notification');
+   select.style.cssText='padding:10px;border:1px solid #d7e4ef;border-radius:9px;max-width:100%';
+   for(const [value,label] of [['pending','Dossiers incomplets — relance'],['active','Adhérents actifs — remerciement']]){
+     const o=document.createElement('option');o.value=value;o.textContent=label;select.appendChild(o);
+   }
+   const body=document.createElement('textarea');body.readOnly=true;body.rows=11;
+   body.style.cssText='width:100%;min-height:170px;margin-top:12px;padding:12px;border-radius:10px;border:1px solid #d7e4ef;line-height:1.5';
+   const refresh=document.createElement('button');refresh.type='button';refresh.className='btn btn-light';
+   refresh.textContent='Actualiser les destinataires';
+   const notice=document.createElement('p');notice.style.cssText='color:#626f7f;font-size:12px;margin-top:12px;line-height:1.5';
+   notice.textContent='Prévisualisation seulement. Aucun e-mail envoyé. Avant activation : vérification du statut en base sur le serveur, journal des envois et prévention des doublons.';
+   function update(){
+     const entries=candidates(),pending=entries.filter(x=>x.type==='pending'),active=entries.filter(x=>x.type==='active');
+     status.textContent='Adresses éligibles (aperçu) : '+pending.length+' dossiers incomplets · '+active.length+' adhérents actifs.';
+     body.value=select.value==='active'?textActive:textPending;
+   }
+   select.addEventListener('change',update);refresh.addEventListener('click',update);
+   panel.append(h,p,status,select,body,refresh,notice);
+   host.appendChild(panel);
+   update();
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+ const anchor=document.getElementById('dir-settings');
+ if(anchor){
+   const observer=new MutationObserver(()=>{if(!anchor.classList.contains('hidden'))install();});
+   observer.observe(anchor,{attributes:true,attributeFilter:['class']});
+ }
+ const old=window.refreshDirection;
+ if(typeof old==='function')window.refreshDirection=function(){const result=old.apply(this,arguments);if(document.getElementById(key)){const refresh=document.querySelector('#'+key+' button');if(refresh)refresh.click();}else install();return result;};
+})();
