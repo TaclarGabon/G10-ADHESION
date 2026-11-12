@@ -1771,7 +1771,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    note.textContent='Un seul destinataire autorisé : '+TEST_EMAIL+'. Envoi depuis contact@g10.ga via le service privé Hostinger.';
    btn.onclick=async function(){
      if(!privilegedG10())return;
-     if(!window.auth||!auth.currentUser){note.textContent='Connectez-vous au compte Direction Firebase avant le test.';return;}
+     if(typeof auth==='undefined'||!auth||!auth.currentUser){note.textContent='Connectez-vous au compte Direction Firebase avant le test.';return;}
      if(!window.confirm('Envoyer un e-mail de TEST à '+TEST_EMAIL+' depuis contact@g10.ga ? Aucun dossier ni paiement ne sera modifié.'))return;
      btn.disabled=true;btn.textContent='Envoi en cours…';
      note.textContent='Vérification Firebase et connexion au serveur SMTP…';
