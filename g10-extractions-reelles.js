@@ -1928,8 +1928,8 @@ function install(){
  if(!host||document.getElementById('g10-pilot-real-mails'))return;
  const card=el('section');card.id='g10-pilot-real-mails';card.className='card panel';
  card.style.cssText='margin:16px 0;padding:20px;border:1px solid #b8d3eb;border-radius:16px;background:#fff';
- card.append(el('h3','Envois réels G10 — pilote limité à deux personnes'),
- el('p','Choisissez une personne active et un dossier incomplet. Vérifiez le dossier dans Firebase avant de confirmer chaque envoi. Aucun envoi collectif.'));
+ card.append(el('h3','Envois nominatifs G10 — commencer par deux personnes'),
+ el('p','Commencez par un adhérent actif et un dossier incomplet. Après leur confirmation, vous pourrez continuer individuellement sans revenir dans Hostinger. Aucun envoi collectif.'));
  const blocks=[];
  for(const mode of ['active','incomplete']){
   const group=el('div');group.style.cssText='border-top:1px solid #e1eaf2;margin-top:15px;padding-top:14px';
@@ -1966,7 +1966,7 @@ function install(){
   group.append(title,select,preview,send,status);card.append(group);blocks.push(populate);populate();
  }
  const update=el('button','Actualiser les deux listes');update.type='button';update.className='btn btn-light';update.style.marginTop='12px';update.onclick=()=>blocks.forEach(fn=>fn());
- card.append(update,el('p','Limite serveur : 1 actif + 1 incomplet maximum. Pas de bouton « Envoyer à tous » pendant ce pilote.'));
+ card.append(update,el('p','Un destinataire par envoi, contrôle Firebase, confirmation et historique anti-doublon. Délai d’une minute entre envois, maximum 25 sur 24 heures. Aucun bouton « Envoyer à tous ».'));
  host.appendChild(card);
 }
 function setup(){
