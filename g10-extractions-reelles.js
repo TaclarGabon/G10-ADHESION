@@ -1970,10 +1970,25 @@ function install(){
  host.appendChild(card);
 }
 function setup(){
- const host=document.getElementById('dir-settings');if(!host)return;
- install();
- const watcher=new MutationObserver(()=>{if(!host.classList.contains('hidden'))install();});
+ const host=document.getElementById('dir-settings');
+ const direction=document.getElementById('directionApp');
+ if(!host||!direction)return;
+ function check(){
+  if(!host.classList.contains('hidden')&&!direction.classList.contains('hidden'))install();
+ }
+ check();
+ const watcher=new MutationObserver(check);
  watcher.observe(host,{attributes:true,attributeFilter:['class']});
+ watcher.observe(direction,{attributes:true,attributeFilter:['class']});
+ document.addEventListener('click',function(event){
+  const nav=event.target.closest&&event.target.closest('button,a');
+  if(nav&&/paramètres/i.test(nav.textContent||''))setTimeout(check,0);
+ },true);
+ const oldEntry=window.enterDirection;
+ if(typeof oldEntry==='function')window.enterDirection=function(){
+  const result=oldEntry.apply(this,arguments);
+  setTimeout(check,0);return result;
+ };
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
 })();
