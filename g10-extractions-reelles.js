@@ -1767,13 +1767,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    btn.textContent='Préparer le test dans Outlook';
    const note=document.createElement('p');note.style.cssText='font-size:12px;color:#61778f;margin:12px 0 0;line-height:1.55';
    note.textContent='L’envoi automatique depuis G10 nécessite encore un service serveur sécurisé relié à Hostinger. Ce bouton ouvre seulement un brouillon dans votre messagerie.';
-   btn.onclick=function(){
+   btn.textContent='Envoyer un e-mail de test';
+   note.textContent='Un seul destinataire autorisé : '+TEST_EMAIL+'. Envoi depuis contact@g10.ga via le service privé Hostinger.';
+   btn.onclick=async function(){
      if(!privilegedG10())return;
-     const subject='[TEST G10] Notification officielle d’adhésion';
-     const body='Bonjour,\n\nCeci est un test de présentation des notifications G10.\n\nCe message ne constitue pas une nouvelle validation de paiement ni un reçu officiel.\n\nVous pouvez consulter votre espace personnel : https://adhesion.g10.ga/\n\nLa Direction du G10\n'+OFFICIAL_SENDER;
-     const url='mailto:'+TEST_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-     note.textContent='Vérifiez dans Outlook que le champ « De » indique contact@g10.ga, puis cliquez sur Envoyer. Aucun e-mail n’est parti automatiquement depuis G10.';
-     window.location.href=url;
+     if(!window.auth||!auth.currentUser){note.textContent='Connectez-vous au compte Direction Firebase avant le test.';return;}
+     if(!window.confirm('Envoyer un e-mail de TEST à '+TEST_EMAIL+' depuis contact@g10.ga ? Aucun dossier ni paiement ne sera modifié.'))return;
+     btn.disabled=true;btn.textContent='Envoi en cours…';
+     note.textContent='Vérification Firebase et connexion au serveur SMTP…';
+     try{
+       const token=await auth.currentUser.getIdToken();
+       const response=await fetch('https://g10.ga/g10-mail-api/send-test.php',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:'{}',cache:'no-store',credentials:'omit'});
+       const data=await response.json();
+       note.textContent=(response.ok&&data.ok?'✓ ':'Échec : ')+(data.message||'Réponse inconnue');
+     }catch(err){console.error('G10 e-mail test',err);note.textContent='Test non confirmé. Vérifiez le service Hostinger et la connexion réseau.';}
+     finally{btn.disabled=false;btn.textContent='Envoyer un e-mail de test';}
    };
    panel.append(heading,p,btn,note);
    host.insertBefore(panel,host.firstChild);
