@@ -1896,3 +1896,84 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  const old=window.refreshDirection;
  if(typeof old==='function')window.refreshDirection=function(){const result=old.apply(this,arguments);if(document.getElementById(key)){const refresh=document.querySelector('#'+key+' button');if(refresh)refresh.click();}else install();return result;};
 })();
+
+
+/* G10_PILOTE_2_PERSONNES_SELECTION_111126 — Interface test réel, une personne par catégorie. */
+(function(){
+'use strict';
+const ENDPOINT='https://g10.ga/g10-mail-api/send-selected.php';
+function can(){try{return typeof isPrivilegedRole==='function'&&isPrivilegedRole();}catch(e){return false;}}
+function people(mode){
+ let data=[];
+ try{if(typeof applications!=='undefined'&&Array.isArray(applications))data.push(...applications);
+ if(typeof activeMembers!=='undefined'&&Array.isArray(activeMembers))data.push(...activeMembers);}catch(e){}
+ const out=new Map();
+ for(const m of data){
+  if(!m||!m.firebaseUid||!m.email)continue;
+  const isActive=m.active===true&&m.paymentConfirmed===true;
+  const incomplete=m.active!==true&&m.paymentConfirmed!==true;
+  if(mode==='active'&&!isActive||mode==='incomplete'&&!incomplete)continue;
+  if(m.notificationOptOut===true||m.emailOptOut===true)continue;
+  const email=String(m.email).trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||['contact@g10.ga','judicael.edanngomo@gmail.com'].includes(email))continue;
+  const name=[m.firstName,m.firstName2,m.lastName,m.lastName2].filter(Boolean).join(' ')||m.id||'Adhérent';
+  out.set(String(m.firebaseUid),{uid:String(m.firebaseUid),email,name});
+ }
+ return [...out.values()].sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+}
+function el(tag,value){const e=document.createElement(tag);if(value!==undefined)e.textContent=value;return e;}
+function install(){
+ if(!can())return;
+ const host=document.getElementById('dir-settings');
+ if(!host||document.getElementById('g10-pilot-real-mails'))return;
+ const card=el('section');card.id='g10-pilot-real-mails';card.className='card panel';
+ card.style.cssText='margin:16px 0;padding:20px;border:1px solid #b8d3eb;border-radius:16px;background:#fff';
+ card.append(el('h3','Envois réels G10 — pilote limité à deux personnes'),
+ el('p','Choisissez une personne active et un dossier incomplet. Vérifiez le dossier dans Firebase avant de confirmer chaque envoi. Aucun envoi collectif.'));
+ const blocks=[];
+ for(const mode of ['active','incomplete']){
+  const group=el('div');group.style.cssText='border-top:1px solid #e1eaf2;margin-top:15px;padding-top:14px';
+  const title=el('strong',mode==='active'?'1. Adhérent actif — remerciement':'2. Dossier incomplet — relance');
+  const select=el('select');select.style.cssText='display:block;width:100%;max-width:580px;margin:10px 0;padding:10px;border:1px solid #c7d9ea;border-radius:8px';
+  const preview=el('button','Vérifier le dossier');preview.type='button';preview.className='btn btn-light';
+  const send=el('button','Envoyer à cette personne');send.type='button';send.className='btn btn-green';send.disabled=true;send.style.marginLeft='8px';
+  const status=el('p','');status.style.cssText='font-size:13px;margin:12px 0';status.setAttribute('role','status');
+  let checked='';
+  function populate(){
+   const old=select.value;select.replaceChildren(new Option('— Sélectionner un destinataire —',''));
+   for(const p of people(mode))select.add(new Option(p.name+' · '+p.email,p.uid));
+   select.value=people(mode).some(p=>p.uid===old)?old:'';
+   checked='';send.disabled=true;status.textContent='';
+  }
+  select.onchange=()=>{checked='';send.disabled=true;status.textContent='';};
+  async function request(action){
+   const p=people(mode).find(x=>x.uid===select.value);
+   if(!p){status.textContent='Sélectionnez un dossier.';return;}
+   if(typeof auth==='undefined'||!auth||!auth.currentUser){status.textContent='Connexion Firebase Direction requise.';return;}
+   if(action==='send'&&checked!==p.uid)return;
+   if(action==='send'&&!confirm('Envoyer MAINTENANT un véritable e-mail G10 à '+p.name+' ('+p.email+') ?'))return;
+   preview.disabled=true;send.disabled=true;status.textContent=action==='preview'?'Vérification Firebase en cours…':'Transmission SMTP en cours…';
+   try{
+    const token=await auth.currentUser.getIdToken();
+    const res=await fetch(ENDPOINT,{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({mode,uid:p.uid,action}),credentials:'omit',cache:'no-store'});
+    const data=await res.json();status.textContent=(res.ok&&data.ok?'✓ ':'Échec : ')+(data.message||'Réponse inconnue');
+    checked=action==='preview'&&res.ok&&data.ok?p.uid:'';
+    send.disabled=checked!==p.uid;
+   }catch(err){status.textContent='Service Hostinger non joignable : aucun envoi confirmé.';checked='';send.disabled=true;}
+   finally{preview.disabled=false;if(action==='send')send.disabled=true;}
+  }
+  preview.onclick=()=>request('preview');send.onclick=()=>request('send');
+  group.append(title,select,preview,send,status);card.append(group);blocks.push(populate);populate();
+ }
+ const update=el('button','Actualiser les deux listes');update.type='button';update.className='btn btn-light';update.style.marginTop='12px';update.onclick=()=>blocks.forEach(fn=>fn());
+ card.append(update,el('p','Limite serveur : 1 actif + 1 incomplet maximum. Pas de bouton « Envoyer à tous » pendant ce pilote.'));
+ host.appendChild(card);
+}
+function setup(){
+ const host=document.getElementById('dir-settings');if(!host)return;
+ install();
+ const watcher=new MutationObserver(()=>{if(!host.classList.contains('hidden'))install();});
+ watcher.observe(host,{attributes:true,attributeFilter:['class']});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
+})();
