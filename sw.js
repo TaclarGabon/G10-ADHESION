@@ -1,4 +1,4 @@
-const CACHE='g10-pwa-20261111-pilote-navigation-fix';
+const CACHE='g10-pwa-20261111-recherche-export-multisource';
 const CORE=['./','./manifest.webmanifest','./g10-app-icon.svg','./v65.js?v=65122'];
 
 self.addEventListener('install',event=>{
