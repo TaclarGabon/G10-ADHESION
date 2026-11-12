@@ -1767,23 +1767,30 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    btn.textContent='Préparer le test dans Outlook';
    const note=document.createElement('p');note.style.cssText='font-size:12px;color:#61778f;margin:12px 0 0;line-height:1.55';
    note.textContent='L’envoi automatique depuis G10 nécessite encore un service serveur sécurisé relié à Hostinger. Ce bouton ouvre seulement un brouillon dans votre messagerie.';
-   btn.textContent='Envoyer un e-mail de test';
-   note.textContent='Un seul destinataire autorisé : '+TEST_EMAIL+'. Envoi depuis contact@g10.ga via le service privé Hostinger.';
-   btn.onclick=async function(){
+   // G10_DUAL_TEMPLATE_TEST_20261111 : deux simulations vers une seule adresse.
+   const second=document.createElement('button');second.type='button';second.className='btn btn-light';
+   second.style.cssText='margin-left:10px;margin-top:8px';
+   btn.textContent='Tester le message adhérent actif';
+   second.textContent='Tester le rappel dossier incomplet';
+   note.textContent='SIMULATIONS UNIQUEMENT : les deux e-mails portent [TEST G10], vers '+TEST_EMAIL+'. Aucun envoi collectif.';
+   async function sendTemplate(mode,control){
      if(!privilegedG10())return;
      if(typeof auth==='undefined'||!auth||!auth.currentUser){note.textContent='Connectez-vous au compte Direction Firebase avant le test.';return;}
-     if(!window.confirm('Envoyer un e-mail de TEST à '+TEST_EMAIL+' depuis contact@g10.ga ? Aucun dossier ni paiement ne sera modifié.'))return;
-     btn.disabled=true;btn.textContent='Envoi en cours…';
-     note.textContent='Vérification Firebase et connexion au serveur SMTP…';
+     const label=mode==='active'?'adhérent actif':'dossier incomplet';
+     if(!window.confirm('Envoyer le modèle TEST « '+label+' » à '+TEST_EMAIL+' ? Votre statut réel restera inchangé.'))return;
+     btn.disabled=true;second.disabled=true;control.textContent='Envoi en cours…';
+     note.textContent='Vérification du compte Firebase et du service SMTP Hostinger…';
      try{
        const token=await auth.currentUser.getIdToken();
-       const response=await fetch('https://g10.ga/g10-mail-api/send-test.php',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:'{}',cache:'no-store',credentials:'omit'});
+       const response=await fetch('https://g10.ga/g10-mail-api/send-test.php',{method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({mode}),cache:'no-store',credentials:'omit'});
        const data=await response.json();
        note.textContent=(response.ok&&data.ok?'✓ ':'Échec : ')+(data.message||'Réponse inconnue');
-     }catch(err){console.error('G10 e-mail test',err);note.textContent='Test non confirmé. Vérifiez le service Hostinger et la connexion réseau.';}
-     finally{btn.disabled=false;btn.textContent='Envoyer un e-mail de test';}
-   };
-   panel.append(heading,p,btn,note);
+     }catch(err){console.error('G10 e-mail test',err);note.textContent='Test non confirmé : vérifiez le service Hostinger.';}
+     finally{btn.disabled=false;second.disabled=false;btn.textContent='Tester le message adhérent actif';second.textContent='Tester le rappel dossier incomplet';}
+   }
+   btn.onclick=()=>sendTemplate('active',btn);
+   second.onclick=()=>sendTemplate('incomplete',second);
+   panel.append(heading,p,btn,second,note);
    host.insertBefore(panel,host.firstChild);
  }
  const oldDirection=window.enterDirection;
