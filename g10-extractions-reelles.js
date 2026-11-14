@@ -2197,14 +2197,19 @@ async function open(s){
  const prior=document.getElementById('g10RappelDirectionDialog');if(prior)prior.remove();
  const d=make('dialog');d.id='g10RappelDirectionDialog';
  d.style.cssText='box-sizing:border-box;width:min(690px,94vw);max-height:90vh;overflow:auto;border:1px solid #bcd0e2;border-radius:15px;padding:20px;box-shadow:0 18px 70px #112b4766;color:#123354;background:#fff';
- const heading=make('h3','Rappel — '+s.name+' / '+s.id);d.appendChild(heading);
+ const top=make('div',undefined,'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:-20px;background:#fff;padding:12px 0;z-index:3;border-bottom:1px solid #dce7ef');
+ const heading=make('h3','Rappel — '+s.name+' / '+s.id);heading.style.margin='0';top.appendChild(heading);
+ const closeTop=addButton(top,'✕ Fermer',()=>{d.close();d.remove();});closeTop.style.cssText='flex-shrink:0;background:#e9f1f8;border:1px solid #a8bfd5;border-radius:8px;padding:8px 12px;cursor:pointer;font-weight:600';
+ d.appendChild(top);
+ d.addEventListener('cancel',e=>{e.preventDefault();d.close();d.remove();});
+ d.addEventListener('click',e=>{if(e.target===d){d.close();d.remove();}});
  d.appendChild(make('p',stageLabel(s)+' · '+motive(s),'font-weight:600'));
  const contact=make('p','Courriel : '+(s.email||'non renseigné')+' | WhatsApp : '+(s.phone||'non renseigné'),'font-size:12px');d.appendChild(contact);
  const textarea=make('textarea');textarea.value=message(s);textarea.rows=10;textarea.style.cssText='width:100%;box-sizing:border-box;border:1px solid #aac1d8;border-radius:8px;padding:12px;line-height:1.5;margin:8px 0';d.appendChild(textarea);
  const bar=make('div',undefined,'display:flex;gap:8px;flex-wrap:wrap;margin:10px 0');d.appendChild(bar);
  const confirmation=make('div',undefined,'display:flex;gap:8px;flex-wrap:wrap;margin:12px 0');d.appendChild(confirmation);
  const status=make('p','','font-size:13px;color:#31516a');status.setAttribute('role','status');d.appendChild(status);
- d.appendChild(make('h4','Historique des relances'));
+ const histHeading=make('h4','Suivi / Historique des relances');histHeading.id='g10RappelHistoriqueTitre';d.appendChild(histHeading);
  const history=make('div','Chargement de l’historique Firebase…','font-size:13px;background:#f3f8fc;border:1px solid #dae7f0;border-radius:10px;padding:12px;max-height:180px;overflow:auto');d.appendChild(history);
  const close=addButton(bar,'Fermer',()=>{d.close();d.remove();});
  const digits=whatsappDigits(s.phone);
@@ -2235,7 +2240,7 @@ async function open(s){
  if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');
  function renderHistory(){
   history.replaceChildren();
-  if(!latest.length){history.textContent='Aucune relance confirmée.';return;}
+  if(!latest.length){history.textContent='Aucune relance confirmée pour ce dossier.';return;}
   latest.slice().reverse().forEach(item=>{
    const line=make('div',(item.channel==='whatsapp'?'WhatsApp':'E-mail')+' · '+dateText(item.at)+' · '+(item.byName||item.byEmail||'Compte non identifié')+' · '+(item.reason||''),'padding:7px 0;border-bottom:1px solid #d9e5ef');
    history.appendChild(line);
@@ -2296,14 +2301,17 @@ function install(){
  if(!privileged())return;
  const tbody=document.getElementById(targetId);if(!tbody)return;
  tbody.querySelectorAll('tr').forEach(tr=>{
-  if(tr.querySelector('[data-g10-direction-reminder]'))return;
+  if(tr.querySelector('[data-g10-direction-reminder]')&&tr.querySelector('[data-g10-direction-followup]'))return;
   const s=rowState(tr);if(!s)return;
   const last=tr.cells[tr.cells.length-1];if(!last)return;
   const b=make('button','Rappeler');b.type='button';b.className='btn btn-light';b.dataset.g10DirectionReminder='1';
   b.style.cssText='margin:6px 0 0 5px';
   if(s.stage==='actif')b.textContent='Historique';
   if(s.stage==='verification')b.textContent='Suivi';
-  b.addEventListener('click',()=>open(rowState(tr)||s));last.appendChild(b);
+  if(!tr.querySelector('[data-g10-direction-reminder]')){b.addEventListener('click',()=>open(rowState(tr)||s));last.appendChild(b);}
+  const follow=make('button','Suivi relances');follow.type='button';follow.className='btn btn-light';follow.dataset.g10DirectionFollowup='1';
+  follow.style.cssText='margin:6px 0 0 5px;border:1px solid #a8c5dc;background:#eff6fb';
+  follow.addEventListener('click',()=>open(rowState(tr)||s));last.appendChild(follow);
  });
 }
 let scheduled=false;
