@@ -2335,3 +2335,50 @@ function boot(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+
+/* G10_RAPPEL_CONDITIONS_CONNEXION_V1 — rappel non intrusif, sans consentement automatique.
+   Affiché pour tout adhérent connecté dont eligibilityConfirmed n'est pas true. */
+(function(){
+'use strict';
+const byId=id=>document.getElementById(id);
+function update(){
+ const host=byId('memberApp');
+ if(!host)return;
+ const member=typeof currentMember!=='undefined'?currentMember:null;
+ const authenticated=typeof currentAuthUser!=='undefined'&&!!currentAuthUser;
+ const visible=!host.classList.contains('hidden')&&getComputedStyle(host).display!=='none';
+ let note=byId('g10PendingEligibilityNotice');
+ if(!authenticated||!member||!visible||member.eligibilityConfirmed===true){
+  if(note)note.remove();
+  return;
+ }
+ if(!note){
+  note=document.createElement('section');note.id='g10PendingEligibilityNotice';
+  note.setAttribute('role','status');
+  note.style.cssText='padding:15px;margin:12px 16px;border:1px solid #e2aa52;border-radius:12px;background:#fff8e9;color:#563b14;font-size:14px';
+  const heading=document.createElement('strong');heading.textContent='Votre dossier nécessite une confirmation';
+  const p=document.createElement('p');p.textContent='Votre confirmation des conditions d’adhésion n’est pas encore enregistrée. Merci de consulter ces conditions et de cocher la case obligatoire dans Mon profil, puis d’enregistrer votre profil. Vos informations déjà saisies sont conservées.';
+  p.style.margin='8px 0';
+  const btn=document.createElement('button');btn.type='button';btn.className='btn btn-primary';btn.textContent='Accéder à la confirmation';
+  btn.addEventListener('click',()=>{
+   if(typeof window.showMemberView==='function')window.showMemberView('account');
+   if(typeof window.toggleMemberAccordion==='function')window.toggleMemberAccordion('profile',true);
+   byId('diasporaEligibility')?.scrollIntoView({behavior:'smooth',block:'center'});
+  });
+  note.append(heading,p,btn);host.prepend(note);
+ }
+}
+function boot(){
+ update();
+ const host=byId('memberApp');
+ if(host)new MutationObserver(()=>queueMicrotask(update)).observe(host,{attributes:true,attributeFilter:['class','style']});
+ for(const key of ['hydrateMember','showMemberView','saveProfile']){
+  const original=window[key];if(typeof original!=='function')continue;
+  window[key]=function(){const result=original.apply(this,arguments);Promise.resolve(result).finally(()=>queueMicrotask(update));return result;};
+ }
+ document.addEventListener('click',()=>setTimeout(update,100));
+ document.addEventListener('visibilitychange',update);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
