@@ -2205,6 +2205,10 @@ async function open(s){
  d.addEventListener('click',e=>{if(e.target===d){d.close();d.remove();}});
  d.appendChild(make('p',stageLabel(s)+' · '+motive(s),'font-weight:600'));
  const contact=make('p','Courriel : '+(s.email||'non renseigné')+' | WhatsApp : '+(s.phone||'non renseigné'),'font-size:12px');d.appendChild(contact);
+ const actorWrap=make('div',undefined,'margin:12px 0;display:flex;flex-direction:column;gap:6px');
+ const actorLabel=make('label','Prénom de la personne qui effectue la relance *','font-weight:700;font-size:13px');
+ const actorInput=make('input');actorInput.type='text';actorInput.maxLength=80;actorInput.placeholder='Saisissez votre prénom';actorInput.autocomplete='off';actorInput.style.cssText='width:100%;box-sizing:border-box;padding:10px;border:1px solid #aac1d8;border-radius:8px';
+ actorWrap.append(actorLabel,actorInput);d.appendChild(actorWrap);
  const textarea=make('textarea');textarea.value=message(s);textarea.rows=10;textarea.style.cssText='width:100%;box-sizing:border-box;border:1px solid #aac1d8;border-radius:8px;padding:12px;line-height:1.5;margin:8px 0';d.appendChild(textarea);
  const bar=make('div',undefined,'display:flex;gap:8px;flex-wrap:wrap;margin:10px 0');d.appendChild(bar);
  const confirmation=make('div',undefined,'display:flex;gap:8px;flex-wrap:wrap;margin:12px 0');d.appendChild(confirmation);
@@ -2266,6 +2270,8 @@ async function open(s){
   if((channel==='email'&&!emailOpened)||(channel==='whatsapp'&&!whatsappOpened))
    return alert('Ouvrez d’abord le canal correspondant.');
   const label=channel==='email'?'e-mail':'WhatsApp';
+  const actor=actorInput.value.trim().replace(/\\s+/g,' ');
+  if(actor.length<2){actorInput.focus();return alert('Veuillez saisir votre prénom avant de confirmer la relance.');}
   if(!window.confirm('Confirmez-vous avoir réellement envoyé ce message par '+label+' à '+s.name+' ?'))return;
   busy=true;ec.disabled=true;wc.disabled=true;status.textContent='Enregistrement dans Firebase…';
   try{
@@ -2281,7 +2287,7 @@ async function open(s){
    }
    const entry={id:'r-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),
     at:new Date().toISOString(),channel,reason:motive(s),status:'envoi_declare',
-    byUid:who.uid,byName:String(who.displayName||who.email||who.uid),byEmail:String(who.email||''),
+    byUid:who.uid,byName:actor,byEmail:String(who.email||''),
     to:channel==='email'?s.email:s.phone,message:textarea.value};
    // Mise à jour atomique d'un seul champ du dossier, sans écraser paiements ni validations.
    const FV=(typeof firebase!=='undefined'&&firebase.firestore&&firebase.firestore.FieldValue)||null;
