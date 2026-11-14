@@ -1997,7 +1997,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 /* G10_RECHERCHE_MULTI_SOURCES_EXPORT_20261111 : Recherche lecture seule base initiale + inscriptions Firebase. */
 (function(){
 'use strict';
-const targets=['dir-platform','dir-applications','dir-active'],names=['Base plateforme','Dossiers d’adhésion','Adhérents actifs'];
+const targets=['dir-applications','dir-active'],names=['Dossiers d’adhésion','Adhérents actifs'];
 const text=v=>String(v??'').trim();
 const normalized=v=>text(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ');
 const numeric=v=>text(v).replace(/\D/g,'');
@@ -2106,4 +2106,61 @@ function init(){
  document.addEventListener('click',event=>{const b=event.target.closest&&event.target.closest('button,a');if(b&&/base plateforme|dossiers d.adh.sion|adh.rents actifs/i.test(b.textContent||''))setTimeout(check,0);},true);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+
+/* G10_BASE_PLATEFORME_20_PAR_PAGE_SIDEBAR_FIX_20261114 */
+(function(){
+'use strict';
+function setup(){
+ const section=document.getElementById('dir-platform');
+ const body=document.getElementById('platformRows');
+ if(!section||!body||document.getElementById('g10-platform-pager-20'))return;
+
+ const css=document.createElement('style');
+ css.id='g10-dir-sidebar-height-20261114';
+ css.textContent=[
+ '#directionApp > .sidebar{position:relative!important;top:auto!important;height:auto!important;min-height:100vh!important;align-self:stretch!important;display:flex!important;flex-direction:column!important}',
+ '#directionApp > .sidebar .side-foot{position:static!important;margin-top:auto!important;left:auto!important;right:auto!important;bottom:auto!important}',
+ '#g10-platform-pager-20{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px;margin:16px 0 4px;padding:10px;border:1px solid #d7e4ef;border-radius:12px;background:#f5f9fd;color:#143c61}',
+ '#g10-platform-pager-20 button{border:1px solid #b9cee1;background:white;color:#0b4a7a;border-radius:9px;padding:9px 14px;font-weight:700;cursor:pointer}',
+ '#g10-platform-pager-20 button:disabled{opacity:.4;cursor:not-allowed}',
+ '@media(max-width:760px){#directionApp > .sidebar{position:fixed!important;top:0!important;height:100dvh!important;min-height:0!important;display:block!important;overflow-y:auto!important}#directionApp > .sidebar .side-foot{margin-top:15px!important}}'
+ ].join('');
+ document.head.appendChild(css);
+
+ const wrap=body.closest('.table-wrap');
+ if(!wrap)return;
+ const pager=document.createElement('div');
+ pager.id='g10-platform-pager-20';
+ pager.setAttribute('role','navigation');
+ pager.setAttribute('aria-label','Pagination de la base plateforme');
+ const prev=document.createElement('button');
+ const next=document.createElement('button');
+ const label=document.createElement('span');
+ prev.type='button';next.type='button';
+ prev.textContent='‹ Précédent';next.textContent='Suivant ›';
+ pager.append(prev,label,next);
+ wrap.insertAdjacentElement('afterend',pager);
+ let page=1,scheduled=false;
+ function draw(){
+  scheduled=false;
+  const rows=Array.from(body.children).filter(el=>el.tagName==='TR');
+  const number=rows.length;
+  const pages=Math.max(1,Math.ceil(number/20));
+  page=Math.min(Math.max(1,page),pages);
+  const start=(page-1)*20;
+  rows.forEach((row,i)=>{row.style.display=(i>=start&&i<start+20)?'':'none';});
+  label.textContent='Page '+page+' / '+pages+' — '+number+' résultat(s)';
+  prev.disabled=page<=1;
+  next.disabled=page>=pages;
+ }
+ function schedule(){if(!scheduled){scheduled=true;queueMicrotask(draw);}}
+ prev.addEventListener('click',()=>{if(page>1){page--;draw();wrap.scrollIntoView({block:'start',behavior:'smooth'});}});
+ next.addEventListener('click',()=>{page++;draw();wrap.scrollIntoView({block:'start',behavior:'smooth'});});
+ const search=document.getElementById('platformSearch');
+ if(search)search.addEventListener('input',()=>{page=1;schedule();});
+ new MutationObserver(schedule).observe(body,{childList:true});
+ draw();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
 })();
