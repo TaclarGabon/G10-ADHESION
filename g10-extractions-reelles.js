@@ -2101,3 +2101,87 @@ function setup(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',setup,{once:true});else setup();
 })();
+
+
+/* G10 Rappel Direction DOM 2026-11-14 */
+(function(){
+'use strict';
+// Vue existante : aucune requête Firebase, aucune modification des dossiers.
+const targetId='applicationRows';
+function escapeNorm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+function record(id){
+  try {
+    if(typeof applications!=='undefined' && Array.isArray(applications))
+      return applications.find(x=>String(x.id||'')===String(id))||null;
+  }catch(e){}
+  return null;
+}
+function rowState(tr){
+  const cells=Array.from(tr.cells||[]);
+  if(cells.length<7)return null;
+  const id=(cells[0].textContent||'').trim();
+  if(!/^G10-ADH-[\w-]+$/i.test(id))return null;
+  const m=record(id);
+  const profile=m?!!m.profileComplete:/\bok\b|complet/i.test(escapeNorm(cells[2].textContent));
+  const signed=m?!!m.formSigned:/\bsign[ée]\b|\bok\b/i.test(escapeNorm(cells[3].textContent));
+  const paid=m?!!(m.paymentDeclared||m.paymentConfirmed):/d[ée]clar[ée]|valid[ée]/i.test(escapeNorm(cells[4].textContent));
+  const identity=(cells[1].querySelector('b,strong')?.textContent||cells[1].textContent||'').trim().split(/\n/)[0];
+  const email=(m?.email||cells[1].textContent.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0]||'').trim();
+  const phone=(m?.phone||m?.whatsapp||m?.telephone||'').trim();
+  return {id,profile,signed,paid,identity,email,phone};
+}
+function message(s){
+ const lines=['Bonjour,','','Nous vous remercions pour votre démarche d’adhésion au G10.',''];
+ if(!s.profile&&!s.signed)lines.push('Votre profil et votre fiche d’adhésion restent à compléter. Merci de remplir votre profil, puis de signer électroniquement votre fiche.');
+ else if(!s.profile)lines.push('Votre fiche est signée, mais votre profil reste à compléter. Merci de vérifier les informations manquantes.');
+ else if(!s.signed)lines.push('Votre profil est complet. Il vous reste à signer électroniquement votre fiche d’adhésion.');
+ else lines.push('Votre profil et votre fiche d’adhésion sont bien complétés. Merci.');
+ lines.push('');
+ if(s.paid)lines.push('Votre déclaration de paiement est enregistrée et reste soumise à la vérification de la Direction.');
+ else lines.push('Le règlement du droit d’adhésion pourra être effectué lorsque vous le souhaiterez, avec son justificatif. Aucun paiement immédiat n’est exigé par ce rappel.');
+ lines.push('','Connectez-vous à votre espace : https://adhesion.g10.ga/','Les capsules G10 peuvent vous guider dans ces étapes.','Si vous venez de terminer ces démarches, veuillez ignorer ce rappel.','','Cordialement,','L’équipe G10');
+ return lines.join('\n');
+}
+function open(s){
+ const existing=document.getElementById('g10RappelDirectionDialog');if(existing)existing.remove();
+ const d=document.createElement('dialog');d.id='g10RappelDirectionDialog';
+ d.style.cssText='box-sizing:border-box;width:min(630px,94vw);max-height:90vh;overflow:auto;border:1px solid #bcd0e2;border-radius:15px;padding:20px;box-shadow:0 18px 70px #112b4766;color:#123354;background:#fff';
+ const title=document.createElement('h3');title.textContent='Rappel — '+s.id;d.appendChild(title);
+ const info=document.createElement('p');info.textContent='Message adapté aux états visibles du dossier. Vérifiez les coordonnées avant chaque envoi.';d.appendChild(info);
+ const contact=document.createElement('p');contact.style.fontSize='12px';contact.textContent='Courriel : '+(s.email||'non renseigné')+' | WhatsApp : '+(s.phone||'non renseigné');d.appendChild(contact);
+ const textarea=document.createElement('textarea');textarea.value=message(s);textarea.rows=12;textarea.style.cssText='width:100%;box-sizing:border-box;border:1px solid #aac1d8;border-radius:8px;padding:12px;line-height:1.5;margin:8px 0';d.appendChild(textarea);
+ const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end';d.appendChild(bar);
+ function btn(label,fn){const b=document.createElement('button');b.type='button';b.className='btn btn-light';b.textContent=label;b.addEventListener('click',fn);bar.appendChild(b);return b;}
+ const digits=s.phone.startsWith('+')?s.phone.replace(/\D/g,''):'';
+ const wb=btn('Ouvrir WhatsApp',()=>window.open('https://wa.me/'+digits+'?text='+encodeURIComponent(textarea.value),'_blank','noopener,noreferrer'));wb.disabled=digits.length<9||digits.length>15;
+ const eb=btn('Préparer un e-mail',()=>{window.location.href='mailto:'+encodeURIComponent(s.email)+'?subject='+encodeURIComponent('G10 — Votre dossier d’adhésion')+'&body='+encodeURIComponent(textarea.value);});eb.disabled=!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email);
+ btn('Fermer',()=>{d.close();d.remove()});
+ document.body.appendChild(d);
+ if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');
+}
+function install(){
+ const tbody=document.getElementById(targetId);if(!tbody)return;
+ tbody.querySelectorAll('tr').forEach(tr=>{
+   if(tr.querySelector('[data-g10-direction-reminder]'))return;
+   const s=rowState(tr);if(!s)return;
+   const last=tr.cells[tr.cells.length-1];if(!last)return;
+   const button=document.createElement('button');button.type='button';button.className='btn btn-light';button.textContent='Rappeler';button.dataset.g10DirectionReminder='1';
+   button.style.cssText='margin:6px 0 0 5px';
+   button.addEventListener('click',()=>open(rowState(tr)||s));
+   last.appendChild(button);
+ });
+}
+let scheduled=false;
+function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;install();});}
+function boot(){
+ const body=document.getElementById(targetId);
+ if(body)new MutationObserver(schedule).observe(body,{childList:true});
+ const direction=document.getElementById('directionApp')||document.body;
+ new MutationObserver(muts=>{
+   if(!document.getElementById(targetId))return;
+   if(muts.some(m=>m.type==='childList' && (m.target.id===targetId||m.target.contains?.(document.getElementById(targetId)))))schedule();
+ }).observe(direction,{subtree:true,childList:true});
+ install();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
