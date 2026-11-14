@@ -554,3 +554,80 @@ observer.observe(document.body,{subtree:true,childList:true});
 refresh();
 console.info('G10 Direction : recherche ciblée et pagination 20/page activées');
 })();
+
+
+/* G10 Direction — rappels manuels dossiers incomplets — 2026-11-14 */
+(function(){
+'use strict';
+function findRecord(id){
+  if(typeof applications==='undefined'||!Array.isArray(applications))return null;
+  return applications.find(function(a){return String(a.id||'')===String(id)})||null;
+}
+function reminder(a){
+  var name=[a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' ').trim()||'Madame, Monsieur';
+  var missing=!a.profileComplete?'votre profil':!a.formSigned?'votre fiche d’adhésion et votre signature électronique':null;
+  if(!missing)return null;
+  return {subject:'G10 — Votre dossier d’adhésion est à compléter',
+    body:'Bonjour '+name+',\n\nNous vous remercions pour votre démarche d’adhésion à la Confédération G10.\n\nAfin de poursuivre votre inscription, nous vous invitons à compléter '+missing+' dans votre espace personnel :\nhttps://adhesion.g10.ga/\n\nVous pouvez vous aider des capsules de présentation G10 partagées dans notre campagne.\n\nSi vous avez déjà effectué cette étape, veuillez ne pas tenir compte de ce rappel.\n\nCordialement,\nL’équipe G10'};
+}
+function waNumber(a){
+  var raw=String(a.phone||a.whatsapp||a.telephone||'').trim();
+  if(!raw||!raw.startsWith('+'))return '';
+  var digits=raw.replace(/\D/g,'');
+  return digits.length>=9&&digits.length<=15?digits:'';
+}
+function openReminder(id){
+  if(typeof isPrivilegedRole==='function'&&!isPrivilegedRole())return;
+  var a=findRecord(id),msg=a&&reminder(a);
+  if(!msg)return alert('Ce dossier ne nécessite pas de rappel de profil ou de signature.');
+  var old=document.getElementById('g10ReminderDialog');if(old)old.remove();
+  var d=document.createElement('dialog');d.id='g10ReminderDialog';
+  d.style.cssText='max-width:min(600px,94vw);width:100%;border:1px solid #c7dbea;border-radius:16px;padding:22px;box-shadow:0 22px 70px #1238;color:#12375d';
+  var h=document.createElement('h3');h.textContent='Rappel du dossier '+String(a.id||'');d.appendChild(h);
+  var p=document.createElement('p');p.textContent='Choisissez le canal après vérification du destinataire. Aucun message n’est envoyé automatiquement.';d.appendChild(p);
+  var preview=document.createElement('textarea');preview.value=msg.body;preview.rows=11;preview.style.cssText='display:block;box-sizing:border-box;width:100%;padding:10px;border:1px solid #b7cddd;border-radius:8px;margin:10px 0';
+  d.appendChild(preview);
+  var info=document.createElement('p');info.style.fontSize='12px';info.textContent='Destinataire : '+(a.email||'aucun e-mail')+' / '+(a.phone||a.whatsapp||a.telephone||'aucun numéro WhatsApp');d.appendChild(info);
+  var row=document.createElement('div');row.style.cssText='display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end';d.appendChild(row);
+  function button(label,fn){var b=document.createElement('button');b.type='button';b.className='btn btn-light';b.textContent=label;b.onclick=fn;row.appendChild(b);return b;}
+  var wa=waNumber(a),email=String(a.email||'').trim();
+  var wb=button('Ouvrir WhatsApp',function(){
+    if(!wa)return;
+    window.open('https://wa.me/'+wa+'?text='+encodeURIComponent(preview.value),'_blank','noopener,noreferrer');
+  });wb.disabled=!wa;
+  var mb=button('Préparer un e-mail',function(){
+    if(!email)return;
+    window.location.href='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(msg.subject)+'&body='+encodeURIComponent(preview.value);
+  });mb.disabled=!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  button('Fermer',function(){d.close();d.remove()});
+  document.body.appendChild(d);
+  if(d.showModal)d.showModal();else d.setAttribute('open','');
+}
+function addButtons(){
+  var section=document.getElementById('dir-applications'),body=document.getElementById('applicationRows');
+  if(!section||!body||!section.contains(body))return;
+  var rs=body.querySelectorAll('tr');
+  rs.forEach(function(tr){
+    var first=tr.querySelector('td'),id=first&&first.textContent.trim(),a=id&&findRecord(id);
+    if(!a||!reminder(a)||tr.querySelector('[data-g10-reminder]'))return;
+    var cells=tr.querySelectorAll('td'),last=cells[cells.length-1];
+    if(!last)return;
+    var btn=document.createElement('button');btn.type='button';btn.className='btn btn-light';btn.dataset.g10Reminder='1';
+    btn.style.marginTop='6px';btn.textContent='Rappeler';
+    btn.addEventListener('click',function(){openReminder(id)});
+    last.appendChild(btn);
+  });
+}
+var prior=window.renderApplications;
+if(typeof prior==='function'){
+  window.renderApplications=function(){var v=prior.apply(this,arguments);addButtons();return v;};
+}
+var pending=false;
+var observer=new MutationObserver(function(muts){
+  if(pending||!muts.some(function(m){return m.type==='childList'&&m.target.closest&&m.target.closest('#applicationRows')}))return;
+  pending=true;requestAnimationFrame(function(){pending=false;addButtons();});
+});
+observer.observe(document.body,{subtree:true,childList:true});
+addButtons();
+console.info('G10 — rappels WhatsApp et e-mail préparés, envoi manuel uniquement');
+})();
