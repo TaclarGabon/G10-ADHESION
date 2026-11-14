@@ -564,11 +564,29 @@ function findRecord(id){
   return applications.find(function(a){return String(a.id||'')===String(id)})||null;
 }
 function reminder(a){
+  if(!a||a.paymentConfirmed===true||a.membershipValidatedAt||a.paymentValidatedAt)return null;
   var name=[a.firstName,a.firstName2,a.lastName,a.lastName2].filter(Boolean).join(' ').trim()||'Madame, Monsieur';
-  var missing=!a.profileComplete?'votre profil':!a.formSigned?'votre fiche d’adhésion et votre signature électronique':null;
-  if(!missing)return null;
-  return {subject:'G10 — Votre dossier d’adhésion est à compléter',
-    body:'Bonjour '+name+',\n\nNous vous remercions pour votre démarche d’adhésion à la Confédération G10.\n\nAfin de poursuivre votre inscription, nous vous invitons à compléter '+missing+' dans votre espace personnel :\nhttps://adhesion.g10.ga/\n\nVous pouvez vous aider des capsules de présentation G10 partagées dans notre campagne.\n\nSi vous avez déjà effectué cette étape, veuillez ne pas tenir compte de ce rappel.\n\nCordialement,\nL’équipe G10'};
+  var profile=!!a.profileComplete, signed=!!a.formSigned, declared=!!a.paymentDeclared;
+  var lines=['Bonjour '+name+',','','Nous vous remercions pour votre démarche d’adhésion à la Confédération G10.',''];
+  if(!profile&&!signed){
+    lines.push('Votre profil et votre fiche d’adhésion ne sont pas encore complets. Nous vous invitons à terminer votre profil, puis à remplir et signer électroniquement votre fiche.');
+  }else if(!profile&&signed){
+    lines.push('Votre signature électronique est bien enregistrée, mais votre profil reste incomplet. Merci de vérifier et de compléter les informations manquantes dans votre espace personnel.');
+  }else if(profile&&!signed){
+    lines.push('Votre profil est bien complété. Il vous reste à remplir et à signer électroniquement votre fiche d’adhésion.');
+  }else{
+    lines.push('Votre profil et votre fiche d’adhésion sont bien complétés. Merci pour ces démarches.');
+  }
+  lines.push('');
+  if(declared){
+    lines.push('Votre paiement a été déclaré. Si son justificatif a été transmis, il reste soumis à la vérification de la Direction. Aucune nouvelle déclaration n’est nécessaire pour ce rappel.');
+  }else if(profile&&signed){
+    lines.push('Si vous souhaitez poursuivre votre adhésion, vous pourrez effectuer le règlement du droit d’adhésion et joindre son justificatif. Il n’y a aucune obligation de le faire immédiatement.');
+  }else{
+    lines.push('Le règlement du droit d’adhésion pourra être effectué ultérieurement, une fois les étapes administratives terminées.');
+  }
+  lines.push('','Accédez à votre espace personnel : https://adhesion.g10.ga/','Vous pouvez également consulter les capsules explicatives de la campagne G10.','Si vous venez de terminer ces démarches, veuillez ne pas tenir compte de ce rappel.','','Cordialement,','L’équipe G10');
+  return {subject:'G10 — Suivi personnalisé de votre dossier d’adhésion',body:lines.join('\n')};
 }
 function waNumber(a){
   var raw=String(a.phone||a.whatsapp||a.telephone||'').trim();
@@ -579,7 +597,7 @@ function waNumber(a){
 function openReminder(id){
   if(typeof isPrivilegedRole==='function'&&!isPrivilegedRole())return;
   var a=findRecord(id),msg=a&&reminder(a);
-  if(!msg)return alert('Ce dossier ne nécessite pas de rappel de profil ou de signature.');
+  if(!msg)return alert('Ce dossier est déjà validé ou aucun rappel n’est nécessaire.');
   var old=document.getElementById('g10ReminderDialog');if(old)old.remove();
   var d=document.createElement('dialog');d.id='g10ReminderDialog';
   d.style.cssText='max-width:min(600px,94vw);width:100%;border:1px solid #c7dbea;border-radius:16px;padding:22px;box-shadow:0 22px 70px #1238;color:#12375d';
