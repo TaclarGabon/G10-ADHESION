@@ -2008,7 +2008,7 @@ function initModule(cfg){
  const title=document.createElement('div');title.textContent='Rechercher parmi les '+cfg.label;title.style.cssText='font-weight:700;color:#103d68;margin-bottom:9px';
  const controls=document.createElement('div');controls.style.cssText='display:flex;flex-wrap:wrap;gap:8px';
  const search=document.createElement('input');search.type='search';search.placeholder='Nom, référence ou contact';search.setAttribute('aria-label','Rechercher '+cfg.label);search.style.cssText='flex:2;min-width:180px;padding:10px;border:1px solid #bacfe2;border-radius:8px';
- const select=document.createElement('select');select.setAttribute('aria-label','Choisir un nom');select.style.cssText='flex:2;min-width:170px;max-width:100%;padding:10px;border:1px solid #bacfe2;border-radius:8px';
+ const select=document.createElement('select');select.setAttribute('aria-label',cfg.body==='applicationRows'?'Filtrer par statut':'Choisir un nom');select.style.cssText='flex:2;min-width:170px;max-width:100%;padding:10px;border:1px solid #bacfe2;border-radius:8px';
  const reset=document.createElement('button');reset.type='button';reset.className='btn btn-light';reset.textContent='Tout afficher';controls.append(search,select,reset);
  const bottom=document.createElement('div');bottom.style.cssText='display:flex;justify-content:space-between;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px';
  const counter=document.createElement('span');counter.setAttribute('role','status');counter.style.cssText='font-size:12px;color:#48637e';
@@ -2017,19 +2017,36 @@ function initModule(cfg){
  prev.type=next.type='button';prev.className=next.className='btn btn-light';prev.textContent='Précédent';next.textContent='Suivant';indicator.style.cssText='font-weight:600;font-size:12px';nav.append(prev,indicator,next);bottom.append(counter,nav);
  panel.append(title,controls,bottom);if(wrap)card.insertBefore(panel,wrap);else card.appendChild(panel);
  let page=1,selected='';
+ const statusMode=cfg.body==='applicationRows';
  const rows=()=>Array.from(tbody.children).filter(r=>r.tagName==='TR');
  const name=r=>(r.cells?.[1]?.textContent||r.cells?.[0]?.textContent||'').trim();
  const id=r=>(r.cells?.[0]?.textContent||'').trim()+' | '+name(r);
+ function statusOf(r){
+  const profile=norm(r.cells?.[2]?.textContent),signature=norm(r.cells?.[3]?.textContent),payment=norm(r.cells?.[4]?.textContent);
+  const signed=signature.includes('electronique')||signature.includes('signe');
+  const verified=payment.includes('confirme')||payment.includes('valide')||payment.includes('verifie');
+  if(!profile.includes('ok'))return 'incomplete';
+  if(!signed||signature.includes('a signer'))return 'signature';
+  if(payment.includes('a verifier')||payment.includes('controle'))return 'review';
+  if(payment.includes('non declare')||payment.includes('a payer'))return 'payment';
+  if(verified)return 'ready';
+  return 'other';
+ }
  function paint(){
-  const all=rows(),q=norm(search.value),matches=all.filter(r=>!q||norm(r.textContent).includes(q));
-  const found=selected?matches.find(r=>id(r)===selected):null;
-  const list=selected?(found?[found]:[]):matches;
+  const all=rows(),q=norm(search.value),matches=all.filter(r=>(!q||norm(r.textContent).includes(q))&&(!statusMode||!selected||statusOf(r)===selected));
+  const found=!statusMode&&selected?matches.find(r=>id(r)===selected):null;
+  const list=!statusMode&&selected?(found?[found]:[]):matches;
   const pages=Math.max(1,Math.ceil(list.length/20));page=Math.min(Math.max(1,page),pages);
   const start=(page-1)*20,visible=new Set(list.slice(start,start+20));
   all.forEach(r=>{r.hidden=!visible.has(r);r.style.display=visible.has(r)?'':'none';});
-  select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent='Choisir un nom (facultatif)';select.appendChild(first);
-  matches.forEach(r=>{const o=document.createElement('option');o.value=id(r);o.textContent=name(r)||id(r);select.appendChild(o);});
-  select.value=selected&&Array.from(select.options).some(x=>x.value===selected)?selected:'';
+  select.replaceChildren();
+  if(statusMode){
+   [['','Tous les dossiers'],['ready','Paiement confirmé — validation à examiner'],['incomplete','Dossiers incomplets'],['signature','Fiche à signer'],['payment','Paiement non déclaré'],['review','Paiement à vérifier'],['other','Autres situations']].forEach(([value,label])=>{const o=document.createElement('option');o.value=value;o.textContent=label;select.appendChild(o);});
+  }else{
+   const first=document.createElement('option');first.value='';first.textContent='Choisir un nom (facultatif)';select.appendChild(first);
+   all.filter(r=>!q||norm(r.textContent).includes(q)).forEach(r=>{const o=document.createElement('option');o.value=id(r);o.textContent=name(r)||id(r);select.appendChild(o);});
+  }
+  select.value=selected;
   counter.textContent=list.length?((start+1)+' à '+Math.min(start+20,list.length)+' sur '+list.length+' '+cfg.label):'Aucun résultat';
   indicator.textContent='Page '+page+' / '+pages;prev.disabled=page===1;next.disabled=page===pages;
  }
