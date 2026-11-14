@@ -622,16 +622,24 @@ function openReminder(id){
   if(d.showModal)d.showModal();else d.setAttribute('open','');
 }
 function addButtons(){
-  var section=document.getElementById('dir-applications'),body=document.getElementById('applicationRows');
-  if(!section||!body||!section.contains(body))return;
-  var rs=body.querySelectorAll('tr');
-  rs.forEach(function(tr){
-    var first=tr.querySelector('td'),id=first&&first.textContent.trim(),a=id&&findRecord(id);
-    if(!a||!reminder(a)||tr.querySelector('[data-g10-reminder]'))return;
-    var cells=tr.querySelectorAll('td'),last=cells[cells.length-1];
-    if(!last)return;
+  // Rendu récent : le tableau visible peut être remplacé et ne plus porter applicationRows.
+  var sec=document.getElementById('dir-applications');
+  var rows=Array.from(document.querySelectorAll('tbody tr')).filter(function(tr){
+    if(sec&&sec.contains(tr))return true;
+    // Ne viser qu'un tableau de dossiers présentant les actions de contrôle Direction.
+    var t=tr.textContent||'';
+    return /G10-ADH-[A-Za-z0-9-]+/.test(t)&&/Voir dossier/.test(t)&&/Supprimer/.test(t);
+  });
+  rows.forEach(function(tr){
+    if(tr.querySelector('[data-g10-reminder]'))return;
+    var cells=tr.querySelectorAll('td');if(cells.length<4)return;
+    var m=(cells[0].textContent||'').match(/G10-ADH-[A-Za-z0-9-]+/i);
+    var id=m&&m[0],a=id&&findRecord(id);
+    if(!a||!reminder(a))return;
+    var last=cells[cells.length-1];
+    if(!/Voir dossier|Valider adhésion|Supprimer/i.test(last.textContent||''))return;
     var btn=document.createElement('button');btn.type='button';btn.className='btn btn-light';btn.dataset.g10Reminder='1';
-    btn.style.marginTop='6px';btn.textContent='Rappeler';
+    btn.style.marginTop='6px';btn.style.marginLeft='5px';btn.textContent='Rappeler';
     btn.addEventListener('click',function(){openReminder(id)});
     last.appendChild(btn);
   });
@@ -642,7 +650,7 @@ if(typeof prior==='function'){
 }
 var pending=false;
 var observer=new MutationObserver(function(muts){
-  if(pending||!muts.some(function(m){return m.type==='childList'&&m.target.closest&&m.target.closest('#applicationRows')}))return;
+  if(pending||!muts.some(function(m){return m.type==='childList'}))return;
   pending=true;requestAnimationFrame(function(){pending=false;addButtons();});
 });
 observer.observe(document.body,{subtree:true,childList:true});
