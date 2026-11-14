@@ -448,309 +448,109 @@ function normalizeValidated(m){
  return m;
 }
 function uniq(list){
- var map={},order=[];(list||[]).forEach(function(m){m=normalizeValidated(m);var k=String(m.id||('mail:'+String(m.email||'').toLowerCase()));if(!map[k]){map[k]=m;order.push(k)}else if(typeof mergeOne==='function')map[k]=normalizeValidated(mergeOne(map[k],m));else map[k]=Object.assign({},map[k],m)});return order.map(function(k){return map[k]});
-}
-function confirmedMembers(){return uniq(applications||[]).filter(validated)}
-function trulyActive(){return uniq(applications||[]).filter(function(m){return typeof g10IsActive==='function'?g10IsActive(m):!!m.active})}
-window.renderApplications=function(){
- var p=uniq(applications||[]).filter(function(a){return !validated(a)}),c=document.getElementById('appCount'),b=document.getElementById('applicationRows');
- if(c)c.textContent=p.length+' dossier'+(p.length>1?'s':'');if(!b)return;
- b.innerHTML=p.length?p.map(function(a){var pr=(a.paymentProofData&&a.paymentProofData.data)?'<br><button class="btn btn-light" onclick="g10Proof(\''+esc(a.id)+'\')">Voir justificatif</button>':'',can=a.profileComplete&&a.formSigned&&a.paymentDeclared&&a.paymentProofData&&a.paymentProofData.data;return '<tr><td><b>'+esc(a.id)+'</b></td><td>'+esc(mname(a)||'À compléter')+'<br><small>'+esc(a.email||'')+'</small></td><td>'+(a.profileComplete?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-warn">À compléter</span>')+'</td><td>'+(a.formSigned?'<span class="badge badge-ok">Signée</span>':'<span class="badge badge-warn">À signer</span>')+'</td><td>'+(a.paymentDeclared?'<span class="badge badge-warn">À vérifier</span>':'<span class="badge badge-off">Non déclaré</span>')+pr+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><button class="btn btn-green" '+(!can?'disabled':'')+' onclick="validateApplication(\''+esc(a.id)+'\')">Valider adhésion</button></td></tr>'}).join(''):'<tr><td colspan="7" class="muted">Aucun dossier en attente de validation.</td></tr>';
-};
-window.renderHistory=function(){
- var rows=confirmedMembers(),c=document.getElementById('historyCount'),b=document.getElementById('historyRows');if(c)c.textContent=rows.length+' dossier'+(rows.length>1?'s':'');if(!b)return;
- b.innerHTML=rows.length?rows.map(function(a){var s=contributionSummary(a),name=mname(a)||a.email||'—';return '<tr><td><b>'+esc(a.id)+'</b></td><td><b>'+esc(name)+'</b><br><small>'+esc(a.email||'')+'</small></td><td><span class="badge badge-ok">Payée & validée</span></td><td>'+esc(s.label)+'</td><td>'+(a.membershipValidatedAt?formatDateFr(a.membershipValidatedAt.slice(0,10)):'—')+'</td><td><div class="history-actions"><button class="btn btn-light" onclick="editHistoryApplication(\''+esc(a.id)+'\')">Éditer</button><button class="btn btn-danger" onclick="deleteHistoryApplication(\''+esc(a.id)+'\')">Supprimer</button></div></td></tr>'}).join(''):'<tr><td colspan="6" class="muted">Aucune adhésion validée pour le moment.</td></tr>';
-};
-window.renderActive=function(){
- activeMembers=trulyActive();var b=document.getElementById('activeRows');if(!b)return;
- b.innerHTML=activeMembers.length?activeMembers.map(function(a){var s=contributionSummary(a);return '<tr><td>'+esc(a.id)+'</td><td><b>'+esc(mname(a)||'—')+'</b></td><td>'+esc(a.email||a.phone||'—')+'</td><td>'+esc(a.country||'—')+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><span class="badge badge-ok">Payée & validée</span></td><td><span class="badge badge-ok">'+esc(s.label)+'</span></td><td><button class="btn btn-light" onclick="g10Receipt(\''+esc(a.id)+'\',\'membership\')">Reçu adhésion</button></td></tr>'}).join(''):'<tr><td colspan="8" class="muted">Aucun adhérent actif pour le moment.</td></tr>';
-};
-window.refreshDirection=function(){
- applications=uniq(applications||[]);activeMembers=trulyActive();var paid=confirmedMembers(),pc=platform.length||settings.platformCount||900;
- var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v};set('kPlatform',pc);set('kInactive',Math.max(0,pc-activeMembers.length));set('kPending',applications.filter(function(a){return !validated(a)}).length);set('kActive',activeMembers.length);set('kRevenue',(paid.length*Number(settings.membershipFee||10))+' €');set('dirMonthly',settings.monthlyContribution+' € × 12');set('dirAnnual',(settings.monthlyContribution*12)+' €');set('dirSemesters',(settings.monthlyContribution*6)+' € + '+(settings.monthlyContribution*6)+' €');
- renderApplications();renderActive();renderPlatform();renderHistory();renderContributionPayments();
-};
-var oldLoad=window.loadMemberFromFirebase;window.loadMemberFromFirebase=async function(user){await oldLoad(user);normalizeValidated(currentMember);if(validated(currentMember)&&db&&user){try{await db.collection('members').doc(user.uid).set(cleanForFirestore({paymentConfirmed:true,status:currentMember.status,active:currentMember.active,updatedAt:new Date().toISOString()}),{merge:true})}catch(e){console.warn('Restauration validation',e)}}};
-var oldSituation=window.renderMemberSituation;window.renderMemberSituation=function(){normalizeValidated(currentMember);oldSituation();if(!currentMember)return;var mem=document.getElementById('situationMembership'),badge=document.getElementById('situationBadge');if(mem&&validated(currentMember))mem.textContent='Adhésion validée';if(badge&&validated(currentMember)&&!currentMember.active){badge.textContent='Adhésion validée — cotisation à démarrer';badge.className='badge badge-info'}};
-var oldHydrate=window.hydrateMember;window.hydrateMember=function(){normalizeValidated(currentMember);oldHydrate()};
-console.info('G10 Adhésion V6.5.16 chargé — états validés restaurés et listes Direction corrigées');
-})();
 
-/* V6.5.22 — rendu Direction robuste : ne jamais laisser un compteur sans lignes. */
+/* G10-ADHESION — recherches ciblées Direction 2026-11-14 */
 (function(){
- window.renderApplications=function(){
-  var raw=Array.isArray(window.applications)?window.applications:(typeof applications!=='undefined'&&Array.isArray(applications)?applications:[]);
-  var list=(typeof uniq==='function'?uniq(raw):raw).filter(function(a){return a && !(typeof validated==='function'?validated(a):a.paymentConfirmed===true);});
-  var c=document.getElementById('appCount'),b=document.getElementById('applicationRows');
-  if(c)c.textContent=list.length+' dossier'+(list.length>1?'s':'');
-  if(!b)return;
-  if(!list.length){b.innerHTML='<tr><td colspan="7" class="muted">Aucun dossier en attente de validation.</td></tr>';return;}
-  b.innerHTML='';
-  list.forEach(function(a){
-   try{
-    var id=String(a.id||'—'), name=(typeof mname==='function'?mname(a):'')||'À compléter';
-    var proof=!!(a.paymentProofData&&a.paymentProofData.data), can=!!(a.profileComplete&&a.formSigned&&a.paymentDeclared&&proof);
-    var tr=document.createElement('tr');
-    tr.innerHTML='<td><b>'+esc(id)+'</b></td><td>'+esc(name)+'<br><small>'+esc(a.email||'')+'</small></td><td>'+(a.profileComplete?'<span class="badge badge-ok">OK</span>':'<span class="badge badge-warn">À compléter</span>')+'</td><td>'+(a.formSigned?'<span class="badge badge-ok">Signée</span>':'<span class="badge badge-warn">À signer</span>')+'</td><td>'+(a.paymentDeclared?'<span class="badge badge-warn">À vérifier</span>':'<span class="badge badge-off">Non déclaré</span>')+(proof?'<br><button class="btn btn-light" onclick="g10Proof(\''+esc(id)+'\')">Voir justificatif</button>':'')+'</td><td>'+esc(a.expertise||a.profession||'—')+'</td><td><button class="btn btn-green" '+(!can?'disabled':'')+' onclick="validateApplication(\''+esc(id)+'\')">Valider adhésion</button></td>';
-    b.appendChild(tr);
-   }catch(e){
-    var tr=document.createElement('tr');tr.innerHTML='<td colspan="7"><b>Dossier à contrôler</b> — affichage partiel sécurisé</td>';b.appendChild(tr);console.error('G10 dossier render',e,a);
-   }
-  });
- };
-})();
-
-
-/* G10 V4 — menu distinct Mes documents dans l'espace adhérent.
-   Ne touche ni aux paiements ni aux données sauvegardées. */
-(function(){
- 'use strict';
- const navSelector='#memberApp';
- function officialButton(){
-  const root=document.getElementById('memberApp');
-  if(!root)return null;
-  const text=x=>(x.textContent||'').replace(/\s+/g,' ').trim();
-  const leaves=[...root.querySelectorAll('*')].filter(x=>x.id!=='g10PersonalDocsNav' && text(x)==='Documents officiels' && ![...x.children].some(c=>text(c)==='Documents officiels'));
-  for(const leaf of leaves){
-   const clickable=leaf.closest('button,a,[onclick],.navbtn,[role="button"]');
-   if(clickable&&root.contains(clickable))return clickable;
-   if(leaf.parentElement&&root.contains(leaf.parentElement))return leaf.parentElement;
-  }
-  return null;
- }
- function installPersonalDocuments(){
-   const official=officialButton();
-   const nav=official&&official.parentElement;
-   const original=document.getElementById('member-docs');
-   if(!nav||!original)return;
-   let button=document.getElementById('g10PersonalDocsNav');
-   if(!button){
-     button=document.createElement('button');
-     button.type='button';
-     button.id='g10PersonalDocsNav';
-     button.className=official&&official.className?official.className:'navbtn';
-     button.style.cssText=official&&official.getAttribute('style')||'';
-     button.removeAttribute('onclick');
-     button.textContent='📁 Mes documents';
-     if(official)official.insertAdjacentElement('afterend',button);else nav.appendChild(button);
-   }
-   let section=document.getElementById('g10PersonalDocumentsView');
-   if(!section){
-     section=document.createElement('section');
-     section.id='g10PersonalDocumentsView';
-     section.className='hidden';
-     section.innerHTML='<div class="topbar"><h2>Mes documents</h2><p>Vos justificatifs personnels et les reçus officiels G10.</p></div><div id="g10PersonalDocsHost"></div>';
-     original.insertAdjacentElement('afterend',section);
-   }
-   button.onclick=function(){if(typeof window.showMemberView==='function')window.showMemberView('personaldocs',button);};
- }
- function showPersonal(){
-   const official=document.getElementById('member-docs'),personal=document.getElementById('g10PersonalDocumentsView');
-   if(!official||!personal)return;
-   if(typeof window.g10PersonalDocs==='function')window.g10PersonalDocs();
-   else if(typeof g10PersonalDocs==='function')g10PersonalDocs();
-   const box=document.getElementById('g10PersonalDocs'),host=document.getElementById('g10PersonalDocsHost');
-   if(box&&host&&box.parentNode!==host)host.appendChild(box);
-   official.classList.add('hidden');personal.classList.remove('hidden');
-   const sidebarButton=officialButton();const nav=sidebarButton&&sidebarButton.parentElement;
-   if(nav){nav.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active'));document.getElementById('g10PersonalDocsNav')?.classList.add('active');}
- }
- function hidePersonal(){
-   document.getElementById('g10PersonalDocumentsView')?.classList.add('hidden');
- }
- const oldView=window.showMemberView;
- if(typeof oldView==='function'){
-  window.showMemberView=function(v,b){
-    if(v==='personaldocs'){
-      installPersonalDocuments();
-      const official=officialButton();
-      const result=oldView.call(this,'docs',official||b);
-      showPersonal();
-      return result;
-    }
-    hidePersonal();
-    return oldView.apply(this,arguments);
-  };
- }
- const oldEnter=window.enterMember;
- if(typeof oldEnter==='function')window.enterMember=function(){const result=oldEnter.apply(this,arguments);setTimeout(installPersonalDocuments,0);return result;};
- const oldHydrate=window.hydrateMember;
- if(typeof oldHydrate==='function')window.hydrateMember=function(){const result=oldHydrate.apply(this,arguments);setTimeout(installPersonalDocuments,0);return result;};
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(installPersonalDocuments,0));else setTimeout(installPersonalDocuments,0);
- const menuObserver=new MutationObserver(()=>{if(document.getElementById('memberApp')&&!document.getElementById('g10PersonalDocsNav'))installPersonalDocuments();});
- menuObserver.observe(document.body,{childList:true,subtree:true});
- console.info('G10 — navigation Mes documents séparée activée');
-})();
-
-
-/* G10 — rappel non bloquant des dossiers d'adhesion incomplets (2026-11-11).
-   Lecture seule : aucun changement de paiement, statut ou donnee Firebase. */
-(function(){
-  'use strict';
-  var dismissed=false, displayedFor='', lastSeen='', pending=false;
-  function member(){
-    try { return (typeof currentMember!=='undefined' && currentMember)||null; }
-    catch(e){ return null; }
-  }
-  function privileged(){
-    try { return typeof isPrivilegedRole==='function' && isPrivilegedRole(); }
-    catch(e){ return true; }
-  }
-  function proof(m){
-    var p=m&&m.paymentProofData;
-    return !!(p&&(typeof p==='string'?p.trim():(p.data||p.url||p.downloadURL)));
-  }
-  function completed(m){
-    return !!(m&&(m.paymentConfirmed===true || m.membershipValidatedAt ||
-      m.paymentValidatedAt || m.receiptSequence || m.active===true));
-  }
-  function state(m){
-    if(!m||completed(m))return null;
-    if(!m.profileComplete)return {title:'Complétez votre profil',desc:'Votre compte est créé, mais votre profil personnel n’est pas encore terminé.',step:'profil'};
-    if(!m.formSigned)return {title:'Validez votre fiche d’adhésion',desc:'Veuillez vérifier votre fiche et accepter les conditions pour poursuivre.',step:'fiche'};
-    if(m.paymentDeclared){
-      if(!proof(m))return {title:'Ajoutez votre justificatif',desc:'Vous avez déjà déclaré un paiement. Ajoutez son justificatif sans effectuer de nouveau versement.',step:'justificatif'};
-      return {title:'Paiement en cours de vérification',desc:'Votre déclaration et votre justificatif sont enregistrés. La Direction doit encore valider votre adhésion. Aucun nouveau paiement n’est demandé.',step:'attente'};
-    }
-    return {title:'Finalisez votre adhésion',desc:'Votre fiche est validée. Il reste à effectuer votre règlement de 6 560 FCFA et à transmettre son justificatif.',step:'paiement'};
-  }
-  function ensureStyle(){
-    if(document.getElementById('g10ReminderStyle'))return;
-    var css=document.createElement('style');
-    css.id='g10ReminderStyle';
-    css.textContent='#g10ReminderOverlay{position:fixed;inset:0;z-index:2147482000;background:rgba(5,20,40,.72);display:flex;align-items:center;justify-content:center;padding:16px}'+
-      '#g10ReminderDialog{width:min(520px,100%);max-height:90dvh;overflow-y:auto;background:#fff;border-radius:18px;padding:24px;box-shadow:0 24px 80px rgba(0,0,0,.22);color:#16324e;font:inherit}'+
-      '#g10ReminderDialog h2{font-size:22px;margin:12px 0}#g10ReminderDialog p{line-height:1.6;margin:10px 0}'+
-      '#g10ReminderDialog .g10-reminder-tag{display:inline-block;background:#fff1d9;color:#895800;border-radius:30px;padding:6px 12px;font-size:13px;font-weight:700}'+
-      '#g10ReminderDialog .g10-reminder-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}'+
-      '#g10ReminderDialog button{cursor:pointer;border-radius:10px;padding:11px 15px;font:inherit;font-weight:700}'+
-      '#g10ReminderNext{background:#123d72;color:#fff;border:1px solid #123d72}'+
-      '#g10ReminderLater{background:white;color:#123d72;border:1px solid #bbcbdc}';
-    document.head.appendChild(css);
-  }
-  function close(){
-    dismissed=true;
-    var root=document.getElementById('g10ReminderOverlay');
-    if(root)root.remove();
-  }
-  function navigate(){
-    close();
-    try{
-      if(typeof window.showMemberView==='function'){
-        var nav=[].slice.call(document.querySelectorAll('#memberApp .navbtn'))
-          .find(function(n){return /mon compte|adhésion|inscription/i.test(n.textContent||'');});
-        window.showMemberView('account',nav||undefined);
+'use strict';
+const configs=[
+  {id:'dir-applications',tbody:'applicationRows',caption:'Rechercher un dossier en attente',prefix:'g10LocalPending'},
+  {id:'dir-active',tbody:'activeRows',caption:'Rechercher un adhérent actif',prefix:'g10LocalActive'}
+];
+const state={};
+function clean(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();}
+function hideBroadSearch(section){
+  const targets=section.querySelectorAll('h1,h2,h3,h4,h5,strong,b,label,div');
+  for(const node of targets){
+    if(node.children.length && node.tagName==='DIV')continue;
+    if(!/^\s*Recherche G10\s*[—-]\s*base initiale et nouveaux inscrits\s*$/i.test(node.textContent||''))continue;
+    let parent=node.closest('.card,.panel,.search-panel,.g10-search-card');
+    if(!parent){
+      let a=node.parentElement;
+      for(let k=0;k<4&&a&&a!==section;k++,a=a.parentElement){
+        if(a.querySelector('table')&&!a.querySelector('#applicationRows,#activeRows')){parent=a;break;}
       }
-      var dest=document.getElementById('member-account');
-      if(dest){dest.classList.remove('hidden');dest.scrollIntoView({behavior:'smooth',block:'start'});}
-      if(typeof window.stepUi==='function')window.stepUi(false);
-    }catch(e){console.warn('G10 rappel navigation',e);}
+    }
+    if(parent && parent!==section && !parent.contains(section.querySelector('#applicationRows,#activeRows'))){
+      parent.style.display='none';
+      parent.dataset.g10HiddenGeneralSearch='1';
+    }
   }
-  function show(m,s){
-    ensureStyle();
-    var old=document.getElementById('g10ReminderOverlay');if(old)old.remove();
-    var overlay=document.createElement('div');overlay.id='g10ReminderOverlay';
-    var dialog=document.createElement('div');dialog.id='g10ReminderDialog';
-    dialog.setAttribute('role','dialog');dialog.setAttribute('aria-modal','true');
-    dialog.setAttribute('aria-labelledby','g10ReminderHeading');
-    var tag=document.createElement('span');tag.className='g10-reminder-tag';
-    tag.textContent=s.step==='attente'?'En cours de vérification':'Dossier incomplet';
-    var head=document.createElement('h2');head.id='g10ReminderHeading';head.textContent='Bienvenue dans votre espace G10';
-    var info=document.createElement('p');info.textContent=s.desc;
-    var subtitle=document.createElement('p');var strong=document.createElement('strong');
-    strong.textContent=s.title;subtitle.appendChild(strong);
-    var tip=document.createElement('p');tip.textContent=s.step==='attente'
-      ?'Vous pouvez consulter votre espace personnel pendant ce traitement.'
-      :'Reprenez simplement à l’étape manquante : vos informations déjà enregistrées sont conservées.';
-    var actions=document.createElement('div');actions.className='g10-reminder-actions';
-    var next=document.createElement('button');next.type='button';next.id='g10ReminderNext';
-    next.textContent=s.step==='attente'?'Consulter mon dossier':'Reprendre mon adhésion';
-    next.addEventListener('click',navigate);
-    var later=document.createElement('button');later.type='button';later.id='g10ReminderLater';
-    later.textContent='Plus tard';later.addEventListener('click',close);
-    actions.appendChild(next);actions.appendChild(later);
-    dialog.appendChild(tag);dialog.appendChild(head);dialog.appendChild(subtitle);
-    dialog.appendChild(info);dialog.appendChild(tip);dialog.appendChild(actions);
-    overlay.appendChild(dialog);document.body.appendChild(overlay);
+}
+function setup(c){
+  const section=document.getElementById(c.id),tbody=document.getElementById(c.tbody);
+  if(!section||!tbody||!section.contains(tbody))return;
+  hideBroadSearch(section);
+  if(state[c.prefix]?.tbody===tbody)return;
+  const table=tbody.closest('table'),wrap=table?.closest('.table-wrap')||table;
+  if(!table||!wrap)return;
+  const bar=document.createElement('div');
+  bar.className='g10-local-search';
+  bar.dataset.g10LocalSearch=c.prefix;
+  bar.innerHTML='<label for="'+c.prefix+'Input">'+c.caption+'</label>'+
+    '<div class="g10-local-search-row"><input id="'+c.prefix+'Input" type="search" list="'+c.prefix+'Options" placeholder="Nom, numéro de dossier, téléphone ou courriel" autocomplete="off">'+
+    '<datalist id="'+c.prefix+'Options"></datalist><button type="button" class="btn btn-light" data-clear>Effacer</button></div>'+
+    '<div class="g10-local-search-foot"><span data-count></span><div class="g10-local-search-pages">'+
+    '<button type="button" class="btn btn-light" data-prev>Précédent</button><span data-page></span>'+
+    '<button type="button" class="btn btn-light" data-next>Suivant</button></div></div>';
+  wrap.parentElement.insertBefore(bar,wrap);
+  const s=state[c.prefix]={tbody,bar,page:1,query:'',limit:20};
+  const input=bar.querySelector('input');
+  input.addEventListener('input',function(){s.query=input.value;s.page=1;render(c);});
+  bar.querySelector('[data-clear]').addEventListener('click',function(){input.value='';s.query='';s.page=1;render(c);input.focus();});
+  bar.querySelector('[data-prev]').addEventListener('click',function(){s.page=Math.max(1,s.page-1);render(c);});
+  bar.querySelector('[data-next]').addEventListener('click',function(){s.page++;render(c);});
+  // La liste réelle est fournie par l'application. Aucun accès ni écriture Firebase supplémentaire.
+  render(c);
+}
+function render(c){
+  const s=state[c.prefix];if(!s||!s.tbody.isConnected)return;
+  const rows=Array.from(s.tbody.children).filter(x=>x.tagName==='TR');
+  const isEmpty=rows.length===1&&/aucun/i.test(rows[0].textContent||'');
+  const actual=isEmpty?[]:rows;
+  const q=clean(s.query);
+  const matched=actual.filter(row=>!q||clean(row.textContent).includes(q));
+  const pages=Math.max(1,Math.ceil(matched.length/s.limit));
+  s.page=Math.min(s.page,pages);
+  const start=(s.page-1)*s.limit,visible=new Set(matched.slice(start,start+s.limit));
+  rows.forEach(row=>{row.hidden=!visible.has(row)&&!isEmpty;if(isEmpty)row.hidden=!!q;});
+  const datalist=s.bar.querySelector('datalist');
+  if(datalist && datalist.dataset.rowCount!==String(actual.length)){
+    datalist.replaceChildren();
+    const unique=new Set();
+    actual.forEach(row=>{
+      const cells=row.querySelectorAll('td');
+      const name=c.id==='dir-applications'?(cells[1]?.textContent||'').split('\n')[0].trim():(cells[1]?.textContent||'').trim();
+      if(name&&name!=='—'&&!unique.has(name)){
+        unique.add(name);const opt=document.createElement('option');opt.value=name;datalist.appendChild(opt);
+      }
+    });
+    datalist.dataset.rowCount=String(actual.length);
   }
-  function refresh(){
-    if(pending)return;
-    pending=true;
-    setTimeout(function(){
-      pending=false;
-      if(privileged()||!document.getElementById('memberApp'))return;
-      var m=member();if(!m)return;
-      var key=String(m.firebaseUid||m.id||m.email||'');
-      if(key!==lastSeen){dismissed=false;displayedFor='';lastSeen=key;}
-      var s=state(m);
-      if(!s){var old=document.getElementById('g10ReminderOverlay');if(old)old.remove();return;}
-      if(dismissed||displayedFor===key)return;
-      displayedFor=key;show(m,s);
-    },180);
-  }
-  if(typeof window.enterMember==='function'){
-    var oldEnter=window.enterMember;
-    window.enterMember=function(){
-      dismissed=false;displayedFor='';lastSeen='';
-      var result=oldEnter.apply(this,arguments);
-      refresh();return result;
-    };
-  }
-  if(typeof window.hydrateMember==='function'){
-    var oldHydrate=window.hydrateMember;
-    window.hydrateMember=function(){var result=oldHydrate.apply(this,arguments);refresh();return result;};
-  }
-  if(typeof window.goHome==='function'){
-    var oldHome=window.goHome;
-    window.goHome=function(){close();lastSeen='';displayedFor='';return oldHome.apply(this,arguments);};
-  }
-  console.info('G10 — rappel contextuel des dossiers incomplets initialise');
-})();
-
-
-/* G10 — préparation contrôlée du test e-mail Direction.
-   Aucun identifiant SMTP dans le navigateur ; aucune validation ni envoi automatique simulés. */
-(function(){
- 'use strict';
- var ID='g10EmailTestPanel';
- var TO='judicael.edanngomo@gmail.com';
- var FROM='contact@g10.ga';
- function entitled(){
-   try{return !!(typeof isPrivilegedRole==='function'&&isPrivilegedRole());}
-   catch(e){return false;}
- }
- function install(){
-   if(!entitled())return;
-   var app=document.getElementById('directionApp');
-   if(!app||app.classList.contains('hidden'))return;
-   var section=document.getElementById('dir-settings');
-   if(!section||document.getElementById(ID))return;
-   var card=document.createElement('section');
-   card.id=ID;card.className='card panel';
-   card.style.cssText='margin:16px 0;padding:20px;border:1px solid #d6e1ed;border-radius:14px;';
-   var title=document.createElement('h3');title.textContent='Test des notifications e-mail G10';
-   var info=document.createElement('p');
-   info.textContent='Expéditeur prévu : '+FROM+' · Destinataire unique : '+TO+'. L’envoi automatique depuis G10 nécessite encore un service serveur sécurisé. Ce test prépare un message dans votre logiciel de messagerie : vous devrez vérifier le compte expéditeur et cliquer sur Envoyer.';
-   info.style.cssText='font-size:14px;line-height:1.55;margin:12px 0;';
-   var button=document.createElement('button');button.type='button';button.className='btn btn-light';
-   button.textContent='Préparer un e-mail de test (Outlook)';
-   var status=document.createElement('p');status.style.cssText='font-size:13px;color:#486178;margin-top:12px;';
-   button.addEventListener('click',function(){
-     if(!entitled())return;
-     var subject='[TEST G10] Confirmation de votre adhésion';
-     var body='Bonjour,\n\nCeci est un essai de notification de la plateforme G10.\n\nCe courriel a été préparé depuis l’espace Direction et envoyé manuellement depuis la messagerie officielle, après vérification de l’expéditeur.\n\nUne notification automatique sera envoyée après validation effective de l’adhésion lorsque le service d’envoi sécurisé sera activé.\n\nAccéder à votre espace : https://adhesion.g10.ga/\n\nDirection G10\n\nMESSAGE DE TEST : aucune validation de paiement ou modification de statut.';
-     var url='mailto:'+encodeURIComponent(TO)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-     status.textContent='Votre messagerie va s’ouvrir. Vérifiez que le champ « De » indique bien '+FROM+', puis envoyez manuellement. Aucun e-mail n’a été envoyé automatiquement par G10.';
-     window.location.href=url;
-   });
-   card.appendChild(title);card.appendChild(info);card.appendChild(button);card.appendChild(status);
-   section.insertBefore(card,section.firstChild);
- }
- if(typeof window.enterDirection==='function'){
-   var originalEnter=window.enterDirection;
-   window.enterDirection=function(){var ret=originalEnter.apply(this,arguments);setTimeout(install,0);return ret;};
- }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(install,400);});
- else setTimeout(install,400);
- console.info('G10 — préparation de test e-mail Direction installée (envoi manuel)');
+  s.bar.querySelector('[data-count]').textContent=matched.length+' dossier(s) trouvé(s) — '+(matched.length?start+1:0)+' à '+Math.min(start+s.limit,matched.length);
+  s.bar.querySelector('[data-page]').textContent='Page '+s.page+' / '+pages;
+  s.bar.querySelector('[data-prev]').disabled=s.page===1;
+  s.bar.querySelector('[data-next]').disabled=s.page>=pages;
+}
+const css=document.createElement('style');css.textContent=
+ '.g10-local-search{padding:12px 14px;margin:12px 0;border:1px solid #d6e3ef;background:#fff;border-radius:12px}'+
+ '.g10-local-search>label{display:block;font-weight:700;color:#123a5c;margin-bottom:8px}'+
+ '.g10-local-search-row{display:flex;gap:8px}.g10-local-search-row input{min-width:0;flex:1;padding:10px;border:1px solid #cbdbea;border-radius:8px}'+
+ '.g10-local-search-foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;font-size:12px}'+
+ '.g10-local-search-pages{display:flex;align-items:center;gap:10px}'+
+ '#dir-applications tbody tr[hidden],#dir-active tbody tr[hidden]{display:none!important}'+
+ '@media(max-width:680px){.g10-local-search-row,.g10-local-search-foot{flex-direction:column;align-items:stretch}}';
+document.head.appendChild(css);
+let queued=false;
+function refresh(){
+  if(queued)return;queued=true;
+  requestAnimationFrame(function(){
+    queued=false;configs.forEach(function(c){setup(c);render(c);});
+  });
+}
+const observer=new MutationObserver(function(changes){
+  if(changes.some(x=>x.type==='childList'))refresh();
+});
+observer.observe(document.body,{subtree:true,childList:true});
+refresh();
+console.info('G10 Direction : recherche ciblée et pagination 20/page activées');
 })();
