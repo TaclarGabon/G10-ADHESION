@@ -2103,32 +2103,60 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 
-/* G10 Rappel Direction DOM 2026-11-14 */
+/* G10 Rappel Direction — suivi Firebase des relances (2026-11-14)
+   Une ouverture de messagerie ne vaut PAS confirmation d'envoi.
+   Historique ciblé dans members/{firebaseUid}.g10ReminderHistory.
+   Aucune modification des validations, paiements ou justificatifs. */
 (function(){
 'use strict';
-// Vue existante : aucune requête Firebase, aucune modification des dossiers.
 const targetId='applicationRows';
-function escapeNorm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+const TWO_DAYS=48*60*60*1000;
+function privileged(){
+ try{return typeof isPrivilegedRole==='function'&&!!isPrivilegedRole();}
+ catch(e){return false;}
+}
+function loggedUser(){
+ try{return typeof auth!=='undefined'&&auth&&auth.currentUser?auth.currentUser:null;}
+ catch(e){return null;}
+}
+function firebaseDb(){
+ try{return typeof db!=='undefined'&&db?db:null;}catch(e){return null;}
+}
 function record(id){
-  try {
-    if(typeof applications!=='undefined' && Array.isArray(applications))
-      return applications.find(x=>String(x.id||'')===String(id))||null;
-  }catch(e){}
-  return null;
+ try{if(typeof applications!=='undefined'&&Array.isArray(applications))
+  return applications.find(x=>String(x.id||'')===String(id))||null;}
+ catch(e){}
+ return null;
 }
 function rowState(tr){
-  const cells=Array.from(tr.cells||[]);
-  if(cells.length<7)return null;
-  const id=(cells[0].textContent||'').trim();
-  if(!/^G10-ADH-[\w-]+$/i.test(id))return null;
-  const m=record(id);
-  const profile=m?!!m.profileComplete:/\bok\b|complet/i.test(escapeNorm(cells[2].textContent));
-  const signed=m?!!m.formSigned:/\bsign[ée]\b|\bok\b/i.test(escapeNorm(cells[3].textContent));
-  const paid=m?!!(m.paymentDeclared||m.paymentConfirmed):/d[ée]clar[ée]|valid[ée]/i.test(escapeNorm(cells[4].textContent));
-  const identity=(cells[1].querySelector('b,strong')?.textContent||cells[1].textContent||'').trim().split(/\n/)[0];
-  const email=(m?.email||cells[1].textContent.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0]||'').trim();
-  const phone=(m?.phone||m?.whatsapp||m?.telephone||'').trim();
-  return {id,profile,signed,paid,identity,email,phone};
+ const cells=Array.from(tr.cells||[]);
+ if(cells.length<7)return null;
+ const id=(cells[0].textContent||'').trim();
+ if(!/^G10-ADH-[\w-]+$/i.test(id))return null;
+ const m=record(id);
+ const plain=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const profile=m?!!m.profileComplete:/\bok\b|complet/i.test(plain(cells[2].textContent));
+ const signed=m?!!m.formSigned:/signe|\bok\b/i.test(plain(cells[3].textContent));
+ const declared=m?!!(m.paymentDeclared||m.paymentConfirmed):/declare|valide/i.test(plain(cells[4].textContent));
+ const confirmed=m?!!(m.paymentConfirmed&&m.active):false;
+ const guessed=(cells[1].querySelector('b,strong')?.textContent||cells[1].textContent||'').trim().split(/\n/)[0];
+ const name=m?[m.lastName,m.lastName2,m.firstName,m.firstName2].filter(Boolean).join(' ').trim()||guessed:guessed;
+ const email=String(m?.email||cells[1].textContent.match(/[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/)?.[0]||'').trim();
+ const phone=String(m?.whatsapp||m?.phone||m?.telephone||'').trim();
+ const uid=String(m?.firebaseUid||'').trim();
+ const stage=confirmed?'actif':!profile||!signed?'dossier':declared?'verification':'paiement';
+ return {id,name:name||'Nom non renseigné',uid,email,phone,profile,signed,declared,confirmed,stage};
+}
+function stageLabel(s){
+ return {actif:'Adhésion active — aucune relance',dossier:'Dossier en cours',verification:'Paiement déclaré — vérification Direction',paiement:'Dossier complet — paiement attendu'}[s.stage];
+}
+function motive(s){
+ if(s.stage==='paiement')return 'Paiement de l’adhésion attendu';
+ if(s.stage==='verification')return 'Vérification du paiement en cours';
+ if(!s.profile&&!s.signed)return 'Profil et fiche à compléter';
+ if(!s.profile)return 'Profil à compléter';
+ if(!s.signed)return 'Fiche à signer';
+ return 'Suivi du dossier';
 }
 function message(s){
  const lines=['Bonjour,','','Nous vous remercions pour votre démarche d’adhésion au G10.',''];
@@ -2137,38 +2165,145 @@ function message(s){
  else if(!s.signed)lines.push('Votre profil est complet. Il vous reste à signer électroniquement votre fiche d’adhésion.');
  else lines.push('Votre profil et votre fiche d’adhésion sont bien complétés. Merci.');
  lines.push('');
- if(s.paid)lines.push('Votre déclaration de paiement est enregistrée et reste soumise à la vérification de la Direction.');
+ if(s.stage==='paiement')lines.push('La prochaine étape concerne le règlement de votre droit d’adhésion de 6 560 FCFA, accompagné de son justificatif.');
+ else if(s.declared)lines.push('Votre déclaration de paiement est enregistrée et reste soumise à la vérification de la Direction.');
  else lines.push('Le règlement du droit d’adhésion pourra être effectué lorsque vous le souhaiterez, avec son justificatif. Aucun paiement immédiat n’est exigé par ce rappel.');
  lines.push('','Connectez-vous à votre espace : https://adhesion.g10.ga/','Les capsules G10 peuvent vous guider dans ces étapes.','Si vous venez de terminer ces démarches, veuillez ignorer ce rappel.','','Cordialement,','L’équipe G10');
  return lines.join('\n');
 }
-function open(s){
- const existing=document.getElementById('g10RappelDirectionDialog');if(existing)existing.remove();
- const d=document.createElement('dialog');d.id='g10RappelDirectionDialog';
- d.style.cssText='box-sizing:border-box;width:min(630px,94vw);max-height:90vh;overflow:auto;border:1px solid #bcd0e2;border-radius:15px;padding:20px;box-shadow:0 18px 70px #112b4766;color:#123354;background:#fff';
- const title=document.createElement('h3');title.textContent='Rappel — '+s.id;d.appendChild(title);
- const info=document.createElement('p');info.textContent='Message adapté aux états visibles du dossier. Vérifiez les coordonnées avant chaque envoi.';d.appendChild(info);
- const contact=document.createElement('p');contact.style.fontSize='12px';contact.textContent='Courriel : '+(s.email||'non renseigné')+' | WhatsApp : '+(s.phone||'non renseigné');d.appendChild(contact);
- const textarea=document.createElement('textarea');textarea.value=message(s);textarea.rows=12;textarea.style.cssText='width:100%;box-sizing:border-box;border:1px solid #aac1d8;border-radius:8px;padding:12px;line-height:1.5;margin:8px 0';d.appendChild(textarea);
- const bar=document.createElement('div');bar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end';d.appendChild(bar);
- function btn(label,fn){const b=document.createElement('button');b.type='button';b.className='btn btn-light';b.textContent=label;b.addEventListener('click',fn);bar.appendChild(b);return b;}
- const digits=s.phone.startsWith('+')?s.phone.replace(/\D/g,''):'';
- const wb=btn('Ouvrir WhatsApp',()=>window.open('https://wa.me/'+digits+'?text='+encodeURIComponent(textarea.value),'_blank','noopener,noreferrer'));wb.disabled=digits.length<9||digits.length>15;
- const eb=btn('Préparer un e-mail',()=>{window.location.href='mailto:'+encodeURIComponent(s.email)+'?subject='+encodeURIComponent('G10 — Votre dossier d’adhésion')+'&body='+encodeURIComponent(textarea.value);});eb.disabled=!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email);
- btn('Fermer',()=>{d.close();d.remove()});
+function whatsappDigits(raw){
+ const val=String(raw||'').trim();
+ let digits='';
+ if(val.startsWith('+'))digits=val.replace(/\D/g,'');
+ else if(/^00/.test(val))digits=val.replace(/\D/g,'').replace(/^00/,'');
+ // Sans indicatif explicite, le pays ne peut être déduit de façon sûre.
+ return digits.length>=9&&digits.length<=15?digits:'';
+}
+function dateText(iso){
+ const d=new Date(iso);
+ return Number.isFinite(d.getTime())?d.toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'}):'Date non disponible';
+}
+function make(tag,text,style){
+ const el=document.createElement(tag);
+ if(text!==undefined)el.textContent=text;
+ if(style)el.style.cssText=style;
+ return el;
+}
+function addButton(host,label,callback){
+ const b=make('button',label);b.type='button';b.className='btn btn-light';b.addEventListener('click',callback);host.appendChild(b);return b;
+}
+async function open(s){
+ if(!privileged())return alert('Accès réservé à la Direction.');
+ const prior=document.getElementById('g10RappelDirectionDialog');if(prior)prior.remove();
+ const d=make('dialog');d.id='g10RappelDirectionDialog';
+ d.style.cssText='box-sizing:border-box;width:min(690px,94vw);max-height:90vh;overflow:auto;border:1px solid #bcd0e2;border-radius:15px;padding:20px;box-shadow:0 18px 70px #112b4766;color:#123354;background:#fff';
+ const heading=make('h3','Rappel — '+s.name+' / '+s.id);d.appendChild(heading);
+ d.appendChild(make('p',stageLabel(s)+' · '+motive(s),'font-weight:600'));
+ const contact=make('p','Courriel : '+(s.email||'non renseigné')+' | WhatsApp : '+(s.phone||'non renseigné'),'font-size:12px');d.appendChild(contact);
+ const textarea=make('textarea');textarea.value=message(s);textarea.rows=10;textarea.style.cssText='width:100%;box-sizing:border-box;border:1px solid #aac1d8;border-radius:8px;padding:12px;line-height:1.5;margin:8px 0';d.appendChild(textarea);
+ const bar=make('div',undefined,'display:flex;gap:8px;flex-wrap:wrap;margin:10px 0');d.appendChild(bar);
+ const confirmation=make('div',undefined,'display:flex;gap:8px;flex-wrap:wrap;margin:12px 0');d.appendChild(confirmation);
+ const status=make('p','','font-size:13px;color:#31516a');status.setAttribute('role','status');d.appendChild(status);
+ d.appendChild(make('h4','Historique des relances'));
+ const history=make('div','Chargement de l’historique Firebase…','font-size:13px;background:#f3f8fc;border:1px solid #dae7f0;border-radius:10px;padding:12px;max-height:180px;overflow:auto');d.appendChild(history);
+ const close=addButton(bar,'Fermer',()=>{d.close();d.remove();});
+ const digits=whatsappDigits(s.phone);
+ let emailOpened=false,whatsappOpened=false,busy=false,latest=[];
+ const validEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email);
+ const wb=addButton(bar,'Ouvrir WhatsApp',()=>{
+  const win=window.open('https://wa.me/'+digits+'?text='+encodeURIComponent(textarea.value),'_blank','noopener,noreferrer');
+  // window.open peut retourner null avec noopener : l'ouverture reste une action volontaire, sans preuve d'envoi.
+  whatsappOpened=true;wc.disabled=false;
+  status.textContent='WhatsApp demandé. Revenez ici après avoir envoyé le message et confirmez l’envoi.';
+ });
+ wb.disabled=!digits||s.stage==='actif'||s.stage==='verification';
+ if(!digits)wb.title='Le numéro doit comporter un indicatif international, par exemple +241…';
+ const eb=addButton(bar,'Préparer un e-mail',()=>{
+  emailOpened=true;ec.disabled=false;
+  window.location.href='mailto:'+s.email+'?subject='+encodeURIComponent('G10 — Votre dossier d’adhésion')+'&body='+encodeURIComponent(textarea.value);
+  status.textContent='E-mail préparé. Confirmez ici seulement après son envoi réel.';
+ });
+ eb.disabled=!validEmail||s.stage==='actif'||s.stage==='verification';
+ const ec=addButton(confirmation,'J’ai envoyé l’e-mail',()=>confirmSent('email'));
+ ec.disabled=true;
+ const wc=addButton(confirmation,'J’ai envoyé le WhatsApp',()=>confirmSent('whatsapp'));
+ wc.disabled=true;
+ if(s.stage==='actif'||s.stage==='verification')status.textContent='Aucune relance adhérent nécessaire à cette étape. Historique consultable.';
+ if(s.phone&&!digits)status.textContent='WhatsApp indisponible : indicatif international manquant dans le numéro du profil.';
+ if(!s.uid)status.textContent='Identifiant Firebase du dossier absent : les confirmations ne peuvent pas être enregistrées.';
  document.body.appendChild(d);
  if(typeof d.showModal==='function')d.showModal();else d.setAttribute('open','');
+ function renderHistory(){
+  history.replaceChildren();
+  if(!latest.length){history.textContent='Aucune relance confirmée.';return;}
+  latest.slice().reverse().forEach(item=>{
+   const line=make('div',(item.channel==='whatsapp'?'WhatsApp':'E-mail')+' · '+dateText(item.at)+' · '+(item.byName||item.byEmail||'Compte non identifié')+' · '+(item.reason||''),'padding:7px 0;border-bottom:1px solid #d9e5ef');
+   history.appendChild(line);
+  });
+ }
+ async function refreshHistory(){
+  const store=firebaseDb(),who=loggedUser();
+  if(!store||!who||!s.uid){history.textContent='Historique indisponible : connexion Direction Firebase nécessaire.';return false;}
+  try{
+   const snap=await store.collection('members').doc(s.uid).get({source:'server'});
+   const data=snap.exists?snap.data():null;
+   if(!data||String(data.id||'')!==String(s.id))throw new Error('Identité du dossier Firebase différente ou dossier introuvable');
+   latest=Array.isArray(data.g10ReminderHistory)?data.g10ReminderHistory:[];
+   latest=latest.slice().sort((a,b)=>String(a.at||'').localeCompare(String(b.at||'')));
+   renderHistory();return true;
+  }catch(error){console.error('G10 lecture relances',error);history.textContent='Impossible de lire l’historique Firebase : '+(error.message||error);return false;}
+ }
+ async function confirmSent(channel){
+  if(busy)return;
+  if(!privileged())return alert('Accès Direction requis.');
+  const who=loggedUser(),store=firebaseDb();
+  if(!who||!store||!s.uid)return alert('Connexion Firebase ou identifiant dossier manquant. Aucune relance enregistrée.');
+  if((channel==='email'&&!emailOpened)||(channel==='whatsapp'&&!whatsappOpened))
+   return alert('Ouvrez d’abord le canal correspondant.');
+  const label=channel==='email'?'e-mail':'WhatsApp';
+  if(!window.confirm('Confirmez-vous avoir réellement envoyé ce message par '+label+' à '+s.name+' ?'))return;
+  busy=true;ec.disabled=true;wc.disabled=true;status.textContent='Enregistrement dans Firebase…';
+  try{
+   const ref=store.collection('members').doc(s.uid);
+   const before=await ref.get({source:'server'});
+   const data=before.exists?before.data():null;
+   if(!data||String(data.id||'')!==String(s.id))throw new Error('Le dossier Firebase est introuvable ou a changé');
+   const prior=Array.isArray(data.g10ReminderHistory)?data.g10ReminderHistory:[];
+   const recent=prior.find(item=>item.channel===channel&&item.reason===motive(s)&&
+     Date.now()-new Date(item.at).getTime()>=0&&Date.now()-new Date(item.at).getTime()<TWO_DAYS);
+   if(recent&&!window.confirm('Une relance '+label+' concernant « '+motive(s)+' » a déjà été déclarée le '+dateText(recent.at)+' par '+(recent.byName||recent.byEmail||'un autre compte')+'. Confirmer une nouvelle relance malgré tout ?')){
+    status.textContent='Doublon évité : aucune nouvelle relance enregistrée.';return;
+   }
+   const entry={id:'r-'+Date.now()+'-'+Math.random().toString(36).slice(2,9),
+    at:new Date().toISOString(),channel,reason:motive(s),status:'envoi_declare',
+    byUid:who.uid,byName:String(who.displayName||who.email||who.uid),byEmail:String(who.email||''),
+    to:channel==='email'?s.email:s.phone,message:textarea.value};
+   // Mise à jour atomique d'un seul champ du dossier, sans écraser paiements ni validations.
+   const FV=(typeof firebase!=='undefined'&&firebase.firestore&&firebase.firestore.FieldValue)||null;
+   if(!FV)throw new Error('Bibliothèque Firebase Firestore indisponible');
+   await ref.update({g10ReminderHistory:FV.arrayUnion(entry),g10ReminderUpdatedAt:FV.serverTimestamp()});
+   await refreshHistory();
+   status.textContent='Envoi '+label+' déclaré et enregistré dans Firebase par '+entry.byName+'.';
+   if(channel==='email')emailOpened=false;else whatsappOpened=false;
+  }catch(error){
+   console.error('G10 écriture historique relance',error);
+   status.textContent='Échec de sauvegarde Firebase : '+(error.message||error)+'. Envoi non enregistré. Vérifiez les règles d’accès.';
+  }finally{busy=false;ec.disabled=!emailOpened;wc.disabled=!whatsappOpened;}
+ }
+ refreshHistory();
 }
 function install(){
+ if(!privileged())return;
  const tbody=document.getElementById(targetId);if(!tbody)return;
  tbody.querySelectorAll('tr').forEach(tr=>{
-   if(tr.querySelector('[data-g10-direction-reminder]'))return;
-   const s=rowState(tr);if(!s)return;
-   const last=tr.cells[tr.cells.length-1];if(!last)return;
-   const button=document.createElement('button');button.type='button';button.className='btn btn-light';button.textContent='Rappeler';button.dataset.g10DirectionReminder='1';
-   button.style.cssText='margin:6px 0 0 5px';
-   button.addEventListener('click',()=>open(rowState(tr)||s));
-   last.appendChild(button);
+  if(tr.querySelector('[data-g10-direction-reminder]'))return;
+  const s=rowState(tr);if(!s)return;
+  const last=tr.cells[tr.cells.length-1];if(!last)return;
+  const b=make('button','Rappeler');b.type='button';b.className='btn btn-light';b.dataset.g10DirectionReminder='1';
+  b.style.cssText='margin:6px 0 0 5px';
+  if(s.stage==='actif')b.textContent='Historique';
+  if(s.stage==='verification')b.textContent='Suivi';
+  b.addEventListener('click',()=>open(rowState(tr)||s));last.appendChild(b);
  });
 }
 let scheduled=false;
@@ -2178,8 +2313,9 @@ function boot(){
  if(body)new MutationObserver(schedule).observe(body,{childList:true});
  const direction=document.getElementById('directionApp')||document.body;
  new MutationObserver(muts=>{
-   if(!document.getElementById(targetId))return;
-   if(muts.some(m=>m.type==='childList' && (m.target.id===targetId||m.target.contains?.(document.getElementById(targetId)))))schedule();
+  const target=document.getElementById(targetId);
+  if(!target)return;
+  if(muts.some(m=>m.type==='childList'&&(m.target.id===targetId||m.target.contains?.(target))))schedule();
  }).observe(direction,{subtree:true,childList:true});
  install();
 }
