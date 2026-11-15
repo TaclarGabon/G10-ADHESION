@@ -2401,34 +2401,38 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 
 
-/* G10_ETAPE2_MESSAGE_20261114 — clarification du caractère obligatoire de la signature */
+/* G10_ETAPE2_MESSAGE_20261114 — explication visible avant le formulaire de signature */
 (function(){
-  'use strict';
-  const previous='Cette étape confirme votre volonté d’adhérer au G10. Vous pouvez consulter la fiche et revenir plus tard sans la signer. Les deux confirmations sont obligatoires uniquement lorsque vous choisissez de valider votre signature.';
-  const revised='Cette étape confirme votre volonté d’adhérer au G10. Après avoir pris connaissance des documents officiels (statuts et règlement intérieur), vous devez confirmer votre engagement et signer votre fiche d’adhésion. Les deux confirmations ci-dessous sont obligatoires pour finaliser cette étape. Sans elles, votre dossier restera incomplet.';
-  const oldPayment='Aucun paiement immédiat n’est exigé pour signer votre fiche.';
-  const newPayment='Aucun paiement immédiat n’est exigé pour valider votre fiche. Vous pourrez effectuer votre paiement ultérieurement.';
-  function update(){
-    const root=document.getElementById('memberApp')||document.body;
-    if(!root)return;
-    for(const el of root.querySelectorAll('div')){
-      if(el.children.length===0&&el.textContent.includes(previous))el.textContent=el.textContent.replace(previous,revised);
-    }
-    for(const el of root.querySelectorAll('strong')){
-      if(el.textContent.trim()===oldPayment)el.textContent=newPayment;
-    }
+ 'use strict';
+ const message="Cette étape confirme votre volonté d’adhérer au G10. Après avoir pris connaissance des documents officiels (statuts et règlement intérieur), vous devez confirmer votre engagement et signer votre fiche d’adhésion. Les deux confirmations ci-dessous sont obligatoires pour finaliser cette étape. Sans elles, votre dossier restera incomplet.";
+ const payment="Aucun paiement immédiat n’est exigé pour valider votre fiche. Vous pourrez effectuer votre paiement ultérieurement.";
+ function update(){
+  const root=document.getElementById('memberApp');if(!root)return;
+  const headings=Array.from(root.querySelectorAll('h1,h2,h3,h4,h5,h6,summary,strong'));
+  const heading=headings.find(el=>/fiche d.ad.hésion et signature/i.test(el.textContent||''));
+  if(!heading)return;
+  const section=heading.closest('section,.card,.panel,.accordion-item,.member-card')||heading.parentElement?.parentElement;
+  if(!section||section.querySelector('#g10-etape2-explication'))return;
+  const notice=document.createElement('div');notice.id='g10-etape2-explication';
+  notice.setAttribute('role','note');
+  notice.style.cssText='margin:12px 0 16px;padding:14px 16px;border:1px solid #b8d6ef;border-radius:12px;background:#f1f8ff;color:#143c60;font-size:14px;line-height:1.6';
+  const p=document.createElement('p');p.style.margin='0 0 8px';p.textContent=message;
+  const q=document.createElement('p');q.style.margin='0';q.textContent=payment;
+  notice.append(p,q);
+  const choice=Array.from(section.querySelectorAll('*')).find(el=>el.children.length===0&&/Document intelligent/i.test(el.textContent||''));
+  const card=choice?.closest('button,label,.option,.choice,.mode-card')||choice?.parentElement?.parentElement;
+  if(card&&section.contains(card)&&card!==section)card.parentElement.insertBefore(notice,card);
+  else{
+   const intro=heading.parentElement;
+   if(intro&&intro.parentElement)intro.parentElement.insertBefore(notice,intro.nextSibling);
+   else section.prepend(notice);
   }
-  function boot(){
-    update();
-    const root=document.getElementById('memberApp');
-    if(root){
-      let pending=false;
-      new MutationObserver(()=>{
-        if(pending)return;
-        pending=true;
-        queueMicrotask(()=>{pending=false;update();});
-      }).observe(root,{childList:true,subtree:true});
-    }
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+ }
+ function boot(){
+  update();
+  const root=document.getElementById('memberApp');
+  if(root){let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;queueMicrotask(()=>{pending=false;update()})}).observe(root,{childList:true,subtree:true});}
+  document.addEventListener('click',()=>setTimeout(update,0));
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
