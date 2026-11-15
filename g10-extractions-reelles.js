@@ -2399,3 +2399,36 @@ function boot(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+
+/* G10_ETAPE2_MESSAGE_20261114 — clarification du caractère obligatoire de la signature */
+(function(){
+  'use strict';
+  const previous='Cette étape confirme votre volonté d’adhérer au G10. Vous pouvez consulter la fiche et revenir plus tard sans la signer. Les deux confirmations sont obligatoires uniquement lorsque vous choisissez de valider votre signature.';
+  const revised='Cette étape confirme votre volonté d’adhérer au G10. Après avoir pris connaissance des documents officiels (statuts et règlement intérieur), vous devez confirmer votre engagement et signer votre fiche d’adhésion. Les deux confirmations ci-dessous sont obligatoires pour finaliser cette étape. Sans elles, votre dossier restera incomplet.';
+  const oldPayment='Aucun paiement immédiat n’est exigé pour signer votre fiche.';
+  const newPayment='Aucun paiement immédiat n’est exigé pour valider votre fiche. Vous pourrez effectuer votre paiement ultérieurement.';
+  function update(){
+    const root=document.getElementById('memberApp')||document.body;
+    if(!root)return;
+    for(const el of root.querySelectorAll('div')){
+      if(el.children.length===0&&el.textContent.includes(previous))el.textContent=el.textContent.replace(previous,revised);
+    }
+    for(const el of root.querySelectorAll('strong')){
+      if(el.textContent.trim()===oldPayment)el.textContent=newPayment;
+    }
+  }
+  function boot(){
+    update();
+    const root=document.getElementById('memberApp');
+    if(root){
+      let pending=false;
+      new MutationObserver(()=>{
+        if(pending)return;
+        pending=true;
+        queueMicrotask(()=>{pending=false;update();});
+      }).observe(root,{childList:true,subtree:true});
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
