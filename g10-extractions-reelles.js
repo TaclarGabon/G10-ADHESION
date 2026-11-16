@@ -2423,3 +2423,50 @@ function boot(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+
+/* G10_FIX_ACCORDEONS_LECTURE_SEULE_MOBILE_20261116: navigation dans la copie du profil, sans écriture Firebase */
+(function(){
+ 'use strict';
+ function repair(){
+  const frame=document.getElementById('g10-full-frame');
+  if(!frame)return;
+  let doc;try{doc=frame.contentDocument}catch(_){return}
+  if(!doc||!doc.getElementById('memberAccordionHead-profile')||doc.__g10ReadonlyAccordionsFixed)return;
+  doc.__g10ReadonlyAccordionsFixed=true;
+  ['profile','form','payment'].forEach(key=>{
+   const head=doc.getElementById('memberAccordionHead-'+key);
+   const body=doc.getElementById('memberAccordionBody-'+key);
+   const card=doc.getElementById('memberAccordion-'+key);
+   if(!head||!body)return;
+   head.style.pointerEvents='auto';
+   head.style.cursor='pointer';
+   head.setAttribute('role','button');
+   head.setAttribute('tabindex','0');
+   const toggle=()=>{
+    const open=body.hasAttribute('hidden');
+    if(open)body.removeAttribute('hidden');else body.setAttribute('hidden','');
+    if(card){card.classList.toggle('open',open);card.classList.toggle('member-accordion-collapsed',!open)}
+    head.setAttribute('aria-expanded',String(open));
+   };
+   head.addEventListener('click',event=>{event.preventDefault();event.stopImmediatePropagation();toggle()},true);
+   head.addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();event.stopImmediatePropagation();toggle()}
+   },true);
+   const buttons=head.querySelectorAll('button');
+   buttons.forEach(btn=>{btn.style.pointerEvents='none'});
+  });
+ }
+ function boot(){
+  const original=window.g10ViewFullApplication;
+  if(typeof original!=='function')return;
+  window.g10ViewFullApplication=function(){
+   const result=original.apply(this,arguments);
+   repair();
+   return result;
+  };
+  const frame=document.getElementById('g10-full-frame');
+  if(frame)frame.addEventListener('load',repair);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
