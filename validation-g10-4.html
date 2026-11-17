@@ -1445,6 +1445,7 @@ window.g10ExportFinanceCSV=function(){if(!isPrivilegedRole())return;const rows=[
 <\/script>
 
 
+
 </body></html>`;
   w.document.open();w.document.write(html);w.document.close();
 }
@@ -2302,6 +2303,51 @@ renderApplications=function(){prevRender();const pending=applications.filter(a=>
    });
    return {members:result.members,rows:updated};
  };
+})();
+</script>
+<script id="G10_IPHONE_READONLY_PARENT_CONTROLS_20261116">
+/* Navigation de lecture seule depuis la fenêtre parente : les clics ne dépendent pas des événements tactiles dans l'iframe Safari. */
+(function(){
+ 'use strict';
+ const keys=[['profile','1. Mon profil'],['form','2. Fiche et signature'],['payment','3. Droit d’adhésion']];
+ function setup(){
+  const frame=document.getElementById('g10-full-frame');
+  if(!frame)return;
+  const modal=frame.closest('[id]');
+  if(!modal||modal.querySelector('#g10-iphone-lecture-nav'))return;
+  const bar=document.createElement('nav');bar.id='g10-iphone-lecture-nav';
+  bar.setAttribute('aria-label','Consulter les rubriques du dossier en lecture seule');
+  bar.style.cssText='display:flex;gap:7px;flex-wrap:wrap;padding:10px 14px;background:#eef5fc;border-bottom:1px solid #d5e3f0';
+  keys.forEach(([key,label])=>{
+   const btn=document.createElement('button');btn.type='button';btn.textContent=label;
+   btn.style.cssText='border:1px solid #b8d2e9;background:white;border-radius:9px;padding:10px 12px;color:#123c61;font-weight:650;font-size:14px;cursor:pointer;touch-action:manipulation';
+   btn.addEventListener('click',()=>{
+    let doc;try{doc=frame.contentDocument}catch(e){return}
+    if(!doc)return;
+    const body=doc.getElementById('memberAccordionBody-'+key);
+    const card=doc.getElementById('memberAccordion-'+key);
+    const head=doc.getElementById('memberAccordionHead-'+key);
+    const section=doc.getElementById('member-account');
+    if(!body||!card)return;
+    if(section)section.classList.remove('hidden');
+    const open=body.hasAttribute('hidden');
+    if(open)body.removeAttribute('hidden');else body.setAttribute('hidden','');
+    card.classList.toggle('open',open);
+    card.classList.toggle('member-accordion-collapsed',!open);
+    if(head)head.setAttribute('aria-expanded',String(open));
+    btn.setAttribute('aria-expanded',String(open));
+    if(open)try{head.scrollIntoView({block:'start',behavior:'instant'})}catch(e){}
+   });
+   bar.appendChild(btn);
+  });
+  frame.parentNode.insertBefore(bar,frame);
+ }
+ function boot(){
+  setup();
+  const observer=new MutationObserver(setup);
+  observer.observe(document.body,{childList:true,subtree:true});
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
 </script>
 </body>
