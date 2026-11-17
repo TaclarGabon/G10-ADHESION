@@ -1277,8 +1277,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  function cleared(section){byId('memberAccordionBody-'+section)?.querySelector('.g10-inscription-error')?.remove();}
  const fields={
   civility:'civilité',firstName:'premier prénom',lastName:'premier nom',birthDate:'date de naissance',birthPlace:'lieu de naissance',
-  nationality:'nationalité',address:'adresse',postal:'code postal',city:'ville',country:'pays',idType:'type de document',
-  idNumber:'numéro du document',idIssue:'date de délivrance',idExpiry:'date d’expiration',
+  nationality:'nationalité',address:'adresse',postal:'code postal',city:'ville',country:'pays',
   email:'adresse courriel',phone:'numéro de téléphone / WhatsApp',profession:'métier / profession',degree:'diplôme',expertise:'expertise / compétences'
  };
  function checkProfileForm(){
